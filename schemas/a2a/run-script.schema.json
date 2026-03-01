@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RUN_SCRIPT",
+  "type": "object",
+  "required": ["message_type", "task_id", "script", "timeout_seconds"],
+  "properties": {
+    "message_type": {"const": "RUN_SCRIPT"},
+    "task_id": {"type": "string", "minLength": 1},
+    "script": {"type": "string", "minLength": 1},
+    "timeout_seconds": {"type": "integer", "minimum": 1}
+  },
+  "additionalProperties": false
+}
