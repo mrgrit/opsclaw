@@ -15,6 +15,8 @@ def test_orchestrator_completes_without_master(tmp_path) -> None:
     assert any(log.startswith("dispatch") for log in result.execution_log)
     assert "opsclaw_run:deploy nginx" in result.metadata["stdout"]
     assert Path(result.metadata["state_path"]).exists()
+    assert result.metadata["a2a_run_script"]["message_type"] == "RUN_SCRIPT"
+    assert result.metadata["a2a_status_update"]["message_type"] == "STATUS_UPDATE"
 
 
 def test_orchestrator_blocks_sensitive_master_prompt(tmp_path) -> None:
@@ -32,6 +34,8 @@ def test_orchestrator_blocks_sensitive_master_prompt(tmp_path) -> None:
     assert result.validation_passed is False
     assert "gate_findings" in result.metadata
     assert Path(result.metadata["state_path"]).exists()
+    assert result.metadata["status_message"]["message_type"] == "STATUS_UPDATE"
+    assert result.metadata["status_message"]["payload"]["status"] == "blocked"
 
 
 def test_orchestrator_transforms_master_prompt_before_dispatch(tmp_path) -> None:
@@ -49,3 +53,16 @@ def test_orchestrator_transforms_master_prompt_before_dispatch(tmp_path) -> None
     assert result.status == "completed"
     assert "[REDACTED_TOKEN]" in result.metadata["stdout"]
     assert "INTERNAL_IP" in result.metadata["stdout"]
+
+
+def test_orchestrator_fails_when_subagent_guardrail_blocks(tmp_path) -> None:
+    orchestrator = ManagerOrchestrator()
+    orchestrator.state_store.root = Path(tmp_path)
+
+    result = orchestrator.run(
+        TaskRequest(task_id="t4", objective="rm -rf /tmp/something")
+    )
+
+    assert result.status == "failed"
+    assert result.validation_passed is False
+    assert "guardrail:block dangerous command" in result.metadata["stderr"]

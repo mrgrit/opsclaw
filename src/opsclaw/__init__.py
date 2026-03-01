@@ -1,5 +1,7 @@
 """OpsClaw MVP scaffold package."""
 
+from .a2a import A2AMessage, MessageType
+from .audit import AuditLogger
 from .models import TaskRequest, TaskResult
 from .orchestrator import ManagerOrchestrator
 from .state_store import JsonStateStore
@@ -11,4 +13,7 @@ __all__ = [
     "ManagerOrchestrator",
     "SubAgentExecutor",
     "JsonStateStore",
+    "AuditLogger",
+    "A2AMessage",
+    "MessageType",
 ]

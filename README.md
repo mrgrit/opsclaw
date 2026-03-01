@@ -25,6 +25,11 @@ python -m pytest -q
 ## 현재 포함 항목
 
 - `src/opsclaw/orchestrator.py`: Manager 최소 워크플로우 + SubAgent/StateStore 연동
+- `src/opsclaw/subagent.py`: 로컬 SubAgent 실행기(쉘 명령 실행/수집 + 위험 명령 Guardrails)
+- `src/opsclaw/state_store.py`: JSON 기반 작업 상태 저장
+- `src/opsclaw/mastergate.py`: PII/Secret 탐지 + transform/block 판정
+- `src/opsclaw/a2a.py`: A2A RUN_SCRIPT/STATUS_UPDATE 메시지 생성
+- `src/opsclaw/audit.py`: 감사 로그(audit log) append 저장
 - `src/opsclaw/subagent.py`: 로컬 SubAgent 실행기(쉘 명령 실행/수집)
 - `src/opsclaw/state_store.py`: JSON 기반 작업 상태 저장
 - `src/opsclaw/mastergate.py`: PII/Secret 탐지 + transform/block 판정

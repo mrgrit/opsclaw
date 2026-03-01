@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
+from .a2a import build_run_script_message, build_status_update_message
+from .audit import AuditLogger
 from .mastergate import MasterGate
 from .models import Decision, TaskRequest, TaskResult
 from .state_store import JsonStateStore
@@ -15,10 +17,12 @@ class ManagerOrchestrator:
         self,
         subagent: SubAgentExecutor | None = None,
         state_store: JsonStateStore | None = None,
+        audit_logger: AuditLogger | None = None,
     ) -> None:
         self.mastergate = MasterGate()
         self.subagent = subagent or SubAgentExecutor()
         self.state_store = state_store or JsonStateStore()
+        self.audit_logger = audit_logger or AuditLogger()
 
     def run(self, request: TaskRequest) -> TaskResult:
         execution_log: list[str] = []
@@ -36,6 +40,15 @@ class ManagerOrchestrator:
         if request.requires_master:
             gate = self.mastergate.evaluate(request.objective)
             execution_log.append(f"mastergate:{gate.decision.value}")
+            self.audit_logger.record(
+                actor="manager",
+                role="system",
+                action="mastergate_evaluate",
+                decision=gate.decision.value,
+                task_id=request.task_id,
+                prompt=request.objective,
+                details={"findings": gate.findings},
+            )
             if gate.decision == Decision.BLOCK:
                 blocked = TaskResult(
                     task_id=request.task_id,
@@ -47,10 +60,30 @@ class ManagerOrchestrator:
                 )
                 path = self.state_store.save(blocked)
                 blocked.metadata["state_path"] = str(path)
+                blocked.metadata["status_message"] = asdict(
+                    build_status_update_message(
+                        task_id=request.task_id,
+                        status="blocked",
+                        detail="mastergate blocked external call",
+                    )
+                )
+                self.audit_logger.record(
+                    actor="manager",
+                    role="system",
+                    action="task_blocked",
+                    decision="block",
+                    task_id=request.task_id,
+                    details={"reason": "mastergate"},
+                )
                 return blocked
             master_prompt = gate.transformed_prompt
 
         dispatch_script = self._dispatch_script(todo, master_prompt)
+        run_msg = build_run_script_message(
+            task_id=request.task_id,
+            script=dispatch_script,
+            timeout_seconds=self.subagent.timeout_seconds,
+        )
         execution_log.append("dispatch:subagent")
 
         collect = self._collect(dispatch_script)
@@ -59,6 +92,16 @@ class ManagerOrchestrator:
         validation = self._validate(collect.exit_code)
         execution_log.append(f"validate:{validation}")
 
+        status = "completed" if validation else "failed"
+        status_msg = build_status_update_message(
+            task_id=request.task_id,
+            status=status,
+            detail=f"subagent_exit={collect.exit_code}",
+        )
+
+        result = TaskResult(
+            task_id=request.task_id,
+            status=status,
         result = TaskResult(
             task_id=request.task_id,
             status="completed" if validation else "failed",
@@ -69,10 +112,22 @@ class ManagerOrchestrator:
                 "request": asdict(request),
                 "stdout": collect.stdout,
                 "stderr": collect.stderr,
+                "a2a_run_script": asdict(run_msg),
+                "a2a_status_update": asdict(status_msg),
             },
         )
         path = self.state_store.save(result)
         result.metadata["state_path"] = str(path)
+
+        self.audit_logger.record(
+            actor="manager",
+            role="system",
+            action="task_completed" if validation else "task_failed",
+            decision="allow" if validation else "block",
+            task_id=request.task_id,
+            details={"exit_code": collect.exit_code},
+        )
+
         return result
 
     def _normalize(self, request: TaskRequest) -> dict[str, object]:
