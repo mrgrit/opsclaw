@@ -142,6 +142,15 @@ class ManagerOrchestrator:
         }
         if run_script is not None:
             metadata["a2a_run_script"] = asdict(run_script)
+        validation = self._validate(collect.exit_code)
+        execution_log.append(f"validate:{validation}")
+
+        status = "completed" if validation else "failed"
+        status_msg = build_status_update_message(
+            task_id=request.task_id,
+            status=status,
+            detail=f"subagent_exit={collect.exit_code}",
+        )
 
         result = TaskResult(
             task_id=request.task_id,
@@ -150,6 +159,19 @@ class ManagerOrchestrator:
             execution_log=execution_log,
             validation_passed=(status == "completed"),
             metadata=metadata,
+        result = TaskResult(
+            task_id=request.task_id,
+            status="completed" if validation else "failed",
+            todo=todo,
+            execution_log=execution_log,
+            validation_passed=validation,
+            metadata={
+                "request": asdict(request),
+                "stdout": collect.stdout,
+                "stderr": collect.stderr,
+                "a2a_run_script": asdict(run_msg),
+                "a2a_status_update": asdict(status_msg),
+            },
         )
         path = self.state_store.save(result)
         result.metadata["state_path"] = str(path)
@@ -162,6 +184,12 @@ class ManagerOrchestrator:
             task_id=request.task_id,
             details={"exit_code": exit_code},
         )
+            action="task_completed" if validation else "task_failed",
+            decision="allow" if validation else "block",
+            task_id=request.task_id,
+            details={"exit_code": collect.exit_code},
+        )
+
         return result
 
     def _normalize(self, request: TaskRequest) -> dict[str, object]:

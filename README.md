@@ -44,6 +44,19 @@ PYTHONPATH=src python3 -m opsclaw.cli --objective "초기 점검 작업" --insta
 
 ```bash
 PYTHONPATH=src python3 -m pytest -q
+이번 커밋부터 최소 실행 가능한 Manager/MasterGate 뼈대가 포함됩니다.
+
+### 빠른 실행
+
+```bash
+python -m opsclaw.cli --objective "nginx 배포 점검"
+python -m opsclaw.cli --objective "Authorization: Bearer token123 on 10.1.0.80" --requires-master
+```
+
+### 테스트
+
+```bash
+python -m pytest -q
 ```
 
 ## 현재 포함 항목
@@ -54,6 +67,9 @@ PYTHONPATH=src python3 -m pytest -q
 - `src/opsclaw/mastergate.py`: PII/Secret 탐지 + transform/block 판정
 - `src/opsclaw/a2a.py`: A2A RUN_SCRIPT/STATUS_UPDATE 메시지 생성
 - `src/opsclaw/audit.py`: 감사 로그(audit log) append 저장
+- `src/opsclaw/subagent.py`: 로컬 SubAgent 실행기(쉘 명령 실행/수집)
+- `src/opsclaw/state_store.py`: JSON 기반 작업 상태 저장
+- `src/opsclaw/mastergate.py`: PII/Secret 탐지 + transform/block 판정
 - `schemas/a2a/*.json`: A2A 메시지/결과 기본 스키마
 - `schemas/audit-log.schema.json`: 감사 로그 기본 스키마
 - `docs/adr/0001-mvp-architecture.md`: MVP 아키텍처 ADR

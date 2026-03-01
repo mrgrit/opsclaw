@@ -32,6 +32,12 @@ class SubAgentExecutor:
         if guardrail_error:
             return ExecutionResult(exit_code=126, stdout="", stderr=guardrail_error)
 
+    """Minimal local subagent runtime for Sprint A."""
+
+    def __init__(self, timeout_seconds: int = 30) -> None:
+        self.timeout_seconds = timeout_seconds
+
+    def run_script(self, script: str) -> ExecutionResult:
         completed = subprocess.run(
             ["bash", "-lc", script],
             capture_output=True,
