@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SUBAGENT_RESULT",
+  "type": "object",
+  "required": ["task_id", "exit_code", "stdout", "stderr", "changed_files", "service_status", "network_snapshot"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "exit_code": {"type": "integer"},
+    "stdout": {"type": "string"},
+    "stderr": {"type": "string"},
+    "changed_files": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "service_status": {"type": "string"},
+    "network_snapshot": {"type": "string"}
+  },
+  "additionalProperties": false
+}
