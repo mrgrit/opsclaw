@@ -30,6 +30,9 @@ python -m pytest -q
 - `src/opsclaw/mastergate.py`: PII/Secret 탐지 + transform/block 판정
 - `src/opsclaw/a2a.py`: A2A RUN_SCRIPT/STATUS_UPDATE 메시지 생성
 - `src/opsclaw/audit.py`: 감사 로그(audit log) append 저장
+- `src/opsclaw/subagent.py`: 로컬 SubAgent 실행기(쉘 명령 실행/수집)
+- `src/opsclaw/state_store.py`: JSON 기반 작업 상태 저장
+- `src/opsclaw/mastergate.py`: PII/Secret 탐지 + transform/block 판정
 - `schemas/a2a/*.json`: A2A 메시지/결과 기본 스키마
 - `schemas/audit-log.schema.json`: 감사 로그 기본 스키마
 - `docs/adr/0001-mvp-architecture.md`: MVP 아키텍처 ADR

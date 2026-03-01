@@ -102,6 +102,9 @@ class ManagerOrchestrator:
         result = TaskResult(
             task_id=request.task_id,
             status=status,
+        result = TaskResult(
+            task_id=request.task_id,
+            status="completed" if validation else "failed",
             todo=todo,
             execution_log=execution_log,
             validation_passed=validation,
