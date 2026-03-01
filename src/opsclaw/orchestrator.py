@@ -4,13 +4,21 @@ from dataclasses import asdict
 
 from .mastergate import MasterGate
 from .models import Decision, TaskRequest, TaskResult
+from .state_store import JsonStateStore
+from .subagent import SubAgentExecutor
 
 
 class ManagerOrchestrator:
     """MVP manager pipeline: intake -> plan -> todo -> dispatch -> collect -> validate -> report."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        subagent: SubAgentExecutor | None = None,
+        state_store: JsonStateStore | None = None,
+    ) -> None:
         self.mastergate = MasterGate()
+        self.subagent = subagent or SubAgentExecutor()
+        self.state_store = state_store or JsonStateStore()
 
     def run(self, request: TaskRequest) -> TaskResult:
         execution_log: list[str] = []
@@ -24,11 +32,12 @@ class ManagerOrchestrator:
         todo = self._todo(plan)
         execution_log.append("todo:ok")
 
+        master_prompt = request.objective
         if request.requires_master:
             gate = self.mastergate.evaluate(request.objective)
             execution_log.append(f"mastergate:{gate.decision.value}")
             if gate.decision == Decision.BLOCK:
-                return TaskResult(
+                blocked = TaskResult(
                     task_id=request.task_id,
                     status="blocked",
                     todo=todo,
@@ -36,23 +45,35 @@ class ManagerOrchestrator:
                     validation_passed=False,
                     metadata={"gate_findings": gate.findings},
                 )
+                path = self.state_store.save(blocked)
+                blocked.metadata["state_path"] = str(path)
+                return blocked
+            master_prompt = gate.transformed_prompt
 
-        dispatch = self._dispatch(todo)
-        execution_log.append(dispatch)
-        collect = self._collect()
-        execution_log.append(collect)
+        dispatch_script = self._dispatch_script(todo, master_prompt)
+        execution_log.append("dispatch:subagent")
 
-        validation = self._validate(collect)
+        collect = self._collect(dispatch_script)
+        execution_log.append(f"collect:exit={collect.exit_code}")
+
+        validation = self._validate(collect.exit_code)
         execution_log.append(f"validate:{validation}")
 
-        return TaskResult(
+        result = TaskResult(
             task_id=request.task_id,
             status="completed" if validation else "failed",
             todo=todo,
             execution_log=execution_log,
             validation_passed=validation,
-            metadata={"request": asdict(request)},
+            metadata={
+                "request": asdict(request),
+                "stdout": collect.stdout,
+                "stderr": collect.stderr,
+            },
         )
+        path = self.state_store.save(result)
+        result.metadata["state_path"] = str(path)
+        return result
 
     def _normalize(self, request: TaskRequest) -> dict[str, object]:
         return {
@@ -76,12 +97,13 @@ class ManagerOrchestrator:
         milestones = plan.get("milestones", [])
         return [f"[{i + 1}] {name}" for i, name in enumerate(milestones)]
 
-    def _dispatch(self, todo: list[str]) -> str:
+    def _dispatch_script(self, todo: list[str], objective: str) -> str:
         _ = todo
-        return "dispatch:subagent-simulated"
+        safe_objective = objective.replace('"', "'")
+        return f'echo "opsclaw_run:{safe_objective}"'
 
-    def _collect(self) -> str:
-        return "collect:stdout=ok"
+    def _collect(self, script: str):
+        return self.subagent.run_script(script)
 
-    def _validate(self, collect_result: str) -> bool:
-        return "ok" in collect_result
+    def _validate(self, exit_code: int) -> bool:
+        return exit_code == 0
