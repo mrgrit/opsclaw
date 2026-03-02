@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OpsClaw Console</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; }
+    .row { display: flex; gap: 16px; align-items: flex-start; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; flex: 1; }
+    input[type=text], input[type=number] { width: 100%; padding: 8px; }
+    textarea { width: 100%; height: 90px; }
+    button { padding: 8px 12px; }
+    pre { background: #f7f7f7; padding: 12px; border-radius: 10px; overflow:auto; max-height: 420px; }
+    .muted { color: #666; }
+    .btnrow { display:flex; gap:10px; align-items:flex-end; flex-wrap: wrap; }
+    label { font-size: 12px; color:#444; }
+    .tag { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #ccc; margin-left:6px; font-size:12px; }
+    .ok { border-color:#0a0; }
+    .bad { border-color:#a00; }
+  </style>
+</head>
+<body>
+  <h1>OpsClaw Console</h1>
+  <p class="muted">
+    API: <%= api %> |
+    <a href="/mastergate">MasterGate</a>
+  </p>
+
+  <% if (error) { %>
+    <div class="card" style="border-color:#c00; margin-bottom:16px;">
+      <b>Error</b>
+      <pre><%= error %></pre>
+    </div>
+  <% } %>
+
+  <div class="row">
+    <div class="card">
+      <h3>1) Create Project</h3>
+      <form method="post" action="/create">
+        <label>Request text</label>
+        <input type="text" name="request_text" value="basic health check" />
+        <p><button type="submit">Create</button></p>
+      </form>
+
+      <h3>2) Load Project</h3>
+      <form method="post" action="/load" class="btnrow">
+        <div style="flex:2; min-width:280px;">
+          <label>Project ID</label>
+          <input type="text" name="project_id" value="<%= project_id || '' %>" placeholder="paste project_id" />
+        </div>
+        <div>
+          <button type="submit">Load</button>
+        </div>
+      </form>
+
+      <% if (project_id) { %>
+        <hr/>
+        <div>
+          <b>Current Project</b>
+          <% if (workflow && workflow.pass === true) { %>
+            <span class="tag ok">PASS</span>
+          <% } else if (workflow && workflow.pass === false) { %>
+            <span class="tag bad">FAIL</span>
+          <% } %>
+        </div>
+        <div class="muted"><%= project_id %></div>
+
+        <p>
+          <a href="/projects/<%= project_id %>/evidence.zip">
+            <button type="button">Download Evidence Pack (ZIP)</button>
+          </a>
+        </p>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <h3>3) Run Workflow (LangGraph)</h3>
+      <form method="post" action="/workflow/run" class="btnrow">
+        <div style="flex:2; min-width:280px;">
+          <label>Project ID</label>
+          <input type="text" name="project_id" value="<%= project_id || '' %>" placeholder="required" />
+        </div>
+        <div style="flex:3; min-width:320px;">
+          <label>Workflow request</label>
+          <input type="text" name="wf_request_text" value="basic system snapshot" />
+        </div>
+        <div style="min-width:140px;">
+          <label>Timeout (sec)</label>
+          <input type="number" name="timeout_s" value="60" min="5" max="600" />
+        </div>
+        <div style="min-width:140px;">
+          <label>Max retries</label>
+          <input type="number" name="max_retries" value="2" min="0" max="5" />
+        </div>
+        <div>
+          <button type="submit">Run Workflow</button>
+        </div>
+      </form>
+
+      <% if (workflow) { %>
+        <h4>Workflow Summary</h4>
+        <pre><%= JSON.stringify(workflow, null, 2) %></pre>
+      <% } else { %>
+        <div class="muted">Run workflow to see summary here.</div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h3>Project State (latest)</h3>
+    <% if (project) { %>
+      <pre><%= JSON.stringify(project, null, 2) %></pre>
+    <% } else { %>
+      <div class="muted">Create or load a project to view state.</div>
+    <% } %>
+  </div>
+</body>
+</html>
