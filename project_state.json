@@ -1,0 +1,155 @@
+{
+  "project_id": "cab833ec-133b-4ba1-8ef4-01c3f97a21c7",
+  "project_type": "generic",
+  "targets": [
+    {
+      "id": "t1",
+      "host": "local",
+      "notes": null
+    }
+  ],
+  "milestones": [
+    "M1"
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "status": "todo",
+      "title": "Execute command via subagent",
+      "detail": "evidence pack test"
+    }
+  ],
+  "runs": [],
+  "tests": [],
+  "errors": [],
+  "master_calls": [],
+  "timestamps": {
+    "started": "2026-03-02T02:43:57+0000",
+    "updated": "2026-03-02T02:43:57+0000",
+    "completed": null
+  },
+  "workflow_runs": [
+    {
+      "wf_id": "c088b2df-e326-4b2e-bd15-56711a2f367a",
+      "request_text": "basic system snapshot",
+      "plan": "M1: Gather basic system facts\nM2: Collect service/network snapshot\nM3: Validate outputs (exit_code)\nUser request: basic system snapshot",
+      "commands": [
+        "uname -a",
+        "uptime",
+        "df -h",
+        "ss -lntp"
+      ],
+      "dispatch_runs": [
+        {
+          "step": 1,
+          "command": "uname -a",
+          "exit_code": 0,
+          "stdout": "Linux fcf19f25e35a 6.8.0-101-generic #101~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Feb 11 13:19:54 UTC  x86_64 GNU/Linux\n",
+          "stderr": "",
+          "evidence_refs": [
+            "/data/evidence/58f4818c-44c4-47bb-bb50-dab4102a3b06_run_stdout.log",
+            "/data/evidence/58f4818c-44c4-47bb-bb50-dab4102a3b06_run_stderr.log"
+          ],
+          "run_id": "58f4818c-44c4-47bb-bb50-dab4102a3b06"
+        },
+        {
+          "step": 2,
+          "command": "uptime",
+          "exit_code": 0,
+          "stdout": " 02:43:57 up 17 min,  0 users,  load average: 0.29, 0.13, 0.11\n",
+          "stderr": "",
+          "evidence_refs": [
+            "/data/evidence/612cad65-6704-4b65-91c4-e0600cf7f820_run_stdout.log",
+            "/data/evidence/612cad65-6704-4b65-91c4-e0600cf7f820_run_stderr.log"
+          ],
+          "run_id": "612cad65-6704-4b65-91c4-e0600cf7f820"
+        },
+        {
+          "step": 3,
+          "command": "df -h",
+          "exit_code": 0,
+          "stdout": "Filesystem      Size  Used Avail Use% Mounted on\noverlay          49G   14G   33G  30% /\ntmpfs            64M     0   64M   0% /dev\nshm              64M     0   64M   0% /dev/shm\n/dev/sda3        49G   14G   33G  30% /data\ntmpfs           3.9G     0  3.9G   0% /proc/acpi\ntmpfs           3.9G     0  3.9G   0% /proc/asound\ntmpfs           3.9G     0  3.9G   0% /proc/scsi\ntmpfs           3.9G     0  3.9G   0% /sys/firmware\n",
+          "stderr": "",
+          "evidence_refs": [
+            "/data/evidence/54e926a4-21f0-4455-87dc-e470b5fbe25f_run_stdout.log",
+            "/data/evidence/54e926a4-21f0-4455-87dc-e470b5fbe25f_run_stderr.log"
+          ],
+          "run_id": "54e926a4-21f0-4455-87dc-e470b5fbe25f"
+        },
+        {
+          "step": 4,
+          "command": "ss -lntp",
+          "exit_code": 0,
+          "stdout": "State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                         \nLISTEN 0      4096      127.0.0.11:38459      0.0.0.0:*                                   \nLISTEN 0      2048         0.0.0.0:55123      0.0.0.0:*    users:((\"uvicorn\",pid=1,fd=11))\n",
+          "stderr": "",
+          "evidence_refs": [
+            "/data/evidence/5f14cdb4-8566-4a1a-8ca6-c158a61fa80e_run_stdout.log",
+            "/data/evidence/5f14cdb4-8566-4a1a-8ca6-c158a61fa80e_run_stderr.log"
+          ],
+          "run_id": "5f14cdb4-8566-4a1a-8ca6-c158a61fa80e"
+        }
+      ],
+      "validate": {
+        "pass": true,
+        "failed_steps": []
+      },
+      "diagnosis": {
+        "kind": "unknown",
+        "missing_cmds": []
+      },
+      "fix_commands": [],
+      "fix_runs": null,
+      "retry_count": 0,
+      "step_log": [
+        {
+          "node": "Intake",
+          "ok": true
+        },
+        {
+          "node": "Plan",
+          "ok": true
+        },
+        {
+          "node": "GenerateArtifacts",
+          "ok": true,
+          "commands": [
+            "uname -a",
+            "uptime",
+            "df -h",
+            "ss -lntp"
+          ]
+        },
+        {
+          "node": "Dispatch",
+          "ok": true,
+          "steps": 4,
+          "retry": 0
+        },
+        {
+          "node": "Collect",
+          "ok": true,
+          "runs": 4
+        },
+        {
+          "node": "Validate",
+          "ok": true,
+          "failed": 0
+        },
+        {
+          "node": "Diagnose",
+          "ok": true,
+          "diagnosis": {
+            "kind": "unknown",
+            "missing_cmds": []
+          }
+        },
+        {
+          "node": "Decide",
+          "ok": true,
+          "branch": "done"
+        }
+      ],
+      "error": null
+    }
+  ]
+}

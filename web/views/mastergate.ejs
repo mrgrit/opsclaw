@@ -44,6 +44,29 @@
 </head>
 <body>
   <h1>MasterGate</h1>
+
+  <div class="summary-card" style="margin: 10px 0 14px;">
+    <div class="summary-row" style="align-items:flex-end;">
+      <div class="grow" style="min-width:260px;">
+        <label>API Token (stored locally)</label>
+        <input id="authToken" type="text" placeholder="x-opsclaw-token" />
+      </div>
+      <div style="min-width:180px;">
+        <label>Actor (optional)</label>
+        <input id="authActor" type="text" placeholder="e.g. admin" />
+      </div>
+      <div>
+        <button type="button" id="authSave">Save</button>
+        <button type="button" id="authClear">Clear</button>
+      </div>
+      <div class="muted small" id="authStatus" style="min-width:220px;"></div>
+    </div>
+    <div class="muted small" style="margin-top:6px;">
+      When tokens are enabled on the API, the web UI must send <code>x-opsclaw-token</code>.
+      This page stores it in <b>localStorage</b> and also sets a cookie so server-rendered forms work.
+    </div>
+  </div>
+
   <p class="muted">API: <%= api %> | <a href="/">Home</a></p>
 
   <div class="statusbar">
@@ -314,6 +337,52 @@
 
   <script>
     (function(){
+
+      // ---- M3-2 UI auth: token/actor stored in localStorage + cookie ----
+      function setCookie(name, value){
+        const v = encodeURIComponent(value || "");
+        // 7 days
+        document.cookie = `${name}=${v}; Path=/; Max-Age=${7*24*3600}`;
+      }
+      function delCookie(name){
+        document.cookie = `${name}=; Path=/; Max-Age=0`;
+      }
+      const tokenEl = document.getElementById("authToken");
+      const actorEl = document.getElementById("authActor");
+      const saveBtn = document.getElementById("authSave");
+      const clearBtn = document.getElementById("authClear");
+      const statusEl = document.getElementById("authStatus");
+
+      function loadAuth(){
+        const t = localStorage.getItem("opsclaw_token") || "";
+        const a = localStorage.getItem("opsclaw_actor") || "";
+        if (tokenEl) tokenEl.value = t;
+        if (actorEl) actorEl.value = a;
+        if (statusEl) statusEl.textContent = t ? "token: set" : "token: empty";
+      }
+      function saveAuth(){
+        const t = (tokenEl && tokenEl.value) ? tokenEl.value.trim() : "";
+        const a = (actorEl && actorEl.value) ? actorEl.value.trim() : "";
+        localStorage.setItem("opsclaw_token", t);
+        localStorage.setItem("opsclaw_actor", a);
+        setCookie("opsclaw_token", t);
+        setCookie("opsclaw_actor", a);
+        if (statusEl) statusEl.textContent = t ? "token: set" : "token: empty";
+        // reload to ensure server-rendered POSTs include cookie
+        location.reload();
+      }
+      function clearAuth(){
+        localStorage.removeItem("opsclaw_token");
+        localStorage.removeItem("opsclaw_actor");
+        delCookie("opsclaw_token");
+        delCookie("opsclaw_actor");
+        if (statusEl) statusEl.textContent = "token: empty";
+        location.reload();
+      }
+      if (saveBtn) saveBtn.addEventListener("click", saveAuth);
+      if (clearBtn) clearBtn.addEventListener("click", clearAuth);
+      loadAuth();
+
       const list = document.getElementById("approvalList");
       if (!list) return;
 
@@ -421,8 +490,15 @@
         };
 
         const r = await fetch("/approvals/bulk_decide", {
+          headers: (function(){
+            const h = {"content-type":"application/json"};
+            const t = (localStorage.getItem("opsclaw_token")||"").trim();
+            const a = (localStorage.getItem("opsclaw_actor")||"").trim();
+            if (t) h["x-opsclaw-token"] = t;
+            if (a) h["x-opsclaw-actor"] = a;
+            return h;
+          })(),
           method: "POST",
-          headers: {"content-type":"application/json"},
           body: JSON.stringify(payload),
         });
 
