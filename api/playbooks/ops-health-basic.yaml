@@ -1,0 +1,29 @@
+id: ops-health-basic
+name: Ops Health Check (basic)
+version: 1
+policy_profile: enterprise-default
+execution_profile: container-safe
+default_timeout_s: 60
+
+steps:
+  - id: snapshot
+    kind: commands
+    commands:
+      - uname -a
+      - date; uptime
+      - df -h
+      - free -m || true
+  - id: network
+    kind: commands
+    commands:
+      - ss -lntp || netstat -lntp || true
+      - ip a || true
+
+validate:
+  pass_if:
+    - rule: exit_code_all_zero
+
+evidence:
+  include:
+    - audit
+    - evidence_files

@@ -1,0 +1,44 @@
+id: suricata-inline-install
+name: Suricata Inline Install (draft)
+version: 1
+policy_profile: enterprise-default
+execution_profile: remote-install
+default_timeout_s: 120
+
+inputs:
+  - name: target_host
+    required: true
+  - name: iface_in
+    required: true
+  - name: iface_out
+    required: true
+
+steps:
+  - id: precheck
+    kind: commands
+    commands:
+      - "ip link show {{iface_in}}"
+      - "ip link show {{iface_out}}"
+      - "uname -a"
+      - "cat /etc/os-release || true"
+
+  - id: install_suricata
+    kind: commands
+    commands:
+      - "echo TODO: install suricata here"
+      - "echo In next patch: allow sudo for remote-install profile"
+
+  - id: validate
+    kind: commands
+    commands:
+      - "which suricata || true"
+      - "suricata --build-info || true"
+
+validate:
+  pass_if:
+    - rule: at_least_one_command_succeeded
+
+evidence:
+  include:
+    - audit
+    - evidence_files

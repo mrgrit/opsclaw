@@ -1,12 +1,9 @@
-from __future__ import annotations
-
 from datetime import datetime
 import os, uuid, re
-from typing import Any, Dict, List, Optional, Literal, Tuple
-
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional, Literal
 
 from state_store import ensure_dirs, init_project, load_json, project_path, append_run, update_project, save_json
 from a2a import run_script
@@ -16,9 +13,8 @@ from master_clients import call_master, Provider
 from workflows.basic_graph import build_graph
 from evidence_pack import build_evidence_zip
 
-# ============================================================
-# Paths / Env
-# ============================================================
+from targets_store import list_targets, get_target, upsert_target, delete_target
+
 STATE_DIR = os.getenv("STATE_DIR", "/data/state")
 ARTIFACT_DIR = os.getenv("ARTIFACT_DIR", "/data/artifacts")
 EVIDENCE_DIR = os.getenv("EVIDENCE_DIR", "/data/evidence")
@@ -29,103 +25,12 @@ MASTERGATE_PROFILE = os.getenv("MASTERGATE_PROFILE", "enterprise-default")
 APPROVAL_DIR = os.path.join(STATE_DIR, "_approvals")
 ensure_dirs(STATE_DIR, ARTIFACT_DIR, EVIDENCE_DIR, AUDIT_DIR, APPROVAL_DIR)
 
-app = FastAPI(title="OpsClaw Manager API", version="0.7.2")
+app = FastAPI(title="OpsClaw Manager API", version="0.7.0")
 
-# ============================================================
-# M3-2: Minimal RBAC/Auth + audit enrichment
-# - If no tokens configured: allow everything (backward compatible)
-# - If any token configured: require header "x-opsclaw-token"
-# Roles: viewer < operator < approver < admin
-# ============================================================
-
-ROLE_ORDER = {"viewer": 0, "operator": 1, "approver": 2, "admin": 3}
-
-def _token_role_map() -> Dict[str, str]:
-    m: Dict[str, str] = {}
-    for role, envk in [
-        ("admin", "OPSCLAW_ADMIN_TOKEN"),
-        ("approver", "OPSCLAW_APPROVER_TOKEN"),
-        ("operator", "OPSCLAW_OPERATOR_TOKEN"),
-        ("viewer", "OPSCLAW_VIEWER_TOKEN"),
-    ]:
-        tok = (os.getenv(envk, "") or "").strip()
-        if tok:
-            m[tok] = role
-    return m
-
-def _auth_enabled() -> bool:
-    return bool(_token_role_map())
-
-def authz(request: Request, min_role: str) -> Dict[str, Any]:
-    """
-    Returns {"role":..., "actor":...}
-    Header:
-      - x-opsclaw-token: required if auth enabled
-      - x-opsclaw-actor: optional display name for audit (fallback: role)
-    """
-    if not _auth_enabled():
-        # No tokens configured -> backward compatible
-        actor = (request.headers.get("x-opsclaw-actor") or "admin").strip() or "admin"
-        return {"role": "admin", "actor": actor}
-
-    token = (request.headers.get("x-opsclaw-token") or "").strip()
-    if not token:
-        raise HTTPException(401, "missing x-opsclaw-token")
-    role = _token_role_map().get(token)
-    if not role:
-        raise HTTPException(403, "invalid token")
-    if ROLE_ORDER[role] < ROLE_ORDER[min_role]:
-        raise HTTPException(403, f"insufficient role: need {min_role}, have {role}")
-
-    actor = (request.headers.get("x-opsclaw-actor") or role).strip() or role
-    return {"role": role, "actor": actor}
-
-def append_audit_ex(request: Request, event: Dict[str, Any], auth: Optional[Dict[str, Any]] = None) -> None:
-    e = dict(event)
-    meta = dict(e.get("meta") or {})
-    try:
-        meta.setdefault("ip", request.client.host if request.client else None)
-    except Exception:
-        meta.setdefault("ip", None)
-    meta.setdefault("user_agent", request.headers.get("user-agent"))
-    if auth:
-        meta.setdefault("role", auth.get("role"))
-        meta.setdefault("actor", auth.get("actor"))
-    e["meta"] = meta
-    append_audit(AUDIT_DIR, e)
-
-# ============================================================
-# Common helpers
-# ============================================================
-
-def _iso_now() -> str:
-    return datetime.utcnow().isoformat() + "Z"
-
-def _ensure_archive_fields(obj: Dict[str, Any]) -> None:
-    obj.setdefault("archived_at", None)     # ISO string or None
-    obj.setdefault("archived_by", None)     # actor or None
-    obj.setdefault("archived_reason", "")   # str
-
-def _parse_iso(ts: Optional[str]) -> Optional[datetime]:
-    if not ts:
-        return None
-    try:
-        if ts.endswith("Z"):
-            return datetime.fromisoformat(ts[:-1])
-        return datetime.fromisoformat(ts)
-    except Exception:
-        return None
-
-def _ensure_created_at(obj: Dict[str, Any]) -> None:
-    if not obj.get("created_at"):
-        obj["created_at"] = _iso_now()
-    _ensure_archive_fields(obj)
-
-# ============================================================
-# M3-3 hardening: container-safe + placeholder handling
-# ============================================================
+# --- M3-3 hardening: container-safe + placeholder handling ---
 PLACEHOLDER_RE = re.compile(r"<[^>]+>")  # e.g. <service_name>, <port>
 
+# denylist: container/agent 환경에서 거의 항상 실패/위험
 DENY_SUBSTR = [
     "systemctl", "journalctl", "service ",
     "sudo ", "reboot", "shutdown", "poweroff",
@@ -141,11 +46,10 @@ def _is_denied_command(cmd: str) -> Optional[str]:
 
 def sanitize_master_reply_json(obj: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Normalize master reply JSON and enforce container-safe verification_commands:
     - Drop commands with placeholders (<...>)
     - Drop denylisted commands (systemctl/journalctl/etc.)
-    - If commands become empty, inject safe defaults
-    - Add next_questions and dropped_commands for visibility
+    - If commands become empty, provide safe fallback commands
+    - Promote questions into next_questions
     """
     if not isinstance(obj, dict):
         return obj
@@ -161,15 +65,21 @@ def sanitize_master_reply_json(obj: Dict[str, Any]) -> Dict[str, Any]:
         cmd = (raw or "").strip()
         if not cmd:
             continue
+
+        # placeholder guard
         if PLACEHOLDER_RE.search(cmd):
             dropped.append({"command": cmd, "reason": "placeholder detected"})
             continue
+
+        # denylist guard
         why = _is_denied_command(cmd)
         if why:
             dropped.append({"command": cmd, "reason": why})
             continue
+
         safe.append(cmd)
 
+    # ensure next_questions
     nq = obj.get("next_questions") or []
     if not isinstance(nq, list):
         nq = []
@@ -186,6 +96,7 @@ def sanitize_master_reply_json(obj: Dict[str, Any]) -> Dict[str, Any]:
         add = f"[M3-3 sanitize] dropped {len(dropped)} cmds (examples: {dropped_txt})"
         obj["notes"] = (notes + "\n" + add).strip() if notes else add
 
+    # if safe becomes empty, inject container-safe defaults
     if not safe:
         safe = [
             "uname -a",
@@ -200,13 +111,15 @@ def sanitize_master_reply_json(obj: Dict[str, Any]) -> Dict[str, Any]:
 
     obj["verification_commands"] = safe
     obj["next_questions"] = nq
-    obj["dropped_commands"] = dropped
+    obj["dropped_commands"] = dropped  # debug visibility (optional)
     return obj
 
-def sanitize_commands_list(commands: List[str]) -> Tuple[List[str], List[Dict[str, str]]]:
+
+def sanitize_commands_list(commands: List[str]) -> (List[str], List[Dict[str, str]]):
     """
-    Apply the same guards to a raw list of commands (used by apply_feedback*).
-    Returns (safe, dropped).
+    Apply same guards to a raw command list:
+    - drop placeholders (<...>)
+    - drop denylisted tokens (systemctl/journalctl/etc.)
     """
     safe: List[str] = []
     dropped: List[Dict[str, str]] = []
@@ -226,13 +139,19 @@ def sanitize_commands_list(commands: List[str]) -> Tuple[List[str], List[Dict[st
 
     return safe, dropped
 
-# ============================================================
-# Models
-# ============================================================
+
+# ---------------- Models ----------------
 class Target(BaseModel):
     id: str
     host: str = "local"
     notes: Optional[str] = None
+
+class TargetReg(BaseModel):
+    id: str
+    base_url: str  # e.g. http://192.168.24.176:55123
+    name: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+    notes: str = ""
 
 class CreateProjectReq(BaseModel):
     project_type: str = "generic"
@@ -265,20 +184,18 @@ class ApplyFeedbackReq(BaseModel):
     max_commands: int = 6
     timeout_s: int = 60
     stop_on_fail: bool = True
+    target_id: str = "local-agent-1"
 
 class WorkflowReq(BaseModel):
     request_text: str = "basic health check"
     timeout_s: int = 60
     max_retries: int = 2
 
-# ============================================================
-# Approval helpers
-# ============================================================
+# ---------------- Approval Helpers ----------------
 def _approval_path(approval_id: str) -> str:
     return os.path.join(APPROVAL_DIR, f"{approval_id}.json")
 
 def _save_approval(obj: Dict[str, Any]) -> Dict[str, Any]:
-    _ensure_created_at(obj)
     save_json(_approval_path(obj["approval_id"]), obj)
     return obj
 
@@ -286,13 +203,9 @@ def _load_approval(approval_id: str) -> Dict[str, Any]:
     p = _approval_path(approval_id)
     if not os.path.exists(p):
         raise HTTPException(404, "approval not found")
-    obj = load_json(p, {})
-    _ensure_created_at(obj)
-    return obj
+    return load_json(p, {})
 
-# ============================================================
-# ApplyFeedback command safety filter
-# ============================================================
+# ---------------- ApplyFeedback helpers ----------------
 _DENY = [
     re.compile(r"rm\s+-rf\s+/", re.I),
     re.compile(r"\bmkfs\.", re.I),
@@ -300,7 +213,7 @@ _DENY = [
     re.compile(r":\(\)\s*\{\s*:\s*\|\s*:\s*;\s*\}\s*;:", re.I),
 ]
 
-def _is_safe_cmd(cmd: str) -> Tuple[bool, str]:
+def _is_safe_cmd(cmd: str) -> (bool, str):
     c = cmd.strip()
     if not c:
         return False, "empty"
@@ -311,12 +224,12 @@ def _is_safe_cmd(cmd: str) -> Tuple[bool, str]:
             return False, f"blocked({p.pattern})"
     return True, ""
 
-# ============================================================
-# M3-3: Master reply schema + parser stabilization
-# ============================================================
+
+# --- M3-3: Master reply JSON schema + parser stabilization ---
 MASTER_SCHEMA_VERSION = "m3-3.v1"
 
 def _master_reply_schema_text() -> str:
+    # Keep schema small + deterministic to improve compliance.
     return (
         '{\n'
         '  "verification_commands": ["cmd1", "cmd2", "..."],\n'
@@ -348,15 +261,19 @@ def _build_master_prompt(user_prompt: str) -> str:
     )
 
 def _extract_first_json_object(text: str) -> str:
+    import re
     t = (text or "").strip()
     if not t:
         return ""
+    # strip ```json fences if present
     t = re.sub(r"^```(?:json)?\s*", "", t, flags=re.I)
     t = re.sub(r"```\s*$", "", t).strip()
 
+    # If pure JSON, return directly
     if t.startswith("{") and t.endswith("}"):
         return t
 
+    # Find first balanced {...} block
     start = t.find("{")
     if start < 0:
         return ""
@@ -394,6 +311,7 @@ def _normalize_master_json(obj: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     if out["risk"] not in ("low", "med", "high"):
+        # map common variants
         r = out["risk"]
         if r in ("medium", "mid", "moderate"):
             out["risk"] = "med"
@@ -406,7 +324,7 @@ def _normalize_master_json(obj: Dict[str, Any]) -> Dict[str, Any]:
 
     return out
 
-def _parse_master_reply_json(text: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def _parse_master_reply_json(text: str) -> (Optional[Dict[str, Any]], Optional[str]):
     import json
     blob = _extract_first_json_object(text)
     if not blob:
@@ -437,19 +355,18 @@ def _repair_prompt(bad_text: str, err: str) -> str:
 
 def _extract_verification_commands(master_reply: Any) -> List[str]:
     """
-    Robust extractor:
-    - dict JSON form: verification_commands/commands/checks
-    - dict wrapper with "text"/"content" containing JSON or fenced blocks
-    - string fallback: fenced bash/sh blocks, numbered lists
+    Robust extractor (v2):
+    - Handles dict replies with .text containing JSON
+    - Accepts key variants: verification_commands / "verification commands" / "verification-commands" / commands / checks
+    - Parses fenced blocks, numbered/bulleted lists as fallback
     """
-    import json
+    import json, re
 
     def uniq(seq):
-        seen=set()
-        out=[]
+        seen=set(); out=[]
         for x in seq:
             x=str(x).strip()
-            if not x:
+            if not x: 
                 continue
             if x not in seen:
                 out.append(x); seen.add(x)
@@ -458,72 +375,77 @@ def _extract_verification_commands(master_reply: Any) -> List[str]:
     def normalize_key(k: str) -> str:
         return re.sub(r"[^a-z0-9]+", "_", (k or "").strip().lower()).strip("_")
 
-    def pick_from_dict(d: dict) -> List[str]:
+    def pick_from_dict(d: dict) -> list[str]:
+        # direct known keys
         for k in list(d.keys()):
             nk = normalize_key(k)
             if nk in ("verification_commands","commands","command_list","checks","verification"):
-                v = d.get(k)
+                v=d.get(k)
                 if isinstance(v, list):
                     return [str(x).strip() for x in v if str(x).strip()]
         return []
 
-    def try_json_text(text: str) -> List[str]:
+    def try_json_text(text: str) -> list[str]:
         text=(text or "").strip()
         if not text:
             return []
+        # try fenced json
         for block in re.findall(r"```json\s*(\{.*?\})\s*```", text, flags=re.S|re.I):
             try:
                 obj=json.loads(block)
                 got=pick_from_dict(obj)
-                if got:
-                    return got
+                if got: return got
             except Exception:
                 pass
+        # try first {...}
         m=re.search(r"(\{.*\})", text, flags=re.S)
         if m:
             cand=m.group(1)
             try:
                 obj=json.loads(cand)
                 got=pick_from_dict(obj)
-                if got:
-                    return got
+                if got: return got
             except Exception:
                 pass
+        # sometimes it is already a pure json string without extra
         try:
             obj=json.loads(text)
             if isinstance(obj, dict):
                 got=pick_from_dict(obj)
-                if got:
-                    return got
+                if got: return got
         except Exception:
             pass
         return []
 
-    # dict reply
+    cmds: list[str] = []
+
+    # 1) dict reply
     if isinstance(master_reply, dict):
         cmds = pick_from_dict(master_reply)
-        if cmds:
+        if cmds: 
             return uniq(cmds)
+
+        # common wrapper: {"text": "...json..."}
         txt = str(master_reply.get("text") or master_reply.get("content") or "")
         cmds = try_json_text(txt)
         if cmds:
             return uniq(cmds)
+
+        # nested wrappers
         for k in ("raw","message","response","result","data"):
             v = master_reply.get(k)
             if isinstance(v, dict):
                 cmds = pick_from_dict(v)
-                if cmds:
-                    return uniq(cmds)
+                if cmds: return uniq(cmds)
                 t = str(v.get("text") or v.get("content") or "")
                 cmds = try_json_text(t)
-                if cmds:
-                    return uniq(cmds)
+                if cmds: return uniq(cmds)
 
-    # string reply
+    # 2) string reply
     text = master_reply if isinstance(master_reply, str) else str(master_reply or "")
     text = text.strip()
 
-    cmds: List[str] = []
+    # bash/sh fenced blocks
     for block in re.findall(r"```(?:bash|sh)?\s*\n(.*?)```", text, flags=re.S|re.I):
         for line in block.splitlines():
             line=line.strip()
@@ -532,31 +454,86 @@ def _extract_verification_commands(master_reply: Any) -> List[str]:
     if cmds:
         return uniq(cmds)
 
+    # json in text
     cmds = try_json_text(text)
     if cmds:
         return uniq(cmds)
 
+    # numbered/bulleted list fallback
     for line in text.splitlines():
         s=line.strip()
-        if not s:
+        if not s: 
             continue
         s=re.sub(r"^(\d+[\.\)]\s+)", "", s)
         s=re.sub(r"^[-*]\s+", "", s)
-        if re.match(r"^(docker|ss|netstat|ps|df|free|cat|grep|tail|head|curl|ip|ping|getent|test)\b", s):
+        if re.match(r"^(docker|ss|netstat|journalctl|ps|df|free|cat|grep|tail|head|curl|ip|ping|getent|test)\b", s):
             cmds.append(s)
 
     return uniq(cmds)
 
-# ============================================================
-# Core
-# ============================================================
+def resolve_subagent_url(target_id: str) -> str:
+    # target_id 없으면 기본 로컬 subagent
+    if not target_id:
+        return SUBAGENT_URL
+
+    # local-agent-1 같은 로컬 타겟이면 기본 subagent
+    if target_id in ("local-agent-1", "local", "localhost"):
+        return SUBAGENT_URL
+
+    t = get_target(target_id)
+    if not t:
+        raise HTTPException(404, f"target not found: {target_id}")
+
+    base = (t.get("base_url") or "").strip().rstrip("/")
+    if not base:
+        raise HTTPException(400, f"target base_url is empty: {target_id}")
+
+    return base
+
+# ---------------- Core ----------------
 @app.get("/health")
 def health():
     return {"ok": True, "subagent": SUBAGENT_URL}
 
 # ============================================================
-# Projects
+# M3-4.1: Targets Registry
 # ============================================================
+@app.get("/targets")
+def api_list_targets():
+    return {"items": list_targets()}
+
+@app.get("/targets/{target_id}")
+def api_get_target(target_id: str):
+    t = get_target(target_id)
+    if not t:
+        raise HTTPException(404, "target not found")
+    return t
+
+@app.post("/targets")
+def api_upsert_target(req: TargetReg):
+    try:
+        t = upsert_target(req.model_dump())
+        append_audit(AUDIT_DIR, {
+            "type": "TARGET_UPSERT",
+            "target_id": t.get("id"),
+            "base_url": t.get("base_url"),
+        })
+        return t
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+@app.delete("/targets/{target_id}")
+def api_delete_target(target_id: str):
+    ok = delete_target(target_id)
+    if not ok:
+        raise HTTPException(404, "target not found")
+    append_audit(AUDIT_DIR, {
+        "type": "TARGET_DELETE",
+        "target_id": target_id,
+    })
+    return {"ok": True}
+
+# ---------- Projects ----------
 @app.post("/projects")
 def create_project(req: CreateProjectReq):
     project_id = str(uuid.uuid4())
@@ -568,7 +545,8 @@ def create_project(req: CreateProjectReq):
 
 @app.get("/projects/{project_id}")
 def get_project(project_id: str):
-    return load_json(project_path(STATE_DIR, project_id), {})
+    p = project_path(STATE_DIR, project_id)
+    return load_json(p, {})
 
 @app.post("/projects/{project_id}/run")
 def run_project_command(project_id: str, req: RunReq):
@@ -581,7 +559,10 @@ def run_project_command(project_id: str, req: RunReq):
         "approval_required": req.approval_required,
         "evidence_requests": ["uname", "uptime", "df", "ss_listen"],
     }
-    result = run_script(SUBAGENT_URL, run_req, timeout_s=req.timeout_s + 20)
+    #subagent_url = resolve_subagent_url(req.target_id)
+    #result = run_script(subagent_url, run_req, timeout_s=req.timeout_s + 20)
+    subagent_url = resolve_subagent_url(getattr(req, "target_id", "") or "local-agent-1")
+    result = run_script(subagent_url, run_req, timeout_s=req.timeout_s + 20)
 
     run_obj = {
         "run_id": run_id,
@@ -607,7 +588,7 @@ def run_project_command(project_id: str, req: RunReq):
     })
     return {"run": run_obj, "tests": st["tests"][-1]}
 
-# ---------- LangGraph Workflow ----------
+# ---------- LangGraph Workflow (Diagnose/Decide/Fix/Retry) ----------
 @app.post("/projects/{project_id}/run_workflow")
 def run_workflow(project_id: str, req: WorkflowReq):
     st = load_json(project_path(STATE_DIR, project_id), {})
@@ -666,7 +647,8 @@ def run_workflow(project_id: str, req: WorkflowReq):
         "diagnosis": state_out.get("diagnosis"),
     })
 
-    return {
+    # ✅ 요약만 반환(대용량 응답 방지)
+    summary = {
         "wf_id": wf_id,
         "pass": (state_out.get("validate") or {}).get("pass"),
         "retry_count": state_out.get("retry_count"),
@@ -675,6 +657,7 @@ def run_workflow(project_id: str, req: WorkflowReq):
         "error": state_out.get("error"),
         "failed_steps": ((state_out.get("validate") or {}).get("failed_steps") or [])[:10],
     }
+    return summary
 
 # ---------- Evidence Pack ZIP ----------
 def _cleanup_file(path: str):
@@ -698,23 +681,24 @@ def download_evidence_zip(project_id: str, background_tasks: BackgroundTasks):
         out_dir="/tmp",
     )
     background_tasks.add_task(_cleanup_file, zip_path)
+
+    # 브라우저/CLI에 다운로드 파일명 제공
     filename = f"opsclaw_evidence_{project_id}.zip"
     return FileResponse(zip_path, media_type="application/zip", filename=filename)
 
-# ============================================================
-# MasterGate
-# ============================================================
+# ---------- MasterGate scan ----------
 @app.post("/mastergate/scan")
 def mastergate_scan_api(draft_prompt: str, context_snippets: str = ""):
     gr = mastergate_scan(draft_prompt, context_snippets, MASTERGATE_PROFILE)
     return gr.__dict__
 
+# ---------- MasterGate request ----------
 @app.post("/mastergate/request")
 def mastergate_request(req: MasterGateRequest):
     gr = mastergate_scan(req.draft_prompt, req.context_snippets, MASTERGATE_PROFILE)
-    approval_id = str(uuid.uuid4())
 
-    obj: Dict[str, Any] = {
+    approval_id = str(uuid.uuid4())
+    obj = {
         "approval_id": approval_id,
         "title": req.title,
         "policy_profile": MASTERGATE_PROFILE,
@@ -727,10 +711,6 @@ def mastergate_request(req: MasterGateRequest):
         "reason": None,
         "master_provider": None,
         "master_reply": None,
-        "master_reply_json": None,
-        "master_reply_schema_version": None,
-        "master_reply_parse_error": None,
-        "master_error": None,
         "apply_feedback_runs": [],
     }
     _save_approval(obj)
@@ -757,58 +737,40 @@ def mastergate_request(req: MasterGateRequest):
 
     return obj
 
-# ============================================================
-# M3-1: Approval Queue list (archive filters)
-# ============================================================
 @app.get("/approvals")
-def list_approvals(include_archived: bool = False, only_archived: bool = False):
-    items: List[Dict[str, Any]] = []
+def list_approvals():
+    # Summary list only (avoid huge payloads)
+    items = []
     for fn in sorted(os.listdir(APPROVAL_DIR)):
-        if not fn.endswith(".json"):
-            continue
-        path = os.path.join(APPROVAL_DIR, fn)
-        obj = load_json(path, {})
-
-        # backfill created_at from mtime if missing
-        if not obj.get("created_at"):
-            try:
-                from pathlib import Path
-                ts = Path(path).stat().st_mtime
-                obj["created_at"] = datetime.utcfromtimestamp(ts).isoformat() + "Z"
-            except Exception:
-                obj["created_at"] = _iso_now()
-
-        _ensure_archive_fields(obj)
-
-        is_archived = bool(obj.get("archived_at"))
-        if only_archived and not is_archived:
-            continue
-        if (not include_archived) and (not only_archived) and is_archived:
-            continue
-
-        items.append({
-            "approval_id": obj.get("approval_id"),
-            "title": obj.get("title"),
-            "created_at": obj.get("created_at"),
-            "decision_state": obj.get("decision_state"),
-            "gate": {"decision": (obj.get("gate") or {}).get("decision")},
-            "master_provider": obj.get("master_provider"),
-            "has_master_reply": bool(obj.get("master_reply")),
-            "has_apply_feedback_validate": bool(obj.get("apply_feedback_validate")),
-            "archived_at": obj.get("archived_at"),
-            "archived_by": obj.get("archived_by"),
-        })
-
+        if fn.endswith(".json"):
+            path = os.path.join(APPROVAL_DIR, fn)
+            obj = load_json(path, {})
+            if not obj.get('created_at'):
+                try:
+                    from pathlib import Path
+                    import datetime
+                    ts=Path(path).stat().st_mtime
+                    obj['created_at']=datetime.datetime.utcfromtimestamp(ts).isoformat()+'Z'
+                except Exception:
+                    pass
+            items.append({
+                "approval_id": obj.get("approval_id"),
+                "title": obj.get("title"),
+                "created_at": obj.get("created_at"),
+                "decision_state": obj.get("decision_state"),
+                "gate": {"decision": (obj.get("gate") or {}).get("decision")},
+                "master_provider": obj.get("master_provider"),
+                "has_master_reply": bool(obj.get("master_reply")),
+                "has_apply_feedback_validate": bool(obj.get("apply_feedback_validate")),
+            })
     items.reverse()
     return {"items": items[:200]}
-
 @app.get("/approvals/{approval_id}")
 def get_approval(approval_id: str):
     return _load_approval(approval_id)
 
 @app.post("/approvals/{approval_id}/decide")
-def decide_approval(request: Request, approval_id: str, req: MasterGateDecisionReq):
-    auth = authz(request, "approver")
+def decide_approval(approval_id: str, req: MasterGateDecisionReq):
     obj = _load_approval(approval_id)
     if obj.get("decision_state") not in ("PENDING", "AUTO"):
         return obj
@@ -826,164 +788,19 @@ def decide_approval(request: Request, approval_id: str, req: MasterGateDecisionR
 
     _save_approval(obj)
 
-    append_audit_ex(request, {
+    append_audit(AUDIT_DIR, {
         "type": "MASTERGATE_DECISION",
         "approval_id": approval_id,
         "decision": obj["decision_state"],
         "actor": obj["actor"],
         "reason": obj["reason"],
         "prompt_hash": obj.get("gate", {}).get("prompt_hash"),
-    }, auth)
+    })
     return obj
 
-# ============================================================
-# M3-1: Archive / Restore
-# ============================================================
-class ArchiveReq(BaseModel):
-    actor: str = "admin"
-    reason: str = ""
-
-@app.post("/approvals/{approval_id}/archive")
-def archive_approval(request: Request, approval_id: str, req: ArchiveReq):
-    auth = authz(request, "approver")
-    obj = _load_approval(approval_id)
-    if obj.get("archived_at"):
-        return obj
-    obj["archived_at"] = _iso_now()
-    obj["archived_by"] = (req.actor or "admin").strip() or "admin"
-    obj["archived_reason"] = (req.reason or "").strip()
-    _save_approval(obj)
-
-    append_audit_ex(request, {
-        "type": "APPROVAL_ARCHIVE",
-        "approval_id": approval_id,
-        "actor": obj["archived_by"],
-        "reason": obj.get("archived_reason") or "",
-    }, auth)
-    return obj
-
-@app.post("/approvals/{approval_id}/restore")
-def restore_approval(request: Request, approval_id: str, req: ArchiveReq):
-    auth = authz(request, "approver")
-    obj = _load_approval(approval_id)
-    if not obj.get("archived_at"):
-        return obj
-    prev = obj.get("archived_at")
-    obj["archived_at"] = None
-    obj["archived_by"] = None
-    obj["archived_reason"] = ""
-    _save_approval(obj)
-
-    append_audit_ex(request, {
-        "type": "APPROVAL_RESTORE",
-        "approval_id": approval_id,
-        "actor": (req.actor or "admin").strip() or "admin",
-        "prev_archived_at": prev,
-        "reason": (req.reason or "").strip(),
-    }, auth)
-    return obj
-
-# ============================================================
-# M3-1: Retention + Purge (file-based)
-# ============================================================
-RETENTION_PATH = os.path.join(STATE_DIR, "_retention.json")
-
-def _load_retention() -> Dict[str, Any]:
-    obj = load_json(RETENTION_PATH, {})
-    obj.setdefault("enabled", True)
-    obj.setdefault("approvals_purge_after_days", int(os.getenv("APPROVALS_PURGE_AFTER_DAYS", "365")))
-    obj.setdefault("updated_at", _iso_now())
-    return obj
-
-def _save_retention(obj: Dict[str, Any]) -> Dict[str, Any]:
-    obj["updated_at"] = _iso_now()
-    save_json(RETENTION_PATH, obj)
-    return obj
-
-class RetentionUpdateReq(BaseModel):
-    enabled: Optional[bool] = None
-    approvals_purge_after_days: Optional[int] = None
-
-class PurgeReq(BaseModel):
-    dry_run: bool = True
-
-@app.get("/retention")
-def get_retention():
-    return _load_retention()
-
-@app.post("/retention")
-def update_retention(request: Request, req: RetentionUpdateReq):
-    auth = authz(request, "admin")
-    cur = _load_retention()
-    if req.enabled is not None:
-        cur["enabled"] = bool(req.enabled)
-    if req.approvals_purge_after_days is not None:
-        d = int(req.approvals_purge_after_days)
-        if d < 1 or d > 36500:
-            raise HTTPException(400, "approvals_purge_after_days must be 1..36500")
-        cur["approvals_purge_after_days"] = d
-    _save_retention(cur)
-
-    append_audit_ex(request, {
-        "type": "RETENTION_UPDATE",
-        "enabled": cur["enabled"],
-        "approvals_purge_after_days": cur["approvals_purge_after_days"],
-    }, auth)
-    return cur
-
-@app.post("/retention/purge")
-def purge_retention(request: Request, req: PurgeReq):
-    auth = authz(request, "admin")
-    cfg = _load_retention()
-    if not cfg.get("enabled", True):
-        return {"ok": True, "skipped": True, "reason": "retention disabled"}
-
-    days = int(cfg.get("approvals_purge_after_days", 365))
-    cutoff = datetime.utcnow().timestamp() - (days * 86400)
-
-    to_delete = []
-    for fn in os.listdir(APPROVAL_DIR):
-        if not fn.endswith(".json"):
-            continue
-        path = os.path.join(APPROVAL_DIR, fn)
-        obj = load_json(path, {})
-        _ensure_archive_fields(obj)
-        dt = _parse_iso(obj.get("archived_at"))
-        if not dt:
-            continue
-        if dt.timestamp() < cutoff:
-            to_delete.append({
-                "approval_id": obj.get("approval_id"),
-                "archived_at": obj.get("archived_at"),
-                "path": path
-            })
-
-    if req.dry_run:
-        return {"ok": True, "dry_run": True, "purge_after_days": days, "candidates": len(to_delete), "sample": to_delete[:10]}
-
-    deleted = 0
-    for it in to_delete:
-        try:
-            os.remove(it["path"])
-            deleted += 1
-        except Exception:
-            pass
-
-    append_audit_ex(request, {
-        "type": "RETENTION_PURGE",
-        "dry_run": False,
-        "purge_after_days": days,
-        "candidates": len(to_delete),
-        "deleted": deleted,
-    }, auth)
-    return {"ok": True, "dry_run": False, "purge_after_days": days, "candidates": len(to_delete), "deleted": deleted}
-
-# ============================================================
-# Ask Master (M3-3 + M3-3.2)
-# ============================================================
+# ---------- Ask Master ----------
 @app.post("/approvals/{approval_id}/ask_master")
-def ask_master(request: Request, approval_id: str, req: AskMasterReq):
-    auth = authz(request, "approver")
+def ask_master(approval_id: str, req: AskMasterReq):
     obj = _load_approval(approval_id)
 
     if obj.get("decision_state") != "APPROVED":
@@ -1000,21 +817,18 @@ def ask_master(request: Request, approval_id: str, req: AskMasterReq):
     except Exception:
         timeout_s = 60
 
+    # M3-3: schema enforcement prompt
     schema_prompt = _build_master_prompt(final_prompt)
-    max_retry = int(os.getenv("MASTER_JSON_RETRY", "2"))
 
-    last_err: Optional[str] = None
-    last_reply: Any = None
-    parsed: Optional[Dict[str, Any]] = None
-    attempt = 0
+    # M3-3: parse+retry to stabilize JSON
+    max_retry = int(os.getenv("MASTER_JSON_RETRY", "2"))
+    last_err = None
+    last_reply = None
+    parsed = None
 
     for attempt in range(max_retry + 1):
         try:
-            if attempt == 0:
-                prompt_to_send = schema_prompt
-            else:
-                prev_txt = (last_reply or {}).get("text") if isinstance(last_reply, dict) else str(last_reply or "")
-                prompt_to_send = _repair_prompt(prev_txt, str(last_err))
+            prompt_to_send = schema_prompt if attempt == 0 else _repair_prompt((last_reply or {}).get("text") if isinstance(last_reply, dict) else str(last_reply or ""), str(last_err))
             last_reply = call_master(req.provider, prompt_to_send)
         except Exception as e:
             obj["master_provider"] = req.provider
@@ -1025,21 +839,28 @@ def ask_master(request: Request, approval_id: str, req: AskMasterReq):
             obj["master_error"] = str(e)[:2000]
             _save_approval(obj)
 
-            append_audit_ex(request, {
+            append_audit(AUDIT_DIR, {
                 "type": "MASTER_CALL_FAILED",
                 "approval_id": approval_id,
                 "provider": req.provider,
                 "timeout_s": timeout_s,
                 "error": str(e)[:2000],
-            }, auth)
+            })
             raise HTTPException(502, f"Master call failed: {str(e)[:200]}")
 
-        text = str(last_reply.get("text") or "") if isinstance(last_reply, dict) else str(last_reply or "")
+        text = ""
+        if isinstance(last_reply, dict):
+            text = str(last_reply.get("text") or "")
+        else:
+            text = str(last_reply or "")
+
         parsed, last_err = _parse_master_reply_json(text)
         if parsed is not None:
+            # M3-3.2: container-safe + placeholder sanitize
             parsed = sanitize_master_reply_json(parsed)
             break
 
+    # store (always store raw reply; parsed may be None)
     obj["master_provider"] = req.provider
     obj["master_reply"] = last_reply
     obj["master_reply_json"] = parsed
@@ -1048,7 +869,7 @@ def ask_master(request: Request, approval_id: str, req: AskMasterReq):
     obj["master_error"] = None
     _save_approval(obj)
 
-    append_audit_ex(request, {
+    append_audit(AUDIT_DIR, {
         "type": "MASTER_CALL",
         "approval_id": approval_id,
         "provider": req.provider,
@@ -1058,16 +879,14 @@ def ask_master(request: Request, approval_id: str, req: AskMasterReq):
         "parse_ok": parsed is not None,
         "parse_error": last_err,
         "attempts": (attempt + 1),
-    }, auth)
+    })
 
+    # summary
     return {"approval_id": approval_id, "ok": True, "schema_version": MASTER_SCHEMA_VERSION, "parse_ok": parsed is not None, "parse_error": last_err}
 
-# ============================================================
-# Apply Feedback
-# ============================================================
+# ---------- Apply Feedback ----------
 @app.post("/approvals/{approval_id}/apply_feedback")
-def apply_feedback(request: Request, approval_id: str, req: ApplyFeedbackReq):
-    auth = authz(request, "operator")
+def apply_feedback(approval_id: str, req: ApplyFeedbackReq):
     obj = _load_approval(approval_id)
     if obj.get("decision_state") != "APPROVED":
         raise HTTPException(400, "Approval must be APPROVED")
@@ -1078,15 +897,21 @@ def apply_feedback(request: Request, approval_id: str, req: ApplyFeedbackReq):
     if not commands:
         raise HTTPException(400, "No verification commands found in master_reply")
 
+    # M3-3.2: drop placeholders + denylisted cmds before execution
     commands, dropped = sanitize_commands_list(commands)
     if dropped:
-        append_audit_ex(request, {"type": "MASTER_REPLY_COMMANDS_DROPPED", "approval_id": approval_id, "count": len(dropped), "examples": dropped[:5]}, auth)
+        append_audit(AUDIT_DIR, {
+            "type": "MASTER_REPLY_COMMANDS_DROPPED",
+            "approval_id": approval_id,
+            "count": len(dropped),
+            "examples": dropped[:5],
+        })
     if not commands:
         raise HTTPException(400, f"All commands were dropped by container-safe filter. dropped={len(dropped)}")
 
     commands = commands[: max(1, int(req.max_commands))]
 
-    append_audit_ex(request, {"type": "APPLY_FEEDBACK_STARTED", "approval_id": approval_id, "actor": req.actor, "commands": commands}, auth)
+    append_audit(AUDIT_DIR, {"type": "APPLY_FEEDBACK_STARTED", "approval_id": approval_id, "actor": req.actor, "commands": commands})
 
     runs: List[Dict[str, Any]] = obj.get("apply_feedback_runs") or []
     for idx, cmd in enumerate(commands, start=1):
@@ -1096,27 +921,28 @@ def apply_feedback(request: Request, approval_id: str, req: ApplyFeedbackReq):
         if not ok:
             step = {"run_id": run_id, "step": idx, "command": cmd, "blocked": True, "block_reason": reason, "exit_code": 126, "stdout": "", "stderr": f"Blocked by server filter: {reason}", "evidence_refs": []}
             runs.append(step)
-            append_audit_ex(request, {"type": "APPLY_FEEDBACK_STEP", "approval_id": approval_id, "run_id": run_id, "step": idx, "blocked": True, "reason": reason}, auth)
+            append_audit(AUDIT_DIR, {"type": "APPLY_FEEDBACK_STEP", "approval_id": approval_id, "run_id": run_id, "step": idx, "blocked": True, "reason": reason})
             if req.stop_on_fail:
                 break
             continue
 
         run_req = {"run_id": run_id, "target_id": "local-agent-1", "script": cmd, "timeout_s": int(req.timeout_s), "approval_required": False, "evidence_requests": []}
-        result = run_script(SUBAGENT_URL, run_req, timeout_s=int(req.timeout_s) + 20)
+        subagent_url = resolve_subagent_url(req.target_id)
+        result = run_script(subagent_url, run_req, timeout_s=int(req.timeout_s) + 20)
         step = {"run_id": run_id, "step": idx, "command": cmd, "blocked": False, "exit_code": result.get("exit_code"), "stdout": (result.get("stdout", "") or "")[:200000], "stderr": (result.get("stderr", "") or "")[:200000], "evidence_refs": result.get("evidence_refs", [])}
         runs.append(step)
-        append_audit_ex(request, {"type": "APPLY_FEEDBACK_STEP", "approval_id": approval_id, "run_id": run_id, "step": idx, "command": cmd, "exit_code": step["exit_code"]}, auth)
+        append_audit(AUDIT_DIR, {"type": "APPLY_FEEDBACK_STEP", "approval_id": approval_id, "run_id": run_id, "step": idx, "command": cmd, "exit_code": step["exit_code"]})
         if req.stop_on_fail and step["exit_code"] != 0:
             break
 
     obj["apply_feedback_runs"] = runs
     _save_approval(obj)
-    append_audit_ex(request, {"type": "APPLY_FEEDBACK_DONE", "approval_id": approval_id, "actor": req.actor, "steps": len(runs)}, auth)
+    append_audit(AUDIT_DIR, {"type": "APPLY_FEEDBACK_DONE", "approval_id": approval_id, "actor": req.actor, "steps": len(runs)})
     return {"approval_id": approval_id, "apply_feedback_runs": runs[-len(commands):]}
 
-# ============================================================
-# Settings Status (M2)
-# ============================================================
+# ===========================
+# M2-1 Settings Status
+# ===========================
 @app.get("/settings/status")
 def settings_status():
     """
@@ -1136,10 +962,12 @@ def settings_status():
         url = f"{ollama_base}/api/tags"
         ollama["url"] = url
         try:
+            # keep this very small; ollama can be slow
             r = requests.get(url, timeout=2)
             ollama["status_code"] = r.status_code
-            ollama["ok"] = (r.status_code == 200)
-            if r.status_code != 200:
+            if r.status_code == 200:
+                ollama["ok"] = True
+            else:
                 ollama["error"] = (r.text[:200] if r.text else f"HTTP {r.status_code}")
         except Exception as e:
             ollama["error"] = str(e)[:200]
@@ -1150,12 +978,11 @@ def settings_status():
         "ollama": ollama,
     }
 
-# ============================================================
-# ApplyFeedback + Validate (closed loop)
-# ============================================================
+# ===========================
+# M2-2 ApplyFeedback + Validate (closed loop)
+# ===========================
 @app.post("/approvals/{approval_id}/apply_feedback_and_validate")
-def apply_feedback_and_validate(request: Request, approval_id: str, req: ApplyFeedbackReq):
-    auth = authz(request, "operator")
+def apply_feedback_and_validate(approval_id: str, req: ApplyFeedbackReq):
     obj = _load_approval(approval_id)
 
     if obj.get("decision_state") != "APPROVED":
@@ -1167,21 +994,28 @@ def apply_feedback_and_validate(request: Request, approval_id: str, req: ApplyFe
     if not commands:
         raise HTTPException(400, "No verification commands found in master_reply")
 
+    # M3-3.2: drop placeholders + denylisted cmds before execution
     commands, dropped = sanitize_commands_list(commands)
     if dropped:
-        append_audit_ex(request, {"type": "MASTER_REPLY_COMMANDS_DROPPED", "approval_id": approval_id, "count": len(dropped), "examples": dropped[:5]}, auth)
+        append_audit(AUDIT_DIR, {
+            "type": "MASTER_REPLY_COMMANDS_DROPPED",
+            "approval_id": approval_id,
+            "count": len(dropped),
+            "examples": dropped[:5],
+        })
     if not commands:
         raise HTTPException(400, f"All commands were dropped by container-safe filter. dropped={len(dropped)}")
+
     commands = commands[: max(1, int(req.max_commands))]
 
-    append_audit_ex(request, {
+    append_audit(AUDIT_DIR, {
         "type": "APPLY_FEEDBACK_VALIDATE_STARTED",
         "approval_id": approval_id,
         "actor": req.actor,
         "commands": commands,
         "timeout_s": int(req.timeout_s),
         "stop_on_fail": bool(req.stop_on_fail),
-    }, auth)
+    })
 
     runs: List[Dict[str, Any]] = obj.get("apply_feedback_runs") or []
     new_runs: List[Dict[str, Any]] = []
@@ -1191,26 +1025,50 @@ def apply_feedback_and_validate(request: Request, approval_id: str, req: ApplyFe
         run_id = str(uuid.uuid4())
 
         if not ok:
-            step = {"run_id": run_id, "step": idx, "command": cmd, "blocked": True, "block_reason": reason, "exit_code": 126, "stdout": "", "stderr": f"Blocked: {reason}", "evidence_refs": []}
+            step = {
+                "run_id": run_id, "step": idx, "command": cmd,
+                "blocked": True, "block_reason": reason,
+                "exit_code": 126, "stdout": "", "stderr": f"Blocked: {reason}",
+                "evidence_refs": [],
+            }
             runs.append(step); new_runs.append(step)
-            append_audit_ex(request, {"type": "APPLY_FEEDBACK_VALIDATE_STEP", "approval_id": approval_id, "run_id": run_id, "step": idx, "blocked": True, "reason": reason}, auth)
-            if req.stop_on_fail:
-                break
+            append_audit(AUDIT_DIR, {"type": "APPLY_FEEDBACK_VALIDATE_STEP", "approval_id": approval_id, "run_id": run_id, "step": idx, "blocked": True, "reason": reason})
+            if req.stop_on_fail: break
             continue
 
-        run_req = {"run_id": run_id, "target_id": "local-agent-1", "script": cmd, "timeout_s": int(req.timeout_s), "approval_required": False, "evidence_requests": []}
-        result = run_script(SUBAGENT_URL, run_req, timeout_s=int(req.timeout_s) + 20)
+        run_req = {
+            "run_id": run_id,
+            "target_id": "local-agent-1",
+            "script": cmd,
+            "timeout_s": int(req.timeout_s),
+            "approval_required": False,
+            "evidence_requests": [],
+        }
+        subagent_url = resolve_subagent_url(req.target_id)
+        result = run_script(subagent_url, run_req, timeout_s=int(req.timeout_s) + 20)
 
-        step = {"run_id": run_id, "step": idx, "command": cmd, "blocked": False, "exit_code": result.get("exit_code"), "stdout": (result.get("stdout", "") or "")[:200000], "stderr": (result.get("stderr", "") or "")[:200000], "evidence_refs": result.get("evidence_refs", [])}
+        step = {
+            "run_id": run_id, "step": idx, "command": cmd,
+            "blocked": False,
+            "exit_code": result.get("exit_code"),
+            "stdout": (result.get("stdout", "") or "")[:200000],
+            "stderr": (result.get("stderr", "") or "")[:200000],
+            "evidence_refs": result.get("evidence_refs", []),
+        }
         runs.append(step); new_runs.append(step)
-        append_audit_ex(request, {"type": "APPLY_FEEDBACK_VALIDATE_STEP", "approval_id": approval_id, "run_id": run_id, "step": idx, "command": cmd, "exit_code": step["exit_code"]}, auth)
+        append_audit(AUDIT_DIR, {"type": "APPLY_FEEDBACK_VALIDATE_STEP", "approval_id": approval_id, "run_id": run_id, "step": idx, "command": cmd, "exit_code": step["exit_code"]})
         if req.stop_on_fail and step["exit_code"] != 0:
             break
 
     failed_steps = []
     for r in new_runs:
         if r.get("blocked") or r.get("exit_code") != 0:
-            failed_steps.append({"step": r.get("step"), "command": r.get("command"), "exit_code": r.get("exit_code"), "reason": (r.get("block_reason") or (r.get("stderr") or "")[:200] or "failed")})
+            failed_steps.append({
+                "step": r.get("step"),
+                "command": r.get("command"),
+                "exit_code": r.get("exit_code"),
+                "reason": (r.get("block_reason") or (r.get("stderr") or "")[:200] or "failed"),
+            })
 
     validate_obj = {
         "pass": len(failed_steps) == 0,
@@ -1223,7 +1081,7 @@ def apply_feedback_and_validate(request: Request, approval_id: str, req: ApplyFe
     obj["apply_feedback_validate"] = validate_obj
     _save_approval(obj)
 
-    append_audit_ex(request, {"type": "APPLY_FEEDBACK_VALIDATE_DONE", "approval_id": approval_id, "actor": req.actor, "pass": validate_obj["pass"], "failed_count": len(failed_steps)}, auth)
+    append_audit(AUDIT_DIR, {"type": "APPLY_FEEDBACK_VALIDATE_DONE", "approval_id": approval_id, "actor": req.actor, "pass": validate_obj["pass"], "failed_count": len(failed_steps)})
 
     return {"approval_id": approval_id, "pass": validate_obj["pass"], "failed_steps": validate_obj["failed_steps"], "evaluated_count": validate_obj["evaluated_count"]}
 
@@ -1231,10 +1089,11 @@ def apply_feedback_and_validate(request: Request, approval_id: str, req: ApplyFe
 def apply_feedback_and_validate_slash(approval_id: str, req: ApplyFeedbackReq):
     return apply_feedback_and_validate(approval_id, req)
 
-# ---------- Approval Evidence Pack ZIP ----------
+# ---------- Approval Evidence Pack ZIP (M2-3) ----------
 @app.get("/approvals/{approval_id}/evidence.zip")
 def download_approval_evidence_zip(approval_id: str, background_tasks: BackgroundTasks):
     obj = _load_approval(approval_id)
+
     audit_path = os.path.join(AUDIT_DIR, "audit.jsonl")
     from evidence_pack import build_approval_evidence_zip
 
@@ -1246,12 +1105,22 @@ def download_approval_evidence_zip(approval_id: str, background_tasks: Backgroun
         out_dir="/tmp",
     )
     background_tasks.add_task(_cleanup_file, zip_path)
+
     filename = f"opsclaw_approval_{approval_id}.zip"
     return FileResponse(zip_path, media_type="application/zip", filename=filename)
 
-# ============================================================
-# Bulk Decide (single definition)
-# ============================================================
+# ---------- M2-4: ensure created_at for approvals ----------
+def _ensure_created_at(obj: Dict[str, Any]) -> None:
+    if not obj.get("created_at"):
+        obj["created_at"] = datetime.utcnow().isoformat() + "Z"
+
+# ---------- M2-4: wrap _save_approval to inject created_at ----------
+_save_approval_orig = _save_approval
+def _save_approval(obj: Dict[str, Any]) -> None:  # type: ignore
+    _ensure_created_at(obj)
+    _save_approval_orig(obj)
+
+# ---------- M2-6: Bulk Decide ----------
 class BulkDecideReq(BaseModel):
     approval_ids: List[str]
     decision: str  # approve|reject
@@ -1259,8 +1128,7 @@ class BulkDecideReq(BaseModel):
     reason: str = ""
 
 @app.post("/approvals/bulk_decide")
-def approvals_bulk_decide(request: Request, req: BulkDecideReq):
-    auth = authz(request, "approver")
+def approvals_bulk_decide(req: BulkDecideReq):
     decision = (req.decision or "").strip().lower()
     if decision not in ("approve", "reject"):
         raise HTTPException(400, "decision must be approve|reject")
@@ -1275,7 +1143,9 @@ def approvals_bulk_decide(request: Request, req: BulkDecideReq):
     reason = (req.reason or "").strip()
 
     results = []
-    approved = rejected = skipped = 0
+    approved = 0
+    rejected = 0
+    skipped = 0
 
     for aid in ids:
         try:
@@ -1290,9 +1160,14 @@ def approvals_bulk_decide(request: Request, req: BulkDecideReq):
             results.append({"approval_id": aid, "ok": False, "status": st, "error": "not PENDING"})
             continue
 
-        obj["decision_state"] = "APPROVED" if decision == "approve" else "REJECTED"
+        if decision == "approve":
+            obj["decision_state"] = "APPROVED"
+        else:
+            obj["decision_state"] = "REJECTED"
+
         obj["actor"] = actor
         obj["reason"] = reason
+        # keep created_at if exists, don't force-create here
         _save_approval(obj)
 
         results.append({"approval_id": aid, "ok": True, "status": obj["decision_state"]})
@@ -1301,7 +1176,7 @@ def approvals_bulk_decide(request: Request, req: BulkDecideReq):
         else:
             rejected += 1
 
-    append_audit_ex(request, {
+    append_audit(AUDIT_DIR, {
         "type": "MASTERGATE_BULK_DECISION",
         "decision": decision.upper(),
         "actor": actor,
@@ -1310,15 +1185,16 @@ def approvals_bulk_decide(request: Request, req: BulkDecideReq):
         "approved": approved,
         "rejected": rejected,
         "skipped": skipped,
-    }, auth)
+    })
 
     return {
         "ok": True,
         "decision": decision,
         "actor": actor,
         "reason": reason,
+        "results": results,
         "approved": approved,
         "rejected": rejected,
         "skipped": skipped,
-        "results": results,
     }
+# (duplicate BulkDecideReq/approvals_bulk_decide removed in M3-3.2 hardening)

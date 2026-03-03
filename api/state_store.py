@@ -9,10 +9,19 @@ def now_ts() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 
 def load_json(path: str, default: Any):
-    if not os.path.exists(path):
+    try:
+        if not os.path.exists(path):
+            return default
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        # corrupted/empty file → reset to default
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(default, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
         return default
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
 
 def save_json(path: str, data: Any):
     tmp = path + ".tmp"

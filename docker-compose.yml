@@ -49,7 +49,7 @@ services:
       - "host.docker.internal:host-gateway"
 
     volumes:
-      - ops_data:/data
+      - ./data:/data
     depends_on:
       db:
         condition: service_healthy
@@ -65,7 +65,7 @@ services:
       EVIDENCE_DIR: /data/evidence
       MAX_OUTPUT_BYTES: "200000"
     volumes:
-      - ops_data:/data
+      - ./data:/data
     ports:
       - "${SUBAGENT_PORT:-55123}:55123"
 
