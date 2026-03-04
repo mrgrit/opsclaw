@@ -158,13 +158,13 @@ M2 완료 시점에서 MasterGate는 다음을 만족한다.
 ```bash
 sudo docker compose up -d --build
 sudo docker compose ps
-
+```
 
 ### 6.2 API 헬스
 ```bash
 curl -sS http://localhost:8000/health
 curl -sS http://localhost:8000/settings/status | python3 -m json.tool | head
-
+```
 ### 6.3 요청 생성 → 승인 → 마스터 → Apply+Validate → ZIP
 
 대표 흐름:
@@ -175,31 +175,31 @@ AID=$(curl -sS -X POST http://localhost:8000/mastergate/request \
   -H 'content-type: application/json' \
   -d '{"title":"Ask Master","draft_prompt":"Give verification commands.","context_snippets":"","require_approval":true}' \
   | python3 -c 'import sys,json; print(json.load(sys.stdin)["approval_id"])')
-
+```
 # approve
 ```bash
 curl -sS -X POST "http://localhost:8000/approvals/$AID/decide" \
   -H 'content-type: application/json' \
   -d '{"decision":"approve","actor":"admin","reason":"ok"}' | python3 -m json.tool | head
-
+```
 # ask master
 ```bash
 curl -sS -X POST "http://localhost:8000/approvals/$AID/ask_master" \
   -H 'content-type: application/json' \
   -d '{"provider":"ollama"}' | head
-
+```
 # apply+validate
 ```bash
 curl -sS -X POST "http://localhost:8000/approvals/$AID/apply_feedback_and_validate" \
   -H 'content-type: application/json' \
   -d '{"actor":"system","max_commands":5,"timeout_s":60,"stop_on_fail":true}' \
   | python3 -m json.tool | head -n 80
-
+```
 # evidence zip
 ```bash
 curl -L -o "approval_${AID}.zip" "http://localhost:8000/approvals/$AID/evidence.zip"
 unzip -l "approval_${AID}.zip" | head -n 60
-
+```
 ### 6.4 Bulk Decide 테스트
 ```bash
 curl -sS -X POST http://localhost:8000/approvals/bulk_decide \
@@ -208,7 +208,7 @@ curl -sS -X POST http://localhost:8000/approvals/bulk_decide \
   | python3 -m json.tool | head -n 120
 
 sudo docker compose exec api sh -lc 'tail -n 20 /data/audit/audit.jsonl'
-
+```
 ## 7. M2에서 실제로 반영한 안정성 포인트
 
 “한 줄 수정”도 서비스가 죽을 수 있으므로:

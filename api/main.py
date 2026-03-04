@@ -2,6 +2,10 @@ from datetime import datetime
 import os, uuid, re
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.responses import FileResponse
+import playbook_store
+import state_store
+import audit_store
+from workflows import playbook_runner
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional, Literal
 
@@ -162,6 +166,7 @@ class RunReq(BaseModel):
     command: str
     timeout_s: int = 60
     approval_required: bool = False
+    target_id: str = "local-agent-1"
 
 Decision = Literal["approve", "reject"]
 
@@ -551,27 +556,35 @@ def get_project(project_id: str):
 @app.post("/projects/{project_id}/run")
 def run_project_command(project_id: str, req: RunReq):
     run_id = str(uuid.uuid4())
+
+    # target_id는 RunReq에 필드로 넣는 게 정석이지만,
+    # 혹시 아직 모델 수정 전이면 getattr로 안전하게 처리
+    target_id = getattr(req, "target_id", None) or "local-agent-1"
+
+    subagent_url = resolve_subagent_url(target_id)
+
     run_req = {
         "run_id": run_id,
-        "target_id": "local-agent-1",
+        "target_id": target_id,
         "script": req.command,
         "timeout_s": req.timeout_s,
         "approval_required": req.approval_required,
         "evidence_requests": ["uname", "uptime", "df", "ss_listen"],
     }
-    #subagent_url = resolve_subagent_url(req.target_id)
-    #result = run_script(subagent_url, run_req, timeout_s=req.timeout_s + 20)
-    subagent_url = resolve_subagent_url(getattr(req, "target_id", "") or "local-agent-1")
+
     result = run_script(subagent_url, run_req, timeout_s=req.timeout_s + 20)
 
+    # result -> run_obj (state에 쌓는 형태로 정리)
     run_obj = {
         "run_id": run_id,
+        "target_id": target_id,
         "command": req.command,
         "exit_code": result.get("exit_code"),
-        "stdout": (result.get("stdout", "") or "")[:200000],
-        "stderr": (result.get("stderr", "") or "")[:200000],
+        "stdout": (result.get("stdout") or "")[:200000],
+        "stderr": (result.get("stderr") or "")[:200000],
         "evidence_refs": result.get("evidence_refs", []),
     }
+
     append_run(STATE_DIR, project_id, run_obj)
 
     st = load_json(project_path(STATE_DIR, project_id), {})
@@ -583,9 +596,11 @@ def run_project_command(project_id: str, req: RunReq):
         "type": "RUN_COMMAND",
         "project_id": project_id,
         "run_id": run_id,
+        "target_id": target_id,
         "command": req.command,
         "exit_code": run_obj["exit_code"],
     })
+
     return {"run": run_obj, "tests": st["tests"][-1]}
 
 # ---------- LangGraph Workflow (Diagnose/Decide/Fix/Retry) ----------
@@ -1198,3 +1213,55 @@ def approvals_bulk_decide(req: BulkDecideReq):
         "skipped": skipped,
     }
 # (duplicate BulkDecideReq/approvals_bulk_decide removed in M3-3.2 hardening)
+class RunPlaybookReq(BaseModel):
+    playbook_id: str
+    inputs: dict = {}
+    target_id: str = "local-agent-1"
+    timeout_s: int = 60
+    approval_required: bool = False
+
+@app.get("/playbooks")
+def list_playbooks():
+    return playbook_store.list_playbooks()
+
+@app.get("/playbooks/{playbook_id}")
+def get_playbook(playbook_id: str):
+    pb = playbook_store.load_playbook(playbook_id)
+    if not pb:
+        raise HTTPException(status_code=404, detail="playbook not found")
+    return pb
+
+@app.post("/projects/{project_id}/run_playbook")
+def run_playbook(project_id: str, req: RunPlaybookReq):
+    pb = playbook_store.load_playbook(req.playbook_id)
+    if not pb:
+        raise HTTPException(status_code=404, detail="playbook not found")
+
+    subagent_url = resolve_subagent_url(req.target_id)
+
+    # runner 실행 (현재 runner 시그니처에 맞게 호출)
+    result = playbook_runner.run_playbook(
+        playbook=pb,
+        subagent_url=subagent_url,
+        inputs=req.inputs,
+        timeout_s=req.timeout_s,
+        project_id=project_id,
+        audit_dir=AUDIT_DIR,    
+    )
+
+    # state 저장: playbook_runs[] append (state_store에 함수 추가 권장)
+    state_store.append_playbook_run(STATE_DIR, project_id, {
+        "playbook_id": req.playbook_id,
+        "target_id": req.target_id,
+        "result": result,
+    })
+
+    audit_store.append_audit(project_id, {
+        "type": "RUN_PLAYBOOK",
+        "project_id": project_id,
+        "playbook_id": req.playbook_id,
+        "target_id": req.target_id,
+        "ok": bool(result.get("ok", True)),
+    })
+
+    return result
