@@ -1,0 +1,33 @@
+id: ops-health-dag-failfast
+version: 1
+
+defaults:
+  target_id: local-agent-1
+  timeout_s: 60
+  failure_policy: fail_fast
+
+validate:
+  pass_if:
+    - rule: exit_code_all_zero
+
+jobs:
+  local_snapshot:
+    target_id: local-agent-1
+    steps:
+      - id: df
+        run: "df -h"
+
+  remote_snapshot:
+    target_id: remote-1
+    steps:
+      - id: force_fail
+        run: "false"          # 의도적 실패
+      - id: uname
+        run: "uname -a"       # fail_fast면 여기까지 못 옴
+
+  report:
+    depends_on: [local_snapshot, remote_snapshot]
+    target_id: local-agent-1
+    steps:
+      - id: echo
+        run: "echo done"      # fail_fast면 실행되면 안 됨

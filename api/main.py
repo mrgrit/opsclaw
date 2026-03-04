@@ -1246,7 +1246,9 @@ def run_playbook(project_id: str, req: RunPlaybookReq):
         inputs=req.inputs,
         timeout_s=req.timeout_s,
         project_id=project_id,
-        audit_dir=AUDIT_DIR,    
+        audit_dir=AUDIT_DIR,
+        target_id=req.target_id,
+        resolve_subagent_url_fn=resolve_subagent_url,  # NEW
     )
 
     # state 저장: playbook_runs[] append (state_store에 함수 추가 권장)

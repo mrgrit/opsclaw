@@ -1,0 +1,31 @@
+id: ops-health-dag
+version: 1
+
+defaults:
+  target_id: local-agent-1
+  timeout_s: 60
+  failure_policy: fail_fast   # fail_fast | continue
+
+jobs:
+  local_snapshot:
+    target_id: local-agent-1
+    steps:
+      - id: df
+        run: "df -h"
+      - id: mem
+        run: "free -m || true"
+
+  remote_snapshot:
+    target_id: remote-1
+    steps:
+      - id: uname
+        run: "uname -a"
+      - id: net
+        run: "ss -lntp || netstat -lntp || true"
+
+  report:
+    depends_on: [local_snapshot, remote_snapshot]
+    target_id: local-agent-1
+    steps:
+      - id: echo
+        run: "echo done"

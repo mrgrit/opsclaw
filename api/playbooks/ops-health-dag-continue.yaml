@@ -1,0 +1,31 @@
+id: ops-health-dag-continue
+version: 1
+
+defaults:
+  target_id: local-agent-1
+  timeout_s: 60
+  failure_policy: continue
+
+validate:
+  pass_if:
+    - rule: exit_code_all_zero
+
+jobs:
+  local_snapshot:
+    target_id: local-agent-1
+    steps:
+      - id: df
+        run: "df -h"
+
+  remote_snapshot:
+    target_id: remote-1
+    steps:
+      - id: force_fail
+        run: "false"
+
+  report:
+    depends_on: [local_snapshot, remote_snapshot]
+    target_id: local-agent-1
+    steps:
+      - id: echo
+        run: "echo done"
