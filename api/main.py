@@ -19,6 +19,14 @@ from evidence_pack import build_evidence_zip
 
 from targets_store import list_targets, get_target, upsert_target, delete_target
 
+import planner_v0
+
+import re
+
+import input_resolver
+
+PB_TEMPLATE_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
+
 STATE_DIR = os.getenv("STATE_DIR", "/data/state")
 ARTIFACT_DIR = os.getenv("ARTIFACT_DIR", "/data/artifacts")
 EVIDENCE_DIR = os.getenv("EVIDENCE_DIR", "/data/evidence")
@@ -142,6 +150,31 @@ def sanitize_commands_list(commands: List[str]) -> (List[str], List[Dict[str, st
         safe.append(cmd)
 
     return safe, dropped
+
+def extract_required_inputs(playbook: dict) -> list[str]:
+    found = set()
+
+    def scan_str(s: str):
+        for m in PB_TEMPLATE_RE.finditer(s or ""):
+            found.add(m.group(1))
+
+    def scan_legacy_steps(pb: dict):
+        # legacy: steps[].commands[]
+        for step in (pb.get("steps") or []):
+            for cmd in (step.get("commands") or []):
+                scan_str(str(cmd))
+
+    def scan_jobs(pb: dict):
+        # jobs: jobs.*.steps[].run
+        jobs = pb.get("jobs") or {}
+        if isinstance(jobs, dict):
+            for _, spec in jobs.items():
+                for step in (spec.get("steps") or []):
+                    scan_str(str(step.get("run") or ""))
+
+    scan_legacy_steps(playbook)
+    scan_jobs(playbook)
+    return sorted(found)
 
 
 # ---------------- Models ----------------
@@ -1267,3 +1300,211 @@ def run_playbook(project_id: str, req: RunPlaybookReq):
     })
 
     return result
+
+
+class PlanReq(BaseModel):
+    request_text: str | None = None
+    default_target_id: str = "local-agent-1"
+    min_score: int = 3
+    margin: int = 2
+
+@app.post("/projects/{project_id}/plan")
+def plan_project(project_id: str, req: PlanReq):
+    # load project state
+    st = load_json(project_path(STATE_DIR, project_id), {})
+    rt = (req.request_text or "").strip()
+    if not rt:
+        # 1) 프로젝트에 직접 request_text가 있으면 우선
+        rt = (st.get("request_text") or "").strip()
+
+    if not rt:
+        # 2) 없으면 todos[0].detail을 request_text로 사용 (현재 프로젝트 구조가 이 방식)
+        todos = st.get("todos") or []
+        if isinstance(todos, list) and todos:
+            first = todos[0] if isinstance(todos[0], dict) else {}
+            rt = (first.get("detail") or "").strip()
+
+    request_text = rt
+
+    # gather data
+    tmp = list_targets()
+    targets = tmp.get("items", []) if isinstance(tmp, dict) else (tmp or [])
+    playbooks = playbook_store.list_playbooks()
+
+    plan = planner_v0.plan_request(
+        request_text=request_text,
+        targets=targets,
+        playbooks=playbooks,
+        default_target_id=req.default_target_id,
+        min_score=req.min_score,
+        margin=req.margin,
+    )
+
+    # save into state
+    st["plan"] = plan
+    st["plan"]["created_at"] = datetime.utcnow().isoformat() + "Z"
+    update_project(STATE_DIR, project_id, st)
+
+    append_audit(AUDIT_DIR, {
+        "type": "PLAN_DONE",
+        "project_id": project_id,
+        "status": plan.get("status"),
+        "selected_playbook_id": plan.get("selected_playbook_id"),
+        "selected_target_ids": plan.get("selected_target_ids"),
+    })
+
+    return plan
+
+class RunAutoReq(BaseModel):
+    inputs: Dict[str, Any] = Field(default_factory=dict)
+    target_id: Optional[str] = None
+    playbook_id: Optional[str] = None
+
+
+@app.post("/projects/{project_id}/run_auto")
+def run_auto(project_id: str, req: RunAutoReq):
+    
+    # load project
+    st = load_json(project_path(STATE_DIR, project_id), {})
+    if not st:
+        raise HTTPException(status_code=404, detail="project not found")
+
+    # -------- helper: pick request_text from project --------
+    def _get_request_text() -> str:
+        rt = (st.get("request_text") or "").strip()
+        if rt:
+            return rt
+        todos = st.get("todos") or []
+        if isinstance(todos, list) and todos and isinstance(todos[0], dict):
+            return (todos[0].get("detail") or "").strip()
+        return ""
+
+    # -------- ensure plan exists (or re-plan if missing) --------
+    plan = st.get("plan")
+    if not isinstance(plan, dict) or not plan.get("status"):
+        request_text = _get_request_text()
+
+        append_audit(AUDIT_DIR, {
+            "type": "PLAN_START",
+            "project_id": project_id,
+            "request_text": request_text,
+        })
+
+        tmp = list_targets()
+        targets = tmp.get("items", []) if isinstance(tmp, dict) else (tmp or [])
+        playbooks = playbook_store.list_playbooks()
+
+        plan = planner_v0.plan_request(
+            request_text=request_text,
+            targets=targets,
+            playbooks=playbooks,
+            default_target_id="local-agent-1",
+            min_score=3,
+            margin=2,
+        )
+        plan["created_at"] = datetime.utcnow().isoformat() + "Z"
+
+        st["plan"] = plan
+        update_project(STATE_DIR, project_id, st)
+
+        append_audit(AUDIT_DIR, {
+            "type": "PLAN_DONE",
+            "project_id": project_id,
+            "status": plan.get("status"),
+            "selected_playbook_id": plan.get("selected_playbook_id"),
+            "selected_target_ids": plan.get("selected_target_ids"),
+        })
+
+    # -------- if needs clarification -> return plan only --------
+    if plan.get("status") != "ready":
+        return {"status": "needs_clarification", "plan": plan}
+
+    # -------- resolve selection (allow overrides) --------
+    selected_playbook_id = req.playbook_id or plan.get("selected_playbook_id")
+    selected_targets = plan.get("selected_target_ids") or []
+    target_id = req.target_id or (selected_targets[0] if selected_targets else "local-agent-1")
+
+    if not selected_playbook_id:
+        plan2 = dict(plan)
+        plan2["status"] = "needs_clarification"
+        plan2["next_questions"] = (plan2.get("next_questions") or []) + [
+            "playbook_id를 선택할 수 없습니다. playbook_id를 지정해 주세요."
+        ]
+        st["plan"] = plan2
+        update_project(STATE_DIR, project_id, st)
+        return {"status": "needs_clarification", "plan": plan2}
+
+    pb = playbook_store.load_playbook(selected_playbook_id)
+    if not pb:
+        raise HTTPException(status_code=404, detail="playbook not found")
+
+    # -------- run target url --------
+    subagent_url = resolve_subagent_url(target_id)
+
+    # -------- input resolver (discover -> auto choose -> ask) --------
+    inputs = {}
+    inputs.update((st.get("plan") or {}).get("inputs") or {})
+    inputs.update(req.inputs or {})
+    print("DEBUG inputs=", inputs)
+    rr = input_resolver.resolve_inputs(
+        audit_dir=AUDIT_DIR,
+        project_id=project_id,
+        playbook=pb,
+        target_id=target_id,
+        subagent_url=subagent_url,        
+        inputs=inputs,
+        timeout_s=20,
+    )
+
+    if rr.get("status") != "ready":
+        plan2 = dict(plan)
+        plan2["status"] = "needs_clarification"
+        plan2["missing_inputs"] = rr.get("missing_inputs")
+        plan2["next_questions"] = rr.get("next_questions")
+        plan2["choices"] = rr.get("choices")
+        plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+
+        st["plan"] = plan2
+        update_project(STATE_DIR, project_id, st)
+        plan2["inputs"] = inputs  # 사용자가 준 값 보존
+        return {"status": "needs_clarification", "plan": plan2}
+
+    inputs = rr.get("inputs") or inputs
+
+    # -------- run playbook --------
+    append_audit(AUDIT_DIR, {
+        "type": "RUN_AUTO_START",
+        "project_id": project_id,
+        "playbook_id": selected_playbook_id,
+        "target_id": target_id,
+        "inputs_keys": sorted(list(inputs.keys())),
+    })
+
+    result = playbook_runner.run_playbook(
+        playbook=pb,
+        subagent_url=subagent_url,
+        inputs=inputs,
+        timeout_s=60,
+        project_id=project_id,
+        audit_dir=AUDIT_DIR,
+        target_id=target_id,
+        resolve_subagent_url_fn=resolve_subagent_url,
+    )
+
+    # persist playbook run
+    state_store.append_playbook_run(STATE_DIR, project_id, {
+        "playbook_id": selected_playbook_id,
+        "target_id": target_id,
+        "inputs": inputs,
+        "result": result,
+    })
+
+    append_audit(AUDIT_DIR, {
+        "type": "RUN_AUTO_DONE",
+        "project_id": project_id,
+        "playbook_id": selected_playbook_id,
+        "target_id": target_id,
+        "ok": bool((result.get("validate") or {}).get("pass", True)),
+    })
+
+    return {"status": "executed", "plan": plan, "inputs": inputs, "result": result}

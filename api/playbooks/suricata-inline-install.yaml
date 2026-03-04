@@ -6,12 +6,22 @@ execution_profile: remote-install
 default_timeout_s: 120
 
 inputs:
-  - name: target_host
-    required: true
-  - name: iface_in
-    required: true
-  - name: iface_out
-    required: true
+  iface_in:
+    discover:
+      commands:
+        - "ip -o link show | awk -F': ' '{print $2}'"
+      filter:
+        exclude: ["lo", "docker0"]
+    question:
+      prompt: "iface_in 선택해줘"
+  iface_out:
+    discover:
+      commands:
+        - "ip -o link show | awk -F': ' '{print $2}'"
+      filter:
+        exclude: ["lo", "docker0"]
+    question:
+      prompt: "iface_out 선택"
 
 steps:
   - id: precheck
