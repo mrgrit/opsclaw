@@ -13,17 +13,18 @@ from state_store import ensure_dirs, init_project, load_json, project_path, appe
 from a2a import run_script
 from mastergate import mastergate_scan
 from audit_store import append_audit
-from master_clients import call_master, Provider
+
 from workflows.basic_graph import build_graph
 from evidence_pack import build_evidence_zip
 
 from targets_store import list_targets, get_target, upsert_target, delete_target
 
 import planner_v0
-
 import re
-
 import input_resolver
+
+from master_clients import call_master, call_conn, Provider
+import llm_registry
 
 PB_TEMPLATE_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
 
@@ -185,10 +186,26 @@ class Target(BaseModel):
 
 class TargetReg(BaseModel):
     id: str
-    base_url: str  # e.g. http://192.168.24.176:55123
+    base_url: str
     name: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     notes: str = ""
+    llm_conn_id: Optional[str] = None
+
+class LLMConnReq(BaseModel):
+    id: str
+    name: str
+    provider: Literal["ollama", "openai", "anthropic", "yncai"]
+    base_url: str = ""
+    api_key: str = ""
+    model: str = ""
+    timeout_s: int = 60
+    headers: Dict[str, str] = Field(default_factory=dict)
+
+class LLMRolesReq(BaseModel):
+    master_conn_id: Optional[str] = None
+    manager_conn_id: Optional[str] = None
+    subagent_default_conn_id: Optional[str] = None
 
 class CreateProjectReq(BaseModel):
     project_type: str = "generic"
@@ -546,6 +563,87 @@ def api_get_target(target_id: str):
     if not t:
         raise HTTPException(404, "target not found")
     return t
+
+# ============================================================
+# M3-5.1: LLM Connection Registry + Role Binding
+# ============================================================
+@app.get("/llm/connections")
+def api_list_llm_connections():
+    items = llm_registry.list_llm_conns()
+    safe_items = []
+    for x in items:
+        y = dict(x)
+        if y.get("api_key"):
+            y["api_key"] = "***"
+        safe_items.append(y)
+    return {"items": safe_items}
+
+@app.get("/llm/connections/{conn_id}")
+def api_get_llm_connection(conn_id: str):
+    x = llm_registry.get_llm_conn(conn_id)
+    if not x:
+        raise HTTPException(404, "llm connection not found")
+    y = dict(x)
+    if y.get("api_key"):
+        y["api_key"] = "***"
+    return y
+
+@app.post("/llm/connections")
+def api_upsert_llm_connection(req: LLMConnReq):
+    obj = llm_registry.upsert_llm_conn(req.model_dump())
+    append_audit(AUDIT_DIR, {
+        "type": "LLM_CONN_UPSERT",
+        "conn_id": obj.get("id"),
+        "provider": obj.get("provider"),
+        "model": obj.get("model"),
+        "base_url": obj.get("base_url"),
+    })
+    out = dict(obj)
+    if out.get("api_key"):
+        out["api_key"] = "***"
+    return out
+
+@app.delete("/llm/connections/{conn_id}")
+def api_delete_llm_connection(conn_id: str):
+    ok = llm_registry.delete_llm_conn(conn_id)
+    if not ok:
+        raise HTTPException(404, "llm connection not found")
+    append_audit(AUDIT_DIR, {
+        "type": "LLM_CONN_DELETE",
+        "conn_id": conn_id,
+    })
+    return {"ok": True}
+
+@app.get("/llm/roles")
+def api_get_llm_roles():
+    return llm_registry.get_llm_roles()
+
+@app.post("/llm/roles")
+def api_set_llm_roles(req: LLMRolesReq):
+    roles = llm_registry.set_llm_roles(req.model_dump())
+    append_audit(AUDIT_DIR, {
+        "type": "LLM_ROLES_SET",
+        "master_conn_id": roles.get("master_conn_id"),
+        "manager_conn_id": roles.get("manager_conn_id"),
+        "subagent_default_conn_id": roles.get("subagent_default_conn_id"),
+    })
+    return roles
+
+@app.post("/llm/test/{conn_id}")
+def api_test_llm_connection(conn_id: str, prompt: str = "Say OK in one short sentence."):
+    conn = llm_registry.get_llm_conn(conn_id)
+    if not conn:
+        raise HTTPException(404, "llm connection not found")
+    try:
+        reply = call_conn(conn, prompt)
+        return {
+            "ok": True,
+            "provider": reply.get("provider"),
+            "model": reply.get("model"),
+            "text": (reply.get("text") or "")[:2000],
+        }
+    except Exception as e:
+        raise HTTPException(502, f"llm test failed: {str(e)[:300]}")
 
 @app.post("/targets")
 def api_upsert_target(req: TargetReg):
@@ -1354,6 +1452,21 @@ def plan_project(project_id: str, req: PlanReq):
     })
 
     return plan
+
+class LLMConnReq(BaseModel):
+    id: str
+    name: str
+    provider: Literal["ollama", "openai", "anthropic", "yncai"]
+    base_url: str = ""
+    api_key: str = ""
+    model: str
+    timeout_s: int = 60
+    headers: Dict[str, str] = Field(default_factory=dict)
+
+class LLMRolesReq(BaseModel):
+    master_conn_id: Optional[str] = None
+    manager_conn_id: Optional[str] = None
+    subagent_default_conn_id: Optional[str] = None
 
 class RunAutoReq(BaseModel):
     inputs: Dict[str, Any] = Field(default_factory=dict)
