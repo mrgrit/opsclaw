@@ -6,6 +6,12 @@ execution_profile: remote-install
 default_timeout_s: 120
 
 inputs:
+  target_os:
+    question:
+      prompt: "대상 서버 운영체제를 알려줘 (예: ubuntu, debian, rhel, rocky, centos)."
+  pkg_manager:
+    question:
+      prompt: "대상 서버의 패키지 매니저를 알려줘 (예: apt, dnf, yum)."
   iface_in:
     discover:
       commands:

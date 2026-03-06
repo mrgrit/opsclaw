@@ -1529,8 +1529,6 @@ def run_auto(project_id: str, req: RunAutoReq):
         })
 
     # -------- resolve selection (allow overrides) --------
-    # plan이 ready가 아니더라도, req에 playbook/target override가 있거나
-    # plan에 selected_playbook_id/target_ids가 있으면 진행 가능.
     selected_playbook_id = (req.playbook_id or plan.get("selected_playbook_id")) if isinstance(plan, dict) else req.playbook_id
     selected_targets = (plan.get("selected_target_ids") or []) if isinstance(plan, dict) else []
     target_id = req.target_id or (selected_targets[0] if selected_targets else "local-agent-1")
@@ -1574,6 +1572,18 @@ def run_auto(project_id: str, req: RunAutoReq):
         timeout_s=20,
     )
 
+    inputs = rr.get("inputs") or inputs
+    
+    existing_plan = plan if isinstance(plan, dict) else {}
+    resolver_rationales = dict(existing_plan.get("input_rationales") or {})
+    resolver_rationales.update(rr.get("rationales") or {})
+
+    resolver_approvals = list(existing_plan.get("pending_approvals") or [])
+    resolver_approvals.extend(rr.get("approvals") or [])
+
+    resolver_evidence_map = dict(existing_plan.get("evidence_map") or {})
+    resolver_evidence_map.update(rr.get("evidence_map") or {})
+
     if rr.get("status") != "ready":
         # 1) resolver가 못 풀면 -> Master-guided probe loop로 먼저 해결 시도
         pr = probe_loop.probe_resolve_inputs(
@@ -1602,6 +1612,15 @@ def run_auto(project_id: str, req: RunAutoReq):
                 timeout_s=20,
             )
 
+            inputs = rr2.get("inputs") or inputs
+            resolver_rationales.update(rr2.get("rationales") or {})
+
+            rr2_approvals = rr2.get("approvals") or []
+            if rr2_approvals:
+                resolver_approvals.extend(rr2_approvals)
+
+            resolver_evidence_map.update(rr2.get("evidence_map") or {})
+
             if rr2.get("status") == "ready":
                 inputs = rr2.get("inputs") or inputs
             else:
@@ -1612,6 +1631,9 @@ def run_auto(project_id: str, req: RunAutoReq):
                 plan2["choices"] = rr2.get("choices")
                 plan2["inputs"] = rr2.get("inputs") or inputs
                 plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+                plan2["input_rationales"] = dict(resolver_rationales)
+                plan2["pending_approvals"] = list(resolver_approvals)
+                plan2["evidence_map"] = dict(resolver_evidence_map)
 
                 st["plan"] = plan2
                 update_project(STATE_DIR, project_id, st)
@@ -1626,6 +1648,9 @@ def run_auto(project_id: str, req: RunAutoReq):
             plan2["choices"] = q.get("choices") or rr.get("choices") or {}
             plan2["inputs"] = inputs
             plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+            plan2["input_rationales"] = dict(resolver_rationales)
+            plan2["pending_approvals"] = list(resolver_approvals)
+            plan2["evidence_map"] = dict(resolver_evidence_map)
 
             st["plan"] = plan2
             update_project(STATE_DIR, project_id, st)
@@ -1640,6 +1665,9 @@ def run_auto(project_id: str, req: RunAutoReq):
             plan2["choices"] = rr.get("choices")
             plan2["inputs"] = inputs
             plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+            plan2["input_rationales"] = dict(resolver_rationales)
+            plan2["pending_approvals"] = list(resolver_approvals)
+            plan2["evidence_map"] = dict(resolver_evidence_map)
 
             st["plan"] = plan2
             update_project(STATE_DIR, project_id, st)
@@ -1647,11 +1675,16 @@ def run_auto(project_id: str, req: RunAutoReq):
 
     # resolver ready
     inputs = rr.get("inputs") or inputs
-    # ✅ plan에 확정된 inputs 반영 (stale 방지)
-    plan2 = dict(plan)
+
+    # ✅ plan에 확정된 inputs + resolution metadata 반영
+    plan2 = dict(plan) if isinstance(plan, dict) else {}
     plan2["inputs"] = dict(inputs)
+    plan2["input_rationales"] = dict(resolver_rationales)
+    plan2["pending_approvals"] = list(resolver_approvals)
+    plan2["evidence_map"] = dict(resolver_evidence_map)
     st["plan"] = plan2
     update_project(STATE_DIR, project_id, st)
+    plan = plan2
 
     append_audit(AUDIT_DIR, {
         "type": "RUN_AUTO_START",
@@ -1693,6 +1726,9 @@ def run_auto(project_id: str, req: RunAutoReq):
             plan2["choices"] = q.get("choices") or {}
             plan2["inputs"] = inputs
             plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+            plan2["input_rationales"] = dict(resolver_rationales)
+            plan2["pending_approvals"] = list(resolver_approvals)
+            plan2["evidence_map"] = dict(resolver_evidence_map)
 
             st["plan"] = plan2
             update_project(STATE_DIR, project_id, st)
@@ -1706,20 +1742,22 @@ def run_auto(project_id: str, req: RunAutoReq):
                 "probe_fix": fx,
             })
 
-            # ✅ plan clean-up: 실행 완료로 상태 전환 + stale 필드 제거
+            # 실행 상태/메타 반영
             plan2 = dict(st.get("plan") or plan or {})
             plan2["status"] = "executed"
             plan2["inputs"] = dict(inputs)
-            
+            plan2["input_rationales"] = dict(resolver_rationales)
+            plan2["pending_approvals"] = list(resolver_approvals)
+            plan2["evidence_map"] = dict(resolver_evidence_map)
+
             # needs_clarification 잔재 제거
             plan2.pop("missing_inputs", None)
             plan2.pop("choices", None)
             plan2.pop("next_questions", None)
 
-            # (선택) 선택 결과도 고정
+            # 선택 결과 고정
             plan2["selected_playbook_id"] = selected_playbook_id
             plan2["selected_target_ids"] = [target_id]
-
             plan2["updated_at"] = datetime.utcnow().isoformat() + "Z"
 
             st["plan"] = plan2
@@ -1762,19 +1800,21 @@ def run_auto(project_id: str, req: RunAutoReq):
 
         # executed 상태 반영
         plan2["status"] = "executed"
-        plan2["inputs"] = inputs
+        plan2["inputs"] = dict(inputs)
+        plan2["input_rationales"] = dict(resolver_rationales)
+        plan2["pending_approvals"] = list(resolver_approvals)
+        plan2["evidence_map"] = dict(resolver_evidence_map)
 
         # 이전 needs_clarification 잔재 제거
         plan2["missing_inputs"] = []
         plan2["choices"] = {}
-        # next_questions도 상황에 따라 비우거나 남겨도 되는데, 보통 executed면 비우는 게 맞음
         plan2["next_questions"] = []
 
         plan2["updated_at"] = datetime.utcnow().isoformat() + "Z"
 
         st2["plan"] = plan2
         update_project(STATE_DIR, project_id, st2)
-        st = st2  # 아래 return에서 최신 st 사용하게
+        st = st2
         plan = plan2
     except Exception as e:
         append_audit(AUDIT_DIR, {"type": "PLAN_CLEANUP_FAIL", "project_id": project_id, "error": str(e)})
@@ -1789,9 +1829,13 @@ def run_auto(project_id: str, req: RunAutoReq):
 
     # plan에도 마지막 inputs 저장(다음 호출에서 이어받기)
     plan2 = dict(plan) if isinstance(plan, dict) else {}
-    plan2["inputs"] = inputs
+    plan2["inputs"] = dict(inputs)
+    plan2["input_rationales"] = dict(resolver_rationales)
+    plan2["pending_approvals"] = list(resolver_approvals)
+    plan2["evidence_map"] = dict(resolver_evidence_map)
     plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
     st["plan"] = plan2
     update_project(STATE_DIR, project_id, st)
+    plan = plan2
 
-    return {"status": "executed", "plan": plan, "inputs": inputs, "result": result}
+    return {"status": "executed", "plan": plan2, "inputs": inputs, "result": result}

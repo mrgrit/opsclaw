@@ -1,9 +1,11 @@
 # api/input_resolver.py
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from a2a import run_script
 from audit_store import append_audit
+from resolution_types import ResolutionResult
+import sys_fact_resolver
 
 TEMPLATE_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
 
@@ -37,6 +39,124 @@ def extract_required_inputs(playbook: dict) -> List[str]:
 def _lines(stdout: str) -> List[str]:
     return [x.strip() for x in (stdout or "").splitlines() if x.strip()]
 
+def _try_fact_resolver(
+    *,
+    audit_dir: str,
+    project_id: str,
+    playbook: dict,
+    target_id: str,
+    subagent_url: str,
+    fact_key: str,
+    fact_spec: Dict[str, Any],
+    inputs: Dict[str, Any],
+    timeout_s: int,
+) -> Optional[ResolutionResult]:
+    """
+    M3-5.3 generic fact resolution hook.
+
+    현재는 sys 계열 범용 fact 일부만 우선 연결:
+    - target_os
+    - pkg_manager
+
+    나머지는 아직 None 반환하여 기존 generic discover/질문 흐름으로 fallback 한다.
+    """
+    append_audit(
+        audit_dir,
+        {
+            "type": "FACT_RESOLVE_TRY",
+            "project_id": project_id,
+            "target_id": target_id,
+            "fact_key": fact_key,
+        },
+    )
+
+    result = sys_fact_resolver.resolve_fact(
+        fact_key=fact_key,
+        project_id=project_id,
+        target_id=target_id,
+        subagent_url=subagent_url,
+        timeout_s=timeout_s,
+        inputs=inputs,
+    )
+
+    if result:
+        append_audit(
+            audit_dir,
+            {
+                "type": "FACT_RESOLVE_RESULT",
+                "project_id": project_id,
+                "target_id": target_id,
+                "fact_key": fact_key,
+                "status": result.get("status"),
+            },
+        )
+
+    return result
+
+
+def _apply_resolution_result(
+    *,
+    result: Optional[ResolutionResult],
+    fact_key: str,
+    inputs: Dict[str, Any],
+    missing: List[str],
+    choices: Dict[str, List[str]],
+    questions: List[str],
+    approvals: List[Dict[str, Any]],
+    rationales: Dict[str, List[str]],
+    evidence_map: Dict[str, List[Dict[str, Any]]],
+) -> bool:
+    """
+    공통 ResolutionResult를 기존 resolve_inputs 흐름에 반영한다.
+
+    반환값:
+      True  -> 이 fact는 처리 완료됨 (generic discover 건너뜀)
+      False -> 처리 못했음 (기존 generic discover 계속 진행)
+    """
+    if not result:
+        return False
+
+    status = result.get("status")
+    rationale = result.get("rationale") or []
+    evidence_refs = result.get("evidence_refs") or []
+
+    if rationale:
+        rationales[fact_key] = [str(x) for x in rationale]
+    if evidence_refs:
+        evidence_map[fact_key] = evidence_refs
+
+    if status == "resolved":
+        value = result.get("value")
+        if value not in (None, "", []):
+            inputs[fact_key] = value
+            if fact_key in missing:
+                missing.remove(fact_key)
+            return True
+        return False
+
+    if status == "needs_clarification":
+        cands = result.get("choices") or []
+        prompt = result.get("question") or f"{fact_key} 값을 선택하세요."
+        if cands:
+            choices[fact_key] = [str(x) for x in cands[:20]]
+        questions.append(prompt)
+        return True
+
+    if status == "needs_approval":
+        approval = result.get("approval") or {}
+        approvals.append({
+            "fact_key": fact_key,
+            "action_summary": approval.get("action_summary") or fact_key,
+            "risk": approval.get("risk") or "high",
+            "rationale": rationales.get(fact_key, []),
+        })
+        return True
+
+    if status == "insufficient_evidence":
+        return False
+
+    return False
+
 def resolve_inputs(
     *,
     audit_dir: str,
@@ -60,9 +180,46 @@ def resolve_inputs(
 
     choices: Dict[str, List[str]] = {}
     questions: List[str] = []
+    approvals: List[Dict[str, Any]] = []
+    rationales: Dict[str, List[str]] = {}
+    evidence_map: Dict[str, List[Dict[str, Any]]] = {}
 
     for k in list(missing):
         if not (isinstance(spec, dict) and isinstance(spec.get(k), dict)):
+            continue
+
+        fact_result = _try_fact_resolver(
+            audit_dir=audit_dir,
+            project_id=project_id,
+            playbook=playbook,
+            target_id=target_id,
+            subagent_url=subagent_url,
+            fact_key=k,
+            fact_spec=spec[k],
+            inputs=inputs,
+            timeout_s=timeout_s,
+        )
+        if _apply_resolution_result(
+            result=fact_result,
+            fact_key=k,
+            inputs=inputs,
+            missing=missing,
+            choices=choices,
+            questions=questions,
+            approvals=approvals,
+            rationales=rationales,
+            evidence_map=evidence_map,
+        ):
+            append_audit(
+                audit_dir,
+                {
+                    "type": "FACT_RESOLUTION_APPLIED",
+                    "project_id": project_id,
+                    "target_id": target_id,
+                    "fact_key": k,
+                    "status": (fact_result or {}).get("status"),
+                },
+            )
             continue
 
         disc = (spec[k].get("discover") or {})
@@ -112,7 +269,16 @@ def resolve_inputs(
             "missing_inputs": missing,
             "next_questions": questions or [f"필수 입력값이 부족합니다: {', '.join(missing)}"],
             "choices": choices,
+            "approvals": approvals,
+            "rationales": rationales,
+            "evidence_map": evidence_map,
         }
 
     append_audit(audit_dir, {"type":"INPUT_RESOLVE_DONE","project_id":project_id,"target_id":target_id})
-    return {"status": "ready", "inputs": inputs}
+    return {
+        "status": "ready",
+        "inputs": inputs,
+        "approvals": approvals,
+        "rationales": rationales,
+        "evidence_map": evidence_map,
+    }
