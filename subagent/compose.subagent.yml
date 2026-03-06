@@ -1,0 +1,16 @@
+name: opsclaw-subagent
+services:
+  subagent:
+    container_name: opsclaw-subagent
+    build:
+      context: /home/opsos/opsclaw/subagent
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:55123:55123"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - subagent_data:/data
+volumes:
+  subagent_data:
