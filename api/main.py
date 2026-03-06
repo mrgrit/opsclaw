@@ -25,6 +25,7 @@ import input_resolver
 
 from master_clients import call_master, call_conn, Provider
 import llm_registry
+import probe_loop
 
 PB_TEMPLATE_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
 
@@ -1476,7 +1477,6 @@ class RunAutoReq(BaseModel):
 
 @app.post("/projects/{project_id}/run_auto")
 def run_auto(project_id: str, req: RunAutoReq):
-    
     # load project
     st = load_json(project_path(STATE_DIR, project_id), {})
     if not st:
@@ -1528,63 +1528,131 @@ def run_auto(project_id: str, req: RunAutoReq):
             "selected_target_ids": plan.get("selected_target_ids"),
         })
 
-    # -------- if needs clarification -> return plan only --------
-    if plan.get("status") != "ready":
-        return {"status": "needs_clarification", "plan": plan}
-
     # -------- resolve selection (allow overrides) --------
-    selected_playbook_id = req.playbook_id or plan.get("selected_playbook_id")
-    selected_targets = plan.get("selected_target_ids") or []
+    # plan이 ready가 아니더라도, req에 playbook/target override가 있거나
+    # plan에 selected_playbook_id/target_ids가 있으면 진행 가능.
+    selected_playbook_id = (req.playbook_id or plan.get("selected_playbook_id")) if isinstance(plan, dict) else req.playbook_id
+    selected_targets = (plan.get("selected_target_ids") or []) if isinstance(plan, dict) else []
     target_id = req.target_id or (selected_targets[0] if selected_targets else "local-agent-1")
 
+    # -------- build inputs (MUST NOT reset later) --------
+    inputs: Dict[str, Any] = {}
+    if isinstance(plan, dict):
+        inputs.update(plan.get("inputs") or {})
+    inputs.update(req.inputs or {})
+
+    # plan 자체가 ready가 아니고, playbook 선택도 안되면 여기서 종료
     if not selected_playbook_id:
-        plan2 = dict(plan)
+        plan2 = dict(plan) if isinstance(plan, dict) else {"status": "needs_clarification"}
         plan2["status"] = "needs_clarification"
-        plan2["next_questions"] = (plan2.get("next_questions") or []) + [
-            "playbook_id를 선택할 수 없습니다. playbook_id를 지정해 주세요."
-        ]
+        plan2["next_questions"] = (plan2.get("next_questions") or [])
+        if "playbook_id를 선택할 수 없습니다. playbook_id를 지정해 주세요." not in plan2["next_questions"]:
+            plan2["next_questions"].append("playbook_id를 선택할 수 없습니다. playbook_id를 지정해 주세요.")
+        plan2["inputs"] = inputs
+        plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+
         st["plan"] = plan2
         update_project(STATE_DIR, project_id, st)
         return {"status": "needs_clarification", "plan": plan2}
 
+    # playbook load
     pb = playbook_store.load_playbook(selected_playbook_id)
     if not pb:
         raise HTTPException(status_code=404, detail="playbook not found")
 
-    # -------- run target url --------
+    # run target url
     subagent_url = resolve_subagent_url(target_id)
 
     # -------- input resolver (discover -> auto choose -> ask) --------
-    inputs = {}
-    inputs.update((st.get("plan") or {}).get("inputs") or {})
-    inputs.update(req.inputs or {})
-    print("DEBUG inputs=", inputs)
     rr = input_resolver.resolve_inputs(
         audit_dir=AUDIT_DIR,
         project_id=project_id,
         playbook=pb,
         target_id=target_id,
-        subagent_url=subagent_url,        
+        subagent_url=subagent_url,
         inputs=inputs,
         timeout_s=20,
     )
 
     if rr.get("status") != "ready":
-        plan2 = dict(plan)
-        plan2["status"] = "needs_clarification"
-        plan2["missing_inputs"] = rr.get("missing_inputs")
-        plan2["next_questions"] = rr.get("next_questions")
-        plan2["choices"] = rr.get("choices")
-        plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+        # 1) resolver가 못 풀면 -> Master-guided probe loop로 먼저 해결 시도
+        pr = probe_loop.probe_resolve_inputs(
+            audit_dir=AUDIT_DIR,
+            project_id=project_id,
+            request_text=_get_request_text(),
+            target_id=target_id,
+            subagent_url=subagent_url,
+            missing_inputs=rr.get("missing_inputs") or [],
+            choices=rr.get("choices") or {},
+            current_inputs=inputs,
+            max_iters=2,
+        )
 
-        st["plan"] = plan2
-        update_project(STATE_DIR, project_id, st)
-        plan2["inputs"] = inputs  # 사용자가 준 값 보존
-        return {"status": "needs_clarification", "plan": plan2}
+        if pr.get("status") == "ready":
+            inputs.update(pr.get("resolved_inputs") or {})
 
+            # 2) resolved_inputs 반영 후 resolver 한 번 더
+            rr2 = input_resolver.resolve_inputs(
+                audit_dir=AUDIT_DIR,
+                project_id=project_id,
+                playbook=pb,
+                target_id=target_id,
+                subagent_url=subagent_url,
+                inputs=inputs,
+                timeout_s=20,
+            )
+
+            if rr2.get("status") == "ready":
+                inputs = rr2.get("inputs") or inputs
+            else:
+                plan2 = dict(plan) if isinstance(plan, dict) else {}
+                plan2["status"] = "needs_clarification"
+                plan2["missing_inputs"] = rr2.get("missing_inputs")
+                plan2["next_questions"] = rr2.get("next_questions")
+                plan2["choices"] = rr2.get("choices")
+                plan2["inputs"] = rr2.get("inputs") or inputs
+                plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+
+                st["plan"] = plan2
+                update_project(STATE_DIR, project_id, st)
+                return {"status": "needs_clarification", "plan": plan2}
+
+        elif pr.get("status") == "needs_clarification":
+            q = pr.get("question") or {}
+            plan2 = dict(plan) if isinstance(plan, dict) else {}
+            plan2["status"] = "needs_clarification"
+            plan2["missing_inputs"] = rr.get("missing_inputs")
+            plan2["next_questions"] = q.get("next_questions") or rr.get("next_questions") or []
+            plan2["choices"] = q.get("choices") or rr.get("choices") or {}
+            plan2["inputs"] = inputs
+            plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+
+            st["plan"] = plan2
+            update_project(STATE_DIR, project_id, st)
+            return {"status": "needs_clarification", "plan": plan2}
+
+        else:
+            # probe loop도 못 풀었으면 resolver 결과로 질문 반환
+            plan2 = dict(plan) if isinstance(plan, dict) else {}
+            plan2["status"] = "needs_clarification"
+            plan2["missing_inputs"] = rr.get("missing_inputs")
+            plan2["next_questions"] = rr.get("next_questions")
+            plan2["choices"] = rr.get("choices")
+            plan2["inputs"] = inputs
+            plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+
+            st["plan"] = plan2
+            update_project(STATE_DIR, project_id, st)
+            return {"status": "needs_clarification", "plan": plan2}
+
+    # resolver ready
     inputs = rr.get("inputs") or inputs
+    # ✅ plan에 확정된 inputs 반영 (stale 방지)
+    plan2 = dict(plan)
+    plan2["inputs"] = dict(inputs)
+    st["plan"] = plan2
+    update_project(STATE_DIR, project_id, st)
 
-    # -------- run playbook --------
     append_audit(AUDIT_DIR, {
         "type": "RUN_AUTO_START",
         "project_id": project_id,
@@ -1593,6 +1661,7 @@ def run_auto(project_id: str, req: RunAutoReq):
         "inputs_keys": sorted(list(inputs.keys())),
     })
 
+    # -------- run playbook --------
     result = playbook_runner.run_playbook(
         playbook=pb,
         subagent_url=subagent_url,
@@ -1604,7 +1673,81 @@ def run_auto(project_id: str, req: RunAutoReq):
         resolve_subagent_url_fn=resolve_subagent_url,
     )
 
-    # persist playbook run
+    # -------- validate fail -> LLM fix loop(1회) + retry --------
+    if isinstance(result, dict) and isinstance(result.get("validate"), dict) and result["validate"].get("pass") is False:
+        fx = probe_loop.probe_fix_and_retry(
+            audit_dir=AUDIT_DIR,
+            project_id=project_id,
+            request_text=_get_request_text(),
+            target_id=target_id,
+            subagent_url=subagent_url,
+            last_result=result,
+            max_iters=1,
+        )
+
+        if fx.get("status") == "needs_clarification":
+            plan2 = dict(plan) if isinstance(plan, dict) else {}
+            q = fx.get("question") or {}
+            plan2["status"] = "needs_clarification"
+            plan2["next_questions"] = q.get("next_questions") or ["추가 확인이 필요합니다."]
+            plan2["choices"] = q.get("choices") or {}
+            plan2["inputs"] = inputs
+            plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+
+            st["plan"] = plan2
+            update_project(STATE_DIR, project_id, st)
+
+            # 실패 결과도 저장(재현/증빙)
+            state_store.append_playbook_run(STATE_DIR, project_id, {
+                "playbook_id": selected_playbook_id,
+                "target_id": target_id,
+                "inputs": inputs,
+                "result": result,
+                "probe_fix": fx,
+            })
+
+            # ✅ plan clean-up: 실행 완료로 상태 전환 + stale 필드 제거
+            plan2 = dict(st.get("plan") or plan or {})
+            plan2["status"] = "executed"
+            plan2["inputs"] = dict(inputs)
+            
+            # needs_clarification 잔재 제거
+            plan2.pop("missing_inputs", None)
+            plan2.pop("choices", None)
+            plan2.pop("next_questions", None)
+
+            # (선택) 선택 결과도 고정
+            plan2["selected_playbook_id"] = selected_playbook_id
+            plan2["selected_target_ids"] = [target_id]
+
+            plan2["updated_at"] = datetime.utcnow().isoformat() + "Z"
+
+            st["plan"] = plan2
+            update_project(STATE_DIR, project_id, st)
+
+            append_audit(AUDIT_DIR, {
+                "type": "RUN_AUTO_DONE",
+                "project_id": project_id,
+                "playbook_id": selected_playbook_id,
+                "target_id": target_id,
+                "ok": False,
+            })
+
+            return {"status": "needs_clarification", "plan": plan2, "inputs": inputs, "result": result, "probe_fix": fx}
+
+        # 1회 재시도
+        result = playbook_runner.run_playbook(
+            playbook=pb,
+            subagent_url=subagent_url,
+            inputs=inputs,
+            timeout_s=60,
+            project_id=project_id,
+            audit_dir=AUDIT_DIR,
+            target_id=target_id,
+            resolve_subagent_url_fn=resolve_subagent_url,
+        )
+
+    # -------- persist playbook run (ALWAYS) --------
     state_store.append_playbook_run(STATE_DIR, project_id, {
         "playbook_id": selected_playbook_id,
         "target_id": target_id,
@@ -1612,12 +1755,43 @@ def run_auto(project_id: str, req: RunAutoReq):
         "result": result,
     })
 
+    # --- plan clean-up / reflect resolved inputs after execution ---
+    try:
+        st2 = load_json(project_path(STATE_DIR, project_id), {}) or st
+        plan2 = dict((st2.get("plan") or plan or {}) if isinstance((st2.get("plan") or plan), dict) else {})
+
+        # executed 상태 반영
+        plan2["status"] = "executed"
+        plan2["inputs"] = inputs
+
+        # 이전 needs_clarification 잔재 제거
+        plan2["missing_inputs"] = []
+        plan2["choices"] = {}
+        # next_questions도 상황에 따라 비우거나 남겨도 되는데, 보통 executed면 비우는 게 맞음
+        plan2["next_questions"] = []
+
+        plan2["updated_at"] = datetime.utcnow().isoformat() + "Z"
+
+        st2["plan"] = plan2
+        update_project(STATE_DIR, project_id, st2)
+        st = st2  # 아래 return에서 최신 st 사용하게
+        plan = plan2
+    except Exception as e:
+        append_audit(AUDIT_DIR, {"type": "PLAN_CLEANUP_FAIL", "project_id": project_id, "error": str(e)})
+
     append_audit(AUDIT_DIR, {
         "type": "RUN_AUTO_DONE",
         "project_id": project_id,
         "playbook_id": selected_playbook_id,
         "target_id": target_id,
-        "ok": bool((result.get("validate") or {}).get("pass", True)),
+        "ok": bool((result.get("validate") or {}).get("pass", True)) if isinstance(result, dict) else True,
     })
+
+    # plan에도 마지막 inputs 저장(다음 호출에서 이어받기)
+    plan2 = dict(plan) if isinstance(plan, dict) else {}
+    plan2["inputs"] = inputs
+    plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+    st["plan"] = plan2
+    update_project(STATE_DIR, project_id, st)
 
     return {"status": "executed", "plan": plan, "inputs": inputs, "result": result}
