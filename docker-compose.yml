@@ -14,7 +14,7 @@ services:
       retries: 20
 
   api:
-    build: ./api
+    build: ./core/manager_api
     env_file:
       - .env
     environment:
@@ -82,5 +82,4 @@ services:
       - "${WEB_PORT:-80}:80"
 
 volumes:
-  db_data:
-  ops_data:
+  db_data:  
