@@ -6,6 +6,7 @@ from a2a import run_script
 from audit_store import append_audit
 from resolution_types import ResolutionResult
 import sys_fact_resolver
+import net_probe
 
 TEMPLATE_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
 
@@ -38,6 +39,28 @@ def extract_required_inputs(playbook: dict) -> List[str]:
 
 def _lines(stdout: str) -> List[str]:
     return [x.strip() for x in (stdout or "").splitlines() if x.strip()]
+
+def _try_net_probe_iface(project_id, target_id, subagent_url, timeout_s):
+
+    r = net_probe.collect_net_probe(
+        project_id=project_id,
+        target_id=target_id,
+        subagent_url=subagent_url,
+        timeout_s=timeout_s,
+    )
+
+    facts = r.get("facts", {})
+
+    if facts.get("network_context") != "host_like":
+        return None
+
+    if facts.get("confidence") not in ("medium", "high"):
+        return None
+
+    return {
+        "iface_in": facts.get("candidate_iface_in"),
+        "iface_out": facts.get("candidate_iface_out"),
+    }
 
 def _try_fact_resolver(
     *,
@@ -176,7 +199,15 @@ def resolve_inputs(
     spec = playbook.get("inputs") or {}
     missing = [k for k in reqs if inputs.get(k) in (None, "", [])]
 
-    append_audit(audit_dir, {"type":"INPUT_RESOLVE_START","project_id":project_id,"target_id":target_id,"missing":missing})
+    append_audit(
+        audit_dir,
+        {
+            "type": "INPUT_RESOLVE_START",
+            "project_id": project_id,
+            "target_id": target_id,
+            "missing": missing,
+        },
+    )
 
     choices: Dict[str, List[str]] = {}
     questions: List[str] = []
@@ -188,6 +219,95 @@ def resolve_inputs(
         if not (isinstance(spec, dict) and isinstance(spec.get(k), dict)):
             continue
 
+        # -------------------------------------------------
+        # 1) iface_in/iface_out: net.probe 우선
+        #    - host_like + (medium/high)만 자동 결정
+        #    - 그 외(불확실)면 절대 자동결정하지 않고 질문으로 남김
+        # -------------------------------------------------
+        if k in ("iface_in", "iface_out"):
+            r = net_probe.collect_net_probe(
+                project_id=project_id,
+                target_id=target_id,
+                subagent_url=subagent_url,
+                timeout_s=timeout_s,
+            )
+            facts = r.get("facts") or {}
+
+            ctx = facts.get("network_context")
+            conf = facts.get("confidence")
+            cand_in = facts.get("candidate_iface_in")
+            cand_out = facts.get("candidate_iface_out")
+
+            # (A) 확실하면 자동 확정
+            if ctx == "host_like" and conf in ("medium", "high") and cand_in and cand_out:
+                chosen = cand_in if k == "iface_in" else cand_out
+                inputs[k] = chosen
+                if k in missing:
+                    missing.remove(k)
+
+                rationales[k] = [str(x) for x in (r.get("rationale") or [])]
+                evidence_map[k] = r.get("evidence_refs") or []
+
+                append_audit(
+                    audit_dir,
+                    {
+                        "type": "NET_PROBE_IFACE_AUTO_CHOSEN",
+                        "project_id": project_id,
+                        "target_id": target_id,
+                        "fact_key": k,
+                        "value": chosen,
+                        "context": ctx,
+                        "confidence": conf,
+                    },
+                )
+                continue
+
+            # (B) 불확실 -> 무조건 질문 (inputs/missing 건드리지 않음)
+            # 기존에 inputs에 들어있던 값이 있으면 무시하도록 강제 (stale 방지)
+            if k in inputs:
+                inputs.pop(k, None)
+
+            # 후보는 보여주되, 자동 확정은 금지
+            nifs = facts.get("normalized_interfaces") or facts.get("interfaces") or []
+            cleaned: List[str] = []
+            for x in nifs:
+                s = str(x).strip()
+                if not s or s == "lo":
+                    continue
+                # docker/bridge/veth는 기본 후보에서 제외
+                if s.startswith("docker") or s.startswith("br-") or s.startswith("veth"):
+                    continue
+                cleaned.append(s)
+
+            if cleaned:
+                choices[k] = cleaned[:20]
+
+            prompt = ((spec.get(k) or {}).get("question") or {}).get("prompt")
+            if not prompt:
+                prompt = f"{k} 값을 선택하세요. (net.probe 결과: {ctx}/{conf} → 자동 확정 금지)"
+
+            questions.append(prompt)
+
+            rationales[k] = [str(x) for x in (r.get("rationale") or [])]
+            evidence_map[k] = r.get("evidence_refs") or []
+
+            append_audit(
+                audit_dir,
+                {
+                    "type": "NET_PROBE_IFACE_NEEDS_CONFIRMATION",
+                    "project_id": project_id,
+                    "target_id": target_id,
+                    "fact_key": k,
+                    "context": ctx,
+                    "confidence": conf,
+                    "candidates": (choices.get(k) or [])[:10],
+                },
+            )
+            continue
+
+        # -------------------------------------------------
+        # 2) generic fact resolver 시도 (sys_fact_resolver 등)
+        # -------------------------------------------------
         fact_result = _try_fact_resolver(
             audit_dir=audit_dir,
             project_id=project_id,
@@ -199,6 +319,7 @@ def resolve_inputs(
             inputs=inputs,
             timeout_s=timeout_s,
         )
+
         if _apply_resolution_result(
             result=fact_result,
             fact_key=k,
@@ -222,47 +343,88 @@ def resolve_inputs(
             )
             continue
 
+        # -------------------------------------------------
+        # 3) playbook discover.commands fallback
+        # -------------------------------------------------
         disc = (spec[k].get("discover") or {})
         cmds = disc.get("commands") or []
         if not cmds:
             continue
 
-        # run discovery until candidates appear
         cands: List[str] = []
         for cmd in cmds:
-            append_audit(audit_dir, {"type":"INPUT_DISCOVER","project_id":project_id,"key":k,"target_id":target_id,"command":cmd})
-            res = run_script(subagent_url, {
-                "run_id": f"discover-{project_id}-{k}",
-                "target_id": target_id,
-                "script": cmd,
-                "timeout_s": timeout_s,
-                "approval_required": False,
-                "evidence_requests": [],
-            }, timeout_s=timeout_s + 10)
+            append_audit(
+                audit_dir,
+                {
+                    "type": "INPUT_DISCOVER",
+                    "project_id": project_id,
+                    "key": k,
+                    "target_id": target_id,
+                    "command": cmd,
+                },
+            )
+
+            res = run_script(
+                subagent_url,
+                {
+                    "run_id": f"discover-{project_id}-{k}",
+                    "target_id": target_id,
+                    "script": cmd,
+                    "timeout_s": timeout_s,
+                    "approval_required": False,
+                    "evidence_requests": [],
+                },
+                timeout_s=timeout_s + 10,
+            )
 
             if res.get("exit_code") == 0:
                 cands = _lines(res.get("stdout") or "")
                 if cands:
                     break
 
-        # optional exclude filter
         ex = set([x.lower() for x in (disc.get("filter") or {}).get("exclude", [])])
         cands = [c for c in cands if c.lower() not in ex]
 
         if len(cands) == 1:
             inputs[k] = cands[0]
-            missing.remove(k)
-            append_audit(audit_dir, {"type":"INPUT_AUTO_CHOSEN","project_id":project_id,"key":k,"value":cands[0],"target_id":target_id})
+            if k in missing:
+                missing.remove(k)
+
+            append_audit(
+                audit_dir,
+                {
+                    "type": "INPUT_AUTO_CHOSEN",
+                    "project_id": project_id,
+                    "key": k,
+                    "value": cands[0],
+                    "target_id": target_id,
+                },
+            )
+
         elif len(cands) > 1:
             choices[k] = cands[:20]
-            questions.append(((spec[k].get("question") or {}).get("prompt")) or f"{k} 값을 선택하세요.")
+            questions.append(
+                ((spec[k].get("question") or {}).get("prompt")) or f"{k} 값을 선택하세요."
+            )
+
         else:
-            questions.append(((spec[k].get("question") or {}).get("prompt")) or f"{k} 값을 입력하세요.")
+            questions.append(
+                ((spec[k].get("question") or {}).get("prompt")) or f"{k} 값을 입력하세요."
+            )
 
     # re-check
     missing = [k for k in reqs if inputs.get(k) in (None, "", [])]
+
     if missing:
-        append_audit(audit_dir, {"type":"INPUT_RESOLVE_NEEDS","project_id":project_id,"target_id":target_id,"missing":missing})
+        append_audit(
+            audit_dir,
+            {
+                "type": "INPUT_RESOLVE_NEEDS",
+                "project_id": project_id,
+                "target_id": target_id,
+                "missing": missing,
+            },
+        )
         return {
             "status": "needs_clarification",
             "inputs": inputs,
@@ -274,7 +436,14 @@ def resolve_inputs(
             "evidence_map": evidence_map,
         }
 
-    append_audit(audit_dir, {"type":"INPUT_RESOLVE_DONE","project_id":project_id,"target_id":target_id})
+    append_audit(
+        audit_dir,
+        {
+            "type": "INPUT_RESOLVE_DONE",
+            "project_id": project_id,
+            "target_id": target_id,
+        },
+    )
     return {
         "status": "ready",
         "inputs": inputs,
@@ -282,3 +451,4 @@ def resolve_inputs(
         "rationales": rationales,
         "evidence_map": evidence_map,
     }
+

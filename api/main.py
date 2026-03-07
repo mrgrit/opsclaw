@@ -532,19 +532,19 @@ def resolve_subagent_url(target_id: str) -> str:
     if not target_id:
         return SUBAGENT_URL
 
-    # local-agent-1 같은 로컬 타겟이면 기본 subagent
+    # 1) 먼저 registry에서 찾는다
+    t = get_target(target_id)
+    if t:
+        base = (t.get("base_url") or "").strip().rstrip("/")
+        if not base:
+            raise HTTPException(400, f"target base_url is empty: {target_id}")
+        return base
+
+    # 2) registry에 없을 때만 로컬 fallback 허용
     if target_id in ("local-agent-1", "local", "localhost"):
         return SUBAGENT_URL
 
-    t = get_target(target_id)
-    if not t:
-        raise HTTPException(404, f"target not found: {target_id}")
-
-    base = (t.get("base_url") or "").strip().rstrip("/")
-    if not base:
-        raise HTTPException(400, f"target base_url is empty: {target_id}")
-
-    return base
+    raise HTTPException(404, f"target not found: {target_id}")
 
 # ---------------- Core ----------------
 @app.get("/health")
@@ -1585,6 +1585,25 @@ def run_auto(project_id: str, req: RunAutoReq):
     resolver_evidence_map.update(rr.get("evidence_map") or {})
 
     if rr.get("status") != "ready":
+        # ---- 보호 키: 사용자만 결정해야 하는 값은 LLM이 대신 결정하지 않음 ----
+        protected = {"iface_in", "iface_out"}  # M3-5.3: critical decision -> ask user
+        missing_inputs = rr.get("missing_inputs") or []
+        if any(k in protected for k in missing_inputs):
+            plan2 = dict(plan) if isinstance(plan, dict) else {}
+            plan2["status"] = "needs_clarification"
+            plan2["missing_inputs"] = missing_inputs
+            plan2["next_questions"] = rr.get("next_questions") or ["추가 확인이 필요합니다."]
+            plan2["choices"] = rr.get("choices") or {}
+            plan2["inputs"] = rr.get("inputs") or inputs
+            plan2["created_at"] = datetime.utcnow().isoformat() + "Z"
+            plan2["input_rationales"] = resolver_rationales
+            plan2["pending_approvals"] = resolver_approvals
+            plan2["evidence_map"] = resolver_evidence_map
+
+            st["plan"] = plan2
+            update_project(STATE_DIR, project_id, st)
+            return {"status": "needs_clarification", "plan": plan2}
+
         # 1) resolver가 못 풀면 -> Master-guided probe loop로 먼저 해결 시도
         pr = probe_loop.probe_resolve_inputs(
             audit_dir=AUDIT_DIR,
@@ -1592,7 +1611,7 @@ def run_auto(project_id: str, req: RunAutoReq):
             request_text=_get_request_text(),
             target_id=target_id,
             subagent_url=subagent_url,
-            missing_inputs=rr.get("missing_inputs") or [],
+            missing_inputs=missing_inputs,
             choices=rr.get("choices") or {},
             current_inputs=inputs,
             max_iters=2,
