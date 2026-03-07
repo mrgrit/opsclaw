@@ -1,0 +1,390 @@
+{
+  "project_id": "7474a09c-1511-464b-a5dc-0397be77ecdb",
+  "project_type": "generic",
+  "targets": [],
+  "milestones": [
+    "M1"
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "status": "todo",
+      "title": "Execute command via subagent",
+      "detail": "suricata inline install 해줘"
+    }
+  ],
+  "runs": [],
+  "tests": [],
+  "errors": [],
+  "master_calls": [],
+  "timestamps": {
+    "started": "2026-03-06T14:59:04+0000",
+    "updated": "2026-03-06T15:11:31+0000",
+    "completed": null
+  },
+  "workflow_runs": [],
+  "plan": {
+    "status": "executed",
+    "next_questions": [],
+    "rationale": {
+      "request_text": "suricata inline install 해줘",
+      "target_scores": [
+        [
+          "local-agent-1",
+          0
+        ]
+      ],
+      "playbook_scores": [
+        [
+          "suricata-inline-install",
+          24
+        ],
+        [
+          "ops-health-dag-failfast",
+          0
+        ],
+        [
+          "ops-health-basic",
+          0
+        ],
+        [
+          "ops-health-dag-continue",
+          0
+        ],
+        [
+          "ops-health-dag-failfast",
+          0
+        ]
+      ]
+    },
+    "created_at": "2026-03-06T15:11:31.482536Z",
+    "inputs": {
+      "pkg_manager": "apt",
+      "target_os": "debian",
+      "iface_in": "eth0",
+      "iface_out": "eth0"
+    },
+    "input_rationales": {
+      "iface_in": [
+        "detected 2 interfaces",
+        "collected ipv4 addresses",
+        "detected default route",
+        "collected route table",
+        "detected container-like network environment",
+        "interface candidates uncertain"
+      ],
+      "iface_out": [
+        "detected 2 interfaces",
+        "collected ipv4 addresses",
+        "detected default route",
+        "collected route table",
+        "detected container-like network environment",
+        "interface candidates uncertain"
+      ],
+      "pkg_manager": [
+        "checked available package manager binaries on target host",
+        "selected first detected supported package manager 'apt'"
+      ],
+      "target_os": [
+        "read /etc/os-release from target host",
+        "mapped os metadata to 'debian'"
+      ]
+    },
+    "pending_approvals": [],
+    "evidence_map": {
+      "iface_in": [
+        {
+          "kind": "run_script",
+          "fact_key": "interfaces",
+          "stdout": "lo\neth0@if9\n",
+          "stderr": ""
+        },
+        {
+          "kind": "run_script",
+          "fact_key": "ipv4_addresses",
+          "stdout": "1: lo    inet 127.0.0.1/8 scope host lo\\       valid_lft forever preferred_lft forever\n2: eth0    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0\\       valid_lft forever preferred_lft forever\n",
+          "stderr": ""
+        },
+        {
+          "kind": "run_script",
+          "fact_key": "default_route",
+          "stdout": "default via 172.17.0.1 dev eth0 \n",
+          "stderr": ""
+        },
+        {
+          "kind": "run_script",
+          "fact_key": "routes_summary",
+          "stdout": "default via 172.17.0.1 dev eth0 \n172.17.0.0/16 dev eth0 proto kernel scope link src 172.17.0.2 \n",
+          "stderr": ""
+        }
+      ],
+      "iface_out": [
+        {
+          "kind": "run_script",
+          "fact_key": "interfaces",
+          "stdout": "lo\neth0@if9\n",
+          "stderr": ""
+        },
+        {
+          "kind": "run_script",
+          "fact_key": "ipv4_addresses",
+          "stdout": "1: lo    inet 127.0.0.1/8 scope host lo\\       valid_lft forever preferred_lft forever\n2: eth0    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0\\       valid_lft forever preferred_lft forever\n",
+          "stderr": ""
+        },
+        {
+          "kind": "run_script",
+          "fact_key": "default_route",
+          "stdout": "default via 172.17.0.1 dev eth0 \n",
+          "stderr": ""
+        },
+        {
+          "kind": "run_script",
+          "fact_key": "routes_summary",
+          "stdout": "default via 172.17.0.1 dev eth0 \n172.17.0.0/16 dev eth0 proto kernel scope link src 172.17.0.2 \n",
+          "stderr": ""
+        }
+      ],
+      "pkg_manager": [
+        {
+          "kind": "run_script",
+          "fact_key": "pkg_manager",
+          "stdout": "apt",
+          "stderr": ""
+        }
+      ],
+      "target_os": [
+        {
+          "kind": "run_script",
+          "fact_key": "target_os",
+          "stdout": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.3\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"",
+          "stderr": ""
+        }
+      ]
+    },
+    "missing_inputs": [],
+    "choices": {},
+    "updated_at": "2026-03-06T15:11:31.481456Z"
+  },
+  "playbook_runs": [
+    {
+      "playbook_id": "suricata-inline-install",
+      "target_id": "local-agent-1",
+      "inputs": {
+        "pkg_manager": "apt",
+        "target_os": "debian",
+        "iface_in": "eth0",
+        "iface_out": "eth0"
+      },
+      "result": {
+        "mode": "steps",
+        "runs": [
+          {
+            "step": "precheck",
+            "run_id": "ba15d6b9-394f-4e2b-b81e-27ddcd8daba7",
+            "command": "ip link show eth0",
+            "exit_code": 0,
+            "stdout": "2: eth0@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default \n    link/ether be:8b:50:bc:93:e1 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/ba15d6b9-394f-4e2b-b81e-27ddcd8daba7_run_stdout.log",
+              "/data/evidence/ba15d6b9-394f-4e2b-b81e-27ddcd8daba7_run_stderr.log"
+            ]
+          },
+          {
+            "step": "precheck",
+            "run_id": "80fe5449-e2c0-4a0b-835c-67b77d05ec70",
+            "command": "ip link show eth0",
+            "exit_code": 0,
+            "stdout": "2: eth0@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default \n    link/ether be:8b:50:bc:93:e1 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/80fe5449-e2c0-4a0b-835c-67b77d05ec70_run_stdout.log",
+              "/data/evidence/80fe5449-e2c0-4a0b-835c-67b77d05ec70_run_stderr.log"
+            ]
+          },
+          {
+            "step": "precheck",
+            "run_id": "109666bc-c1af-4cd4-87f4-0635bf02c2af",
+            "command": "uname -a",
+            "exit_code": 0,
+            "stdout": "Linux e7e6fd662405 6.8.0-100-generic #100~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Jan 19 17:10:19 UTC  x86_64 GNU/Linux\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/109666bc-c1af-4cd4-87f4-0635bf02c2af_run_stdout.log",
+              "/data/evidence/109666bc-c1af-4cd4-87f4-0635bf02c2af_run_stderr.log"
+            ]
+          },
+          {
+            "step": "precheck",
+            "run_id": "ea89ee66-a294-476f-9c12-4dcc545ca5d8",
+            "command": "cat /etc/os-release || true",
+            "exit_code": 0,
+            "stdout": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.3\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/ea89ee66-a294-476f-9c12-4dcc545ca5d8_run_stdout.log",
+              "/data/evidence/ea89ee66-a294-476f-9c12-4dcc545ca5d8_run_stderr.log"
+            ]
+          },
+          {
+            "step": "install_suricata",
+            "run_id": "aae8f8ae-fce5-4835-a37a-abbfee668d7d",
+            "command": "echo TODO: install suricata here",
+            "exit_code": 0,
+            "stdout": "TODO: install suricata here\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/aae8f8ae-fce5-4835-a37a-abbfee668d7d_run_stdout.log",
+              "/data/evidence/aae8f8ae-fce5-4835-a37a-abbfee668d7d_run_stderr.log"
+            ]
+          },
+          {
+            "step": "install_suricata",
+            "run_id": "d916d30e-d483-4dd8-941e-1f6c5683eaff",
+            "command": "echo In next patch: allow sudo for remote-install profile",
+            "exit_code": 0,
+            "stdout": "In next patch: allow sudo for remote-install profile\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/d916d30e-d483-4dd8-941e-1f6c5683eaff_run_stdout.log",
+              "/data/evidence/d916d30e-d483-4dd8-941e-1f6c5683eaff_run_stderr.log"
+            ]
+          },
+          {
+            "step": "validate",
+            "run_id": "caf0e15d-bfcc-444f-bdfc-d13be8ac506f",
+            "command": "which suricata || true",
+            "exit_code": 0,
+            "stdout": "",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/caf0e15d-bfcc-444f-bdfc-d13be8ac506f_run_stdout.log",
+              "/data/evidence/caf0e15d-bfcc-444f-bdfc-d13be8ac506f_run_stderr.log"
+            ]
+          },
+          {
+            "step": "validate",
+            "run_id": "2d75193a-1aa5-4dc2-821e-1696d572c6f7",
+            "command": "suricata --build-info || true",
+            "exit_code": 0,
+            "stdout": "",
+            "stderr": "/bin/sh: 1: suricata: not found\n",
+            "evidence_refs": [
+              "/data/evidence/2d75193a-1aa5-4dc2-821e-1696d572c6f7_run_stdout.log",
+              "/data/evidence/2d75193a-1aa5-4dc2-821e-1696d572c6f7_run_stderr.log"
+            ]
+          }
+        ],
+        "validate": {
+          "pass": true,
+          "rule": "at_least_one_command_succeeded"
+        }
+      },
+      "created_at": "2026-03-06T15:00:07.878298Z"
+    },
+    {
+      "playbook_id": "suricata-inline-install",
+      "target_id": "local-agent-1",
+      "inputs": {
+        "pkg_manager": "apt",
+        "target_os": "debian",
+        "iface_in": "eth0",
+        "iface_out": "eth0"
+      },
+      "result": {
+        "mode": "steps",
+        "runs": [
+          {
+            "step": "precheck",
+            "run_id": "3d90f8c6-0078-4f6e-bcbf-fda7b0bfdf0a",
+            "command": "ip link show eth0",
+            "exit_code": 0,
+            "stdout": "2: eth0@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default \n    link/ether be:8b:50:bc:93:e1 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/3d90f8c6-0078-4f6e-bcbf-fda7b0bfdf0a_run_stdout.log",
+              "/data/evidence/3d90f8c6-0078-4f6e-bcbf-fda7b0bfdf0a_run_stderr.log"
+            ]
+          },
+          {
+            "step": "precheck",
+            "run_id": "7167020d-3a0b-4da8-b047-dbacbe368551",
+            "command": "ip link show eth0",
+            "exit_code": 0,
+            "stdout": "2: eth0@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default \n    link/ether be:8b:50:bc:93:e1 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/7167020d-3a0b-4da8-b047-dbacbe368551_run_stdout.log",
+              "/data/evidence/7167020d-3a0b-4da8-b047-dbacbe368551_run_stderr.log"
+            ]
+          },
+          {
+            "step": "precheck",
+            "run_id": "e044526c-e604-4979-a2ed-4ced8b43a1ce",
+            "command": "uname -a",
+            "exit_code": 0,
+            "stdout": "Linux e7e6fd662405 6.8.0-100-generic #100~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Jan 19 17:10:19 UTC  x86_64 GNU/Linux\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/e044526c-e604-4979-a2ed-4ced8b43a1ce_run_stdout.log",
+              "/data/evidence/e044526c-e604-4979-a2ed-4ced8b43a1ce_run_stderr.log"
+            ]
+          },
+          {
+            "step": "precheck",
+            "run_id": "9b9bbe23-04c3-4776-bfed-5e19ded19d23",
+            "command": "cat /etc/os-release || true",
+            "exit_code": 0,
+            "stdout": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.3\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/9b9bbe23-04c3-4776-bfed-5e19ded19d23_run_stdout.log",
+              "/data/evidence/9b9bbe23-04c3-4776-bfed-5e19ded19d23_run_stderr.log"
+            ]
+          },
+          {
+            "step": "install_suricata",
+            "run_id": "367987cd-981e-4863-92bc-cc6883bbfa98",
+            "command": "echo TODO: install suricata here",
+            "exit_code": 0,
+            "stdout": "TODO: install suricata here\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/367987cd-981e-4863-92bc-cc6883bbfa98_run_stdout.log",
+              "/data/evidence/367987cd-981e-4863-92bc-cc6883bbfa98_run_stderr.log"
+            ]
+          },
+          {
+            "step": "install_suricata",
+            "run_id": "17deb8b5-d8a3-481a-9e2f-729213f814bc",
+            "command": "echo In next patch: allow sudo for remote-install profile",
+            "exit_code": 0,
+            "stdout": "In next patch: allow sudo for remote-install profile\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/17deb8b5-d8a3-481a-9e2f-729213f814bc_run_stdout.log",
+              "/data/evidence/17deb8b5-d8a3-481a-9e2f-729213f814bc_run_stderr.log"
+            ]
+          },
+          {
+            "step": "validate",
+            "run_id": "e4d40e88-1b0c-44ee-bc4e-5dac10aca2a6",
+            "command": "command -v suricata",
+            "exit_code": 127,
+            "stdout": "",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/e4d40e88-1b0c-44ee-bc4e-5dac10aca2a6_run_stdout.log",
+              "/data/evidence/e4d40e88-1b0c-44ee-bc4e-5dac10aca2a6_run_stderr.log"
+            ]
+          }
+        ],
+        "validate": {
+          "pass": false,
+          "rule": "exit_code_all_zero"
+        }
+      },
+      "created_at": "2026-03-06T15:11:31.480353Z"
+    }
+  ]
+}

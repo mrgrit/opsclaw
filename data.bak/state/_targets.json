@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "id": "local-agent-1",
+      "name": "Local SubAgent",
+      "base_url": "http://subagent:55123",
+      "tags": [
+        "local"
+      ],
+      "notes": ""
+    }
+  ]
+}

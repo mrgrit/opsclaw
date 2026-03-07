@@ -1,0 +1,12 @@
+[
+  {
+    "id": "ollama-1",
+    "name": "local-ollama",
+    "provider": "ollama",
+    "base_url": "http://211.170.162.139:10534",
+    "api_key": "",
+    "model": "gpt-oss:120b",
+    "timeout_s": 900,
+    "headers": {}
+  }
+]

@@ -1,0 +1,378 @@
+{
+  "project_id": "9ac5b4fc-8f8a-4433-b824-d0a02c5412e2",
+  "project_type": "generic",
+  "targets": [],
+  "milestones": [
+    "M1"
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "status": "todo",
+      "title": "Execute command via subagent",
+      "detail": "suricata inline install 해줘"
+    }
+  ],
+  "runs": [],
+  "tests": [],
+  "errors": [],
+  "master_calls": [],
+  "timestamps": {
+    "started": "2026-03-06T14:03:02+0000",
+    "updated": "2026-03-06T14:29:27+0000",
+    "completed": null
+  },
+  "workflow_runs": [],
+  "plan": {
+    "status": "executed",
+    "next_questions": [],
+    "rationale": {
+      "request_text": "suricata inline install 해줘",
+      "target_scores": [
+        [
+          "local-agent-1",
+          0
+        ]
+      ],
+      "playbook_scores": [
+        [
+          "suricata-inline-install",
+          24
+        ],
+        [
+          "ops-health-dag-failfast",
+          0
+        ],
+        [
+          "ops-health-basic",
+          0
+        ],
+        [
+          "ops-health-dag-continue",
+          0
+        ],
+        [
+          "ops-health-dag-failfast",
+          0
+        ]
+      ]
+    },
+    "created_at": "2026-03-06T14:29:27.473467Z",
+    "inputs": {
+      "iface_in": "eth0@if9",
+      "iface_out": "eth0@if9",
+      "pkg_manager": "apt",
+      "target_os": "debian"
+    },
+    "input_rationales": {
+      "pkg_manager": [
+        "checked available package manager binaries on target host",
+        "selected first detected supported package manager 'apt'"
+      ],
+      "target_os": [
+        "read /etc/os-release from target host",
+        "mapped os metadata to 'debian'"
+      ]
+    },
+    "pending_approvals": [],
+    "evidence_map": {
+      "pkg_manager": [
+        {
+          "kind": "run_script",
+          "fact_key": "pkg_manager",
+          "stdout": "apt",
+          "stderr": ""
+        }
+      ],
+      "target_os": [
+        {
+          "kind": "run_script",
+          "fact_key": "target_os",
+          "stdout": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.3\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"",
+          "stderr": ""
+        }
+      ]
+    },
+    "missing_inputs": [],
+    "choices": {},
+    "updated_at": "2026-03-06T14:29:27.472624Z"
+  },
+  "playbook_runs": [
+    {
+      "playbook_id": "ops-health-basic",
+      "target_id": "local-agent-1",
+      "inputs": {
+        "iface_in": "eth0@if9",
+        "iface_out": "eth0@if9",
+        "pkg_manager": "apt",
+        "target_os": "debian"
+      },
+      "result": {
+        "mode": "steps",
+        "runs": [
+          {
+            "step": "snapshot",
+            "run_id": "75eb3d6f-5c20-40f7-90c4-c63f4d395545",
+            "command": "uname -a",
+            "exit_code": 0,
+            "stdout": "Linux e7e6fd662405 6.8.0-100-generic #100~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Jan 19 17:10:19 UTC  x86_64 GNU/Linux\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/75eb3d6f-5c20-40f7-90c4-c63f4d395545_run_stdout.log",
+              "/data/evidence/75eb3d6f-5c20-40f7-90c4-c63f4d395545_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "2dd3051f-c60e-4c57-921e-9d64c2e06944",
+            "command": "date; uptime",
+            "exit_code": 0,
+            "stdout": "Fri Mar  6 14:17:00 UTC 2026\n 14:17:00 up  8:16,  0 users,  load average: 0.00, 0.03, 0.08\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/2dd3051f-c60e-4c57-921e-9d64c2e06944_run_stdout.log",
+              "/data/evidence/2dd3051f-c60e-4c57-921e-9d64c2e06944_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "1fa96395-1fef-4bab-a961-0199f57bda99",
+            "command": "df -h",
+            "exit_code": 0,
+            "stdout": "Filesystem      Size  Used Avail Use% Mounted on\noverlay          29G   13G   15G  46% /\ntmpfs            64M     0   64M   0% /dev\nshm              64M     0   64M   0% /dev/shm\n/dev/sda3        29G   13G   15G  46% /etc/hosts\ntmpfs           1.9G     0  1.9G   0% /proc/acpi\ntmpfs           1.9G     0  1.9G   0% /proc/asound\ntmpfs           1.9G     0  1.9G   0% /proc/scsi\ntmpfs           1.9G     0  1.9G   0% /sys/firmware\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/1fa96395-1fef-4bab-a961-0199f57bda99_run_stdout.log",
+              "/data/evidence/1fa96395-1fef-4bab-a961-0199f57bda99_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "ef79d67c-dca8-4966-a630-c26ca8418215",
+            "command": "free -m || true",
+            "exit_code": 0,
+            "stdout": "               total        used        free      shared  buff/cache   available\nMem:            3868        1412         664          33        2107        2455\nSwap:           3219           0        3219\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/ef79d67c-dca8-4966-a630-c26ca8418215_run_stdout.log",
+              "/data/evidence/ef79d67c-dca8-4966-a630-c26ca8418215_run_stderr.log"
+            ]
+          },
+          {
+            "step": "network",
+            "run_id": "0078e0de-96f2-46bf-a85c-5147562a75fe",
+            "command": "ss -lntp || netstat -lntp || true",
+            "exit_code": 0,
+            "stdout": "State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                         \nLISTEN 0      2048         0.0.0.0:55123      0.0.0.0:*    users:((\"uvicorn\",pid=1,fd=11))\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/0078e0de-96f2-46bf-a85c-5147562a75fe_run_stdout.log",
+              "/data/evidence/0078e0de-96f2-46bf-a85c-5147562a75fe_run_stderr.log"
+            ]
+          },
+          {
+            "step": "network",
+            "run_id": "7e10f864-bbeb-4b4b-ad51-39558926ac13",
+            "command": "ip a || true",
+            "exit_code": 0,
+            "stdout": "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n    inet6 ::1/128 scope host proto kernel_lo \n       valid_lft forever preferred_lft forever\n2: eth0@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default \n    link/ether be:8b:50:bc:93:e1 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0\n       valid_lft forever preferred_lft forever\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/7e10f864-bbeb-4b4b-ad51-39558926ac13_run_stdout.log",
+              "/data/evidence/7e10f864-bbeb-4b4b-ad51-39558926ac13_run_stderr.log"
+            ]
+          }
+        ],
+        "validate": {
+          "pass": true,
+          "rule": "exit_code_all_zero"
+        }
+      },
+      "created_at": "2026-03-06T14:17:00.879758Z"
+    },
+    {
+      "playbook_id": "ops-health-basic",
+      "target_id": "local-agent-1",
+      "inputs": {
+        "iface_in": "eth0@if9",
+        "iface_out": "eth0@if9",
+        "pkg_manager": "apt",
+        "target_os": "debian"
+      },
+      "result": {
+        "mode": "steps",
+        "runs": [
+          {
+            "step": "snapshot",
+            "run_id": "6331064b-ead3-4785-a784-8a134f83bfca",
+            "command": "uname -a",
+            "exit_code": 0,
+            "stdout": "Linux e7e6fd662405 6.8.0-100-generic #100~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Jan 19 17:10:19 UTC  x86_64 GNU/Linux\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/6331064b-ead3-4785-a784-8a134f83bfca_run_stdout.log",
+              "/data/evidence/6331064b-ead3-4785-a784-8a134f83bfca_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "597fa1ed-fe69-45a1-a793-b6b4424cd5a1",
+            "command": "date; uptime",
+            "exit_code": 0,
+            "stdout": "Fri Mar  6 14:17:48 UTC 2026\n 14:17:48 up  8:16,  0 users,  load average: 0.00, 0.02, 0.08\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/597fa1ed-fe69-45a1-a793-b6b4424cd5a1_run_stdout.log",
+              "/data/evidence/597fa1ed-fe69-45a1-a793-b6b4424cd5a1_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "82587be0-6ebf-45fb-a2d4-695be84e91aa",
+            "command": "df -h",
+            "exit_code": 0,
+            "stdout": "Filesystem      Size  Used Avail Use% Mounted on\noverlay          29G   13G   15G  46% /\ntmpfs            64M     0   64M   0% /dev\nshm              64M     0   64M   0% /dev/shm\n/dev/sda3        29G   13G   15G  46% /etc/hosts\ntmpfs           1.9G     0  1.9G   0% /proc/acpi\ntmpfs           1.9G     0  1.9G   0% /proc/asound\ntmpfs           1.9G     0  1.9G   0% /proc/scsi\ntmpfs           1.9G     0  1.9G   0% /sys/firmware\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/82587be0-6ebf-45fb-a2d4-695be84e91aa_run_stdout.log",
+              "/data/evidence/82587be0-6ebf-45fb-a2d4-695be84e91aa_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "89eefdeb-2c37-4e9c-a584-c8ff41428982",
+            "command": "free -m || true",
+            "exit_code": 0,
+            "stdout": "               total        used        free      shared  buff/cache   available\nMem:            3868        1401         675          33        2107        2466\nSwap:           3219           0        3219\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/89eefdeb-2c37-4e9c-a584-c8ff41428982_run_stdout.log",
+              "/data/evidence/89eefdeb-2c37-4e9c-a584-c8ff41428982_run_stderr.log"
+            ]
+          },
+          {
+            "step": "network",
+            "run_id": "da141390-9ce4-4321-a3ac-de0eaa76cd72",
+            "command": "ss -lntp || netstat -lntp || true",
+            "exit_code": 0,
+            "stdout": "State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                         \nLISTEN 0      2048         0.0.0.0:55123      0.0.0.0:*    users:((\"uvicorn\",pid=1,fd=11))\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/da141390-9ce4-4321-a3ac-de0eaa76cd72_run_stdout.log",
+              "/data/evidence/da141390-9ce4-4321-a3ac-de0eaa76cd72_run_stderr.log"
+            ]
+          },
+          {
+            "step": "network",
+            "run_id": "f00f08b6-2d8f-4f9e-880f-20c06c35bf20",
+            "command": "ip a || true",
+            "exit_code": 0,
+            "stdout": "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n    inet6 ::1/128 scope host proto kernel_lo \n       valid_lft forever preferred_lft forever\n2: eth0@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default \n    link/ether be:8b:50:bc:93:e1 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0\n       valid_lft forever preferred_lft forever\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/f00f08b6-2d8f-4f9e-880f-20c06c35bf20_run_stdout.log",
+              "/data/evidence/f00f08b6-2d8f-4f9e-880f-20c06c35bf20_run_stderr.log"
+            ]
+          }
+        ],
+        "validate": {
+          "pass": true,
+          "rule": "exit_code_all_zero"
+        }
+      },
+      "created_at": "2026-03-06T14:17:48.457400Z"
+    },
+    {
+      "playbook_id": "ops-health-basic",
+      "target_id": "local-agent-1",
+      "inputs": {
+        "iface_in": "eth0@if9",
+        "iface_out": "eth0@if9",
+        "pkg_manager": "apt",
+        "target_os": "debian"
+      },
+      "result": {
+        "mode": "steps",
+        "runs": [
+          {
+            "step": "snapshot",
+            "run_id": "5e4c9fe5-cbac-4072-88bc-f464a94a5f34",
+            "command": "uname -a",
+            "exit_code": 0,
+            "stdout": "Linux e7e6fd662405 6.8.0-100-generic #100~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Jan 19 17:10:19 UTC  x86_64 GNU/Linux\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/5e4c9fe5-cbac-4072-88bc-f464a94a5f34_run_stdout.log",
+              "/data/evidence/5e4c9fe5-cbac-4072-88bc-f464a94a5f34_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "a64f2a52-6e0d-49b0-b654-4992310437ef",
+            "command": "date; uptime",
+            "exit_code": 0,
+            "stdout": "Fri Mar  6 14:29:27 UTC 2026\n 14:29:27 up  8:28,  0 users,  load average: 0.00, 0.00, 0.01\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/a64f2a52-6e0d-49b0-b654-4992310437ef_run_stdout.log",
+              "/data/evidence/a64f2a52-6e0d-49b0-b654-4992310437ef_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "6707b8c7-1a8b-4717-98e0-d4f330a4b966",
+            "command": "df -h",
+            "exit_code": 0,
+            "stdout": "Filesystem      Size  Used Avail Use% Mounted on\noverlay          29G   13G   15G  46% /\ntmpfs            64M     0   64M   0% /dev\nshm              64M     0   64M   0% /dev/shm\n/dev/sda3        29G   13G   15G  46% /etc/hosts\ntmpfs           1.9G     0  1.9G   0% /proc/acpi\ntmpfs           1.9G     0  1.9G   0% /proc/asound\ntmpfs           1.9G     0  1.9G   0% /proc/scsi\ntmpfs           1.9G     0  1.9G   0% /sys/firmware\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/6707b8c7-1a8b-4717-98e0-d4f330a4b966_run_stdout.log",
+              "/data/evidence/6707b8c7-1a8b-4717-98e0-d4f330a4b966_run_stderr.log"
+            ]
+          },
+          {
+            "step": "snapshot",
+            "run_id": "97d2a9fc-2abc-469b-bdcb-387a6df42048",
+            "command": "free -m || true",
+            "exit_code": 0,
+            "stdout": "               total        used        free      shared  buff/cache   available\nMem:            3868        1400         675          33        2107        2467\nSwap:           3219           0        3219\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/97d2a9fc-2abc-469b-bdcb-387a6df42048_run_stdout.log",
+              "/data/evidence/97d2a9fc-2abc-469b-bdcb-387a6df42048_run_stderr.log"
+            ]
+          },
+          {
+            "step": "network",
+            "run_id": "f908f31d-06b1-4a53-a3db-e293f6b84541",
+            "command": "ss -lntp || netstat -lntp || true",
+            "exit_code": 0,
+            "stdout": "State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                         \nLISTEN 0      2048         0.0.0.0:55123      0.0.0.0:*    users:((\"uvicorn\",pid=1,fd=11))\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/f908f31d-06b1-4a53-a3db-e293f6b84541_run_stdout.log",
+              "/data/evidence/f908f31d-06b1-4a53-a3db-e293f6b84541_run_stderr.log"
+            ]
+          },
+          {
+            "step": "network",
+            "run_id": "dc3e2d3e-76c7-4e55-b618-5eb737fc9e18",
+            "command": "ip a || true",
+            "exit_code": 0,
+            "stdout": "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n    inet6 ::1/128 scope host proto kernel_lo \n       valid_lft forever preferred_lft forever\n2: eth0@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default \n    link/ether be:8b:50:bc:93:e1 brd ff:ff:ff:ff:ff:ff link-netnsid 0\n    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0\n       valid_lft forever preferred_lft forever\n",
+            "stderr": "",
+            "evidence_refs": [
+              "/data/evidence/dc3e2d3e-76c7-4e55-b618-5eb737fc9e18_run_stdout.log",
+              "/data/evidence/dc3e2d3e-76c7-4e55-b618-5eb737fc9e18_run_stderr.log"
+            ]
+          }
+        ],
+        "validate": {
+          "pass": true,
+          "rule": "exit_code_all_zero"
+        }
+      },
+      "created_at": "2026-03-06T14:29:27.471469Z"
+    }
+  ]
+}
