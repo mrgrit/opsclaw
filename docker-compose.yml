@@ -61,7 +61,7 @@ services:
     env_file:
       - .env
     environment:
-      AGENT_ID: local-agent-1
+      AGENT_ID: ${AGENT_ID:-local-agent-1}
       EVIDENCE_DIR: /data/evidence
       MAX_OUTPUT_BYTES: "200000"
     volumes:

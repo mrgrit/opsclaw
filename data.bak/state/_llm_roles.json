@@ -1,0 +1,5 @@
+{
+  "master_conn_id": "ollama-1",
+  "manager_conn_id": null,
+  "subagent_default_conn_id": null
+}
