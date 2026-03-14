@@ -1,0 +1,10 @@
+[Unit]
+Description=OldClaw Manager Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/oldclaw-manager
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

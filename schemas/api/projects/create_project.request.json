@@ -1,0 +1,14 @@
+# API schema for Projects (create)
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Create Project Request",
+  "type": "object",
+  "required": ["name", "request_text", "mode"],
+  "properties": {
+    "name": {"type": "string"},
+    "request_text": {"type": "string"},
+    "mode": {"type": "string", "enum": ["one_shot","batch","continuous"]},
+    "asset_scope": {"type": "array", "items": {"type": "string"}},
+    "playbook_id": {"type": "string"}
+  }
+}

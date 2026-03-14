@@ -1,0 +1,10 @@
+[Unit]
+Description=OldClaw SubAgent Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/oldclaw-subagent
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

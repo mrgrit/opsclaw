@@ -1,0 +1,2 @@
+-- 0004_scheduler_and_watch.sql
+-- Placeholder for scheduler and watch tables

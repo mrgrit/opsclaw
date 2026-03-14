@@ -1,0 +1,16 @@
+# API schema for Evidence list (project)
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "List Evidence Response",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": {"type": "string"},
+      "tool": {"type": "string"},
+      "stdout_ref": {"type": "string"},
+      "stderr_ref": {"type": "string"},
+      "exit_code": {"type": "integer"}
+    }
+  }
+}

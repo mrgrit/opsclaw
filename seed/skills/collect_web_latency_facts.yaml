@@ -1,0 +1,27 @@
+- id: collect_web_latency_facts
+  version: "1.0.0"
+  name: collect_web_latency_facts
+  category: diagnosis
+  description: Collect latency-related facts from web/api/db assets.
+  supported_modes:
+    - one_shot
+  input_schema_ref: schemas/registry/skills/collect_web_latency_facts.input.json
+  output_schema_ref: schemas/registry/skills/collect_web_latency_facts.output.json
+  required_tools:
+    - run_command
+    - fetch_log
+  optional_tools:
+    - query_metric
+  default_validation:
+    type: fact_completeness
+    required_fields:
+      - upstream_response_time
+      - cpu_usage
+      - memory_usage
+  policy_hint:
+    risk_level: low
+    approvals: []
+  evidence_expectations:
+    - command_stdout
+    - command_exit_code
+  enabled: true
