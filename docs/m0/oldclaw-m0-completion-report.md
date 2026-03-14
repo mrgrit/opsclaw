@@ -1,6 +1,12 @@
 # M0 Completion Report (v0.3)
 
-## 이번 보강 작업 내용 (핵심 결과)
+## 직접 주입된 파일 목록
+- docs/m0/oldclaw-m0-design-baseline.md
+- docs/m0/oldclaw-m0-registry-spec.md
+- apps/manager-api/src/main.py
+- apps/subagent-runtime/src/main.py
+- packages/pi_adapter/runtime/client.py
+- migrations/0001_init_core.sql
 - **문서**: `design-baseline`, `repo-and-service-structure`, `db-schema`, `registry-spec` 를 **전략·설계·경계** 수준의 기준 문서로 확장하고, 각 항목에 설계 이유와 예시를 포함했습니다.
 - **서비스 스켈레톤**: `manager-api`, `master-service`, `subagent-runtime`, `scheduler-worker`, `watch-worker` 에서 모든 TODO/placeholder 를 **명시적 501 / NotImplementedError** 로 교체하고, 라우터·핸들러·함수 구조를 드러냈습니다.
 - **pi_adapter**: `runtime/`, `tools/`, `sessions/`, `model_profiles/`, `translators/`, `contracts/` 로 디렉터리 분리하고, 각각 최소 인터페이스와 예외 기반 경계를 구현했습니다.

@@ -1,36 +1,67 @@
-# OldClaw Master Service
-# Handles project review, re‑planning, and escalation logic.
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, status
 from pydantic import BaseModel
 from typing import Any
 
-app = FastAPI(title="OldClaw Master Service", version="0.1.0")
-
-@app.get("/health")
-async def health_check():
-    return {"status": "master ok"}
-
-# ---------- DTOs ----------
 class ReviewReq(BaseModel):
     project_id: str
     reviewer_id: str
     comments: str | None = None
 
-# ---------- Review endpoint ----------
-@app.post("/projects/{project_id}/review")
-async def review_project(project_id: str, req: ReviewReq):
-    # Placeholder implementation
-    raise HTTPException(status_code=501, detail="review_project not implemented yet")
 
-# ---------- Re‑plan endpoint ----------
-@app.post("/projects/{project_id}/replan")
-async def replan_project(project_id: str, plan: Any):
-    # Stub for re‑planning logic
-    raise HTTPException(status_code=501, detail="replan_project not implemented yet")
+def create_health_router() -> APIRouter:
+    router = APIRouter(tags=["health"])
 
-# ---------- Escalation endpoint ----------
-@app.post("/projects/{project_id}/escalate")
-async def escalate_project(project_id: str, level: int = 1):
-    # Stub for escalation handling
-    raise HTTPException(status_code=501, detail="escalate_project not implemented yet")
+    @router.get("/health")
+    def health():
+        return {"status": "master ok"}
+
+    return router
+
+
+def create_review_router() -> APIRouter:
+    router = APIRouter(prefix="/projects", tags=["review"])
+
+    @router.post("/{project_id}/review")
+    def review_project(project_id: str, req: ReviewReq):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail={
+                "message": "review not implemented in M0",
+                "next_milestone": "M2",
+                "project_id": project_id,
+            },
+        )
+
+    @router.post("/{project_id}/replan")
+    def replan_project(project_id: str, plan: Any):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail={
+                "message": "replan not implemented in M0",
+                "next_milestone": "M2",
+                "project_id": project_id,
+            },
+        )
+
+    @router.post("/{project_id}/escalate")
+    def escalate_project(project_id: str, level: int = 1):
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail={
+                "message": "escalate not implemented in M0",
+                "next_milestone": "M2",
+                "project_id": project_id,
+            },
+        )
+
+    return router
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="OldClaw Master Service", version="0.1.0-m0")
+    app.include_router(create_health_router())
+    app.include_router(create_review_router())
+    return app
+
+
+app = create_app()
