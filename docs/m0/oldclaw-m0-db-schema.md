@@ -1,6 +1,6 @@
-# docs/m0/oldclaw-m0-db-schema.md
-
 # Database Schema (M0 Draft)
+
+The database schema captures the **Asset‑First**, **Evidence‑First** philosophy of OldClaw. Every operational entity (Project, JobRun, Evidence) ultimately ties back to an `assets` record, enabling full traceability from high‑level business intent down to low‑level command execution.
 
 ## 공통 컬럼
 All tables include:

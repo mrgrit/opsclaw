@@ -1,5 +1,3 @@
-# docs/m0/oldclaw-m0-design-baseline.md
-
 # OldClaw M0 Design Baseline (Reference Implementation)
 
 ## 1. 목표
@@ -22,4 +20,27 @@
 - 복합 인덱스 및 성능 튜닝
 
 ---
-*본 문서는 현재 M0 단계에서 확정된 설계와, 다음 마일스톤(M1)으로 이관될 항목을 구분해 기록합니다.*
+## Detailed Design Rationale
+
+### Asset‑First Principle
+The platform treats assets as the primary source of truth. All other entities (targets, projects, job runs) reference an asset via foreign keys. This guarantees that any operation can be traced back to a concrete infrastructure object, simplifying audit and compliance.
+
+### Evidence‑First Principle
+Every actionable step (Tool execution, Skill run, Playbook) creates an **Evidence** record. Evidence is immutable and linked to the originating `JobRun`. Down‑stream validators and reports consume only evidence, never raw logs, ensuring reproducibility.
+
+### Tool → Skill → Playbook Flow
+- **Tool**: atomic operation, no side‑effects beyond its explicit output.
+- **Skill**: orchestrates one or more Tools, performs input validation, and produces structured evidence.
+- **Playbook**: defines a directed acyclic graph of Skills, controls flow (conditions, retries) and binds policies (e.g., SLA, risk limits).
+
+### Separation of Concerns
+- **Manager API**: external façade, request validation, routing, and orchestration triggers.
+- **Master Service**: business logic for review, re‑planning, escalation; operates on persisted state only.
+- **SubAgent Runtime**: lightweight execution environment exposing capabilities via HTTP; communicates with Manager via A2A messages.
+- **Scheduler / Watch Workers**: background daemons that translate temporal or event‑driven triggers into `JobRun` entries.
+
+### Extensibility
+New Tools, Skills, or Playbooks are added by inserting rows into the registry tables and adding corresponding JSON schema files under `schemas/registry`. No code change is required for the core platform.
+
+---
+*임의 적용*: 일부 정책‑바인딩 상세는 M1 에서 정의될 예정입니다.*
