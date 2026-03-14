@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "tune_siem_noise input",
+  "type": "object",
+  "properties": {
+    "siem_endpoint": {"type": "string"},
+    "noise_threshold": {"type": "number"}
+  },
+  "required": ["siem_endpoint"]
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "probe_linux_host input",
+  "type": "object",
+  "properties": {
+    "host": {"type": "string"},
+    "commands": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "required": ["host", "commands"]
+}

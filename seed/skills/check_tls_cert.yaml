@@ -1,0 +1,7 @@
+name: check_tls_cert
+version: "1.0"
+description: Verify TLS certificate validity for a domain
+required_tools: ["run_command"]
+input_schema_ref: "schemas/registry/skills/check_tls_cert.input.json"
+output_schema_ref: "schemas/registry/skills/check_tls_cert.output.json"
+enabled: true

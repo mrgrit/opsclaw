@@ -1,9 +1,36 @@
-# master-service placeholder
+# OldClaw Master Service
+# Handles project review, re‑planning, and escalation logic.
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Any
 
-app = FastAPI(title="OldClaw Master Service")
+app = FastAPI(title="OldClaw Master Service", version="0.1.0")
 
 @app.get("/health")
 async def health_check():
     return {"status": "master ok"}
+
+# ---------- DTOs ----------
+class ReviewReq(BaseModel):
+    project_id: str
+    reviewer_id: str
+    comments: str | None = None
+
+# ---------- Review endpoint ----------
+@app.post("/projects/{project_id}/review")
+async def review_project(project_id: str, req: ReviewReq):
+    # Placeholder implementation
+    return {"project_id": project_id, "review_status": "submitted"}
+
+# ---------- Re‑plan endpoint ----------
+@app.post("/projects/{project_id}/replan")
+async def replan_project(project_id: str, plan: Any):
+    # Stub for re‑planning logic
+    return {"project_id": project_id, "replan_status": "queued"}
+
+# ---------- Escalation endpoint ----------
+@app.post("/projects/{project_id}/escalate")
+async def escalate_project(project_id: str, level: int = 1):
+    # Stub for escalation handling
+    return {"project_id": project_id, "escalation_level": level}

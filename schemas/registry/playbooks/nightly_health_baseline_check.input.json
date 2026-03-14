@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "nightly_health_baseline_check input",
+  "type": "object",
+  "properties": {
+    "project_id": {"type": "string"}
+  },
+  "required": ["project_id"]
+}

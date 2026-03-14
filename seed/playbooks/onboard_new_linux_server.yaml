@@ -1,0 +1,7 @@
+name: onboard_new_linux_server
+version: "1.0"
+description: Provision and configure a new Linux server
+required_skills: ["probe_linux_host", "check_tls_cert"]
+input_schema_ref: "schemas/registry/playbooks/onboard_new_linux_server.input.json"
+output_schema_ref: "schemas/registry/playbooks/onboard_new_linux_server.output.json"
+enabled: true

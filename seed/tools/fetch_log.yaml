@@ -1,0 +1,7 @@
+name: fetch_log
+version: "1.0"
+description: Fetch logs from a service
+runtime_type: local
+input_schema_ref: "schemas/registry/tools/fetch_log.input.json"
+output_schema_ref: "schemas/registry/tools/fetch_log.output.json"
+enabled: true

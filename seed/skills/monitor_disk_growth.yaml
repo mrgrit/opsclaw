@@ -1,0 +1,7 @@
+name: monitor_disk_growth
+version: "1.0"
+description: Monitor disk usage growth and alert when threshold exceeded
+required_tools: ["run_command"]
+input_schema_ref: "schemas/registry/skills/monitor_disk_growth.input.json"
+output_schema_ref: "schemas/registry/skills/monitor_disk_growth.output.json"
+enabled: true

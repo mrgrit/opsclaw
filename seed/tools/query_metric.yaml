@@ -1,0 +1,7 @@
+name: query_metric
+version: "1.0"
+description: Query a metric from monitoring system
+runtime_type: local
+input_schema_ref: "schemas/registry/tools/query_metric.input.json"
+output_schema_ref: "schemas/registry/tools/query_metric.output.json"
+enabled: true

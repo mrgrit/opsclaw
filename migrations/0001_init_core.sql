@@ -143,4 +143,40 @@ CREATE TABLE reports (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Additional tables (messages, audit_logs, schedules, etc.) will be added in later migrations.
+-- Additional supporting tables
+
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    job_run_id UUID REFERENCES job_runs(id) ON DELETE SET NULL,
+    sender TEXT NOT NULL,
+    recipient TEXT,
+    channel TEXT,
+    content TEXT NOT NULL,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_type TEXT NOT NULL,
+    actor TEXT,
+    target TEXT,
+    outcome TEXT,
+    description TEXT,
+    metadata JSONB,
+    occurred_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+    schedule_type TEXT NOT NULL,
+    cron_expr TEXT,
+    next_run TIMESTAMP WITH TIME ZONE,
+    last_run TIMESTAMP WITH TIME ZONE,
+    enabled BOOLEAN DEFAULT true,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+

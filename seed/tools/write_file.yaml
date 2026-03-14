@@ -1,0 +1,7 @@
+name: write_file
+version: "1.0"
+description: Write content to a file
+runtime_type: local
+input_schema_ref: "schemas/registry/tools/write_file.input.json"
+output_schema_ref: "schemas/registry/tools/write_file.output.json"
+enabled: true

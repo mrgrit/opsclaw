@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "diagnose_web_latency output",
+  "type": "object",
+  "properties": {
+    "latency_ms": {"type": "number"},
+    "recommendations": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["latency_ms"]
+}

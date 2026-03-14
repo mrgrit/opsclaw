@@ -1,21 +1,40 @@
-# subagent runtime placeholder
+# OldClaw SubAgent Runtime
+# Provides health, capability enumeration, and A2A script execution entry points.
 
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import subprocess
 import sys
 
-def run_command(cmd: str, timeout: int = 60):
-    try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-        print("STDOUT:\n", result.stdout)
-        print("STDERR:\n", result.stderr, file=sys.stderr)
-        print("EXIT CODE:", result.returncode)
-    except subprocess.TimeoutExpired as e:
-        print("Command timed out", file=sys.stderr)
-        sys.exit(124)
+app = FastAPI(title="OldClaw SubAgent Runtime", version="0.1.0")
 
-if __name__ == "__main__":
-    # Simple demo runner – real SubAgent will receive A2A messages.
-    if len(sys.argv) > 1:
-        run_command(" ".join(sys.argv[1:]))
-    else:
-        print("Usage: python main.py <command>")
+@app.get("/health")
+async def health_check():
+    return {"status": "subagent ok"}
+
+# ---------- Capability DTO ----------
+class Capability(BaseModel):
+    name: str
+    description: str
+
+# ---------- Capabilities endpoint ----------
+@app.get("/capabilities")
+async def list_capabilities():
+    # Stub list – in real runtime this would be dynamic
+    return [
+        Capability(name="run_command", description="Execute shell commands"),
+        Capability(name="read_file", description="Read local files"),
+    ]
+
+# ---------- A2A script execution (mock) ----------
+@app.post("/run")
+async def run_script(command: str, timeout: int = 60):
+    try:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
+        return {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Command timed out")

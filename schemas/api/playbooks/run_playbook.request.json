@@ -1,12 +1,10 @@
-# API schema for Playbooks (run)
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Run Playbook Request",
   "type": "object",
-  "required": ["playbook_id", "asset_scope"],
   "properties": {
     "playbook_id": {"type": "string"},
-    "asset_scope": {"type": "array", "items": {"type": "string"}},
-    "inputs": {"type": "object"}
-  }
+    "input": {"type": "object"}
+  },
+  "required": ["playbook_id"]
 }

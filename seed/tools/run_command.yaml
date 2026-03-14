@@ -1,11 +1,8 @@
-- id: run_command
-  version: "1.0.0"
-  name: run_command
-  description: Execute a shell command on the assigned runtime.
-  runtime_type: subagent
-  risk_level: medium
-  input_schema_ref: schemas/registry/tools/run_command.input.json
-  output_schema_ref: schemas/registry/tools/run_command.output.json
-  policy_tags:
-    - command_execution
-  enabled: true
+name: run_command
+version: "1.0"
+description: Execute a shell command on the target host
+runtime_type: local
+input_schema_ref: "schemas/registry/tools/run_command.input.json"
+output_schema_ref: "schemas/registry/tools/run_command.output.json"
+policy_tags: ["security", "operations"]
+enabled: true

@@ -1,39 +1,33 @@
-# OldClaw M0 DB Schema Overview
+# OldClaw M0 DB Schema
 
-## Core Tables (Asset‑first)
-| Table | Purpose |
-|-------|---------|
-| **assets** | 관리 대상 자산 정의. `metadata` JSONB 로 확장 가능 |
-| **asset_endpoints** | 자산이 제공하는 접근점 (SSH, HTTP, etc.) |
-| **targets** | 실행 시점에 파생되는 endpoint 정보 (임시 객체) |
-| **projects** | 사용자가 요청한 작업 단위, 상태·단계 포함 |
-| **project_assets** | 프로젝트 ↔ 자산 매핑 (scope) |
-| **job_runs** | 세부 실행 단위, skill/playbook/asset 지정 |
-| **evidence** | 모든 실행 결과 증빙. stdout/stderr/blob reference 포함 |
-| **validation_runs** | 검증 로직 실행 결과 및 link to evidence |
-| **master_reviews** | Master 의 최종 검수·승인 기록 |
-| **reports** | 최종/중간 보고서 (blob reference) |
+## 핵심 테이블 개요
+| 테이블 | 주요 컬럼 | 설명 |
+|--------|-----------|------|
+| **assets** | `id`, `name`, `type`, `platform`, `metadata` | 관리 대상 인프라 자산 정의 |
+| **asset_endpoints** | `asset_id`, `endpoint_type`, `value` | 자산이 제공하는 엔드포인트 정보 |
+| **targets** | `asset_id`, `base_url`, `health` | 자산에 연계된 접근 대상 (URL 등) |
+| **projects** | `id`, `name`, `status`, `current_stage`, `playbook_id` | 오케스트레이션 작업 단위 |
+| **project_assets** | `project_id`, `asset_id`, `scope_role` | 프로젝트와 자산 매핑 |
+| **job_runs** | `project_id`, `playbook_id`, `skill_id`, `asset_id`, `status` | Playbook·Skill 실행 인스턴스 |
+| **evidence** | `project_id`, `job_run_id`, `tool_name`, `command_text`, `stdout_ref` | 실행 결과와 로그 저장 |
+| **validation_runs** | `project_id`, `job_run_id`, `validator_name`, `status` | 검증 결과 기록 |
+| **master_reviews** | `project_id`, `reviewer_agent_id`, `status` | 검토·승인 기록 |
+| **reports** | `project_id`, `report_type`, `body_ref` | 최종 보고서 |
+| **messages** | `project_id`, `job_run_id`, `sender`, `content` | 시스템·사용자 메시지 |
+| **audit_logs** | `event_type`, `actor`, `target`, `outcome` | 감사 로그 |
+| **schedules** | `project_id`, `schedule_type`, `cron_expr`, `next_run` | 주기적 스케줄 정의 |
+| **histories** | `project_id`, `event`, `context` | 히스토리 이벤트 |
+| **experiences** | `asset_id`, `skill_id`, `outcome` | 경험/학습 데이터 |
+| **retrieval_documents** | `source`, `content` | 검색용 문서 저장 |
+| **task_memories** | `task_id`, `memory_type`, `payload` | 작업 메모리 (예: LLM 컨텍스트) |
+| **incidents** | `project_id`, `severity`, `description`, `status` | 인시던트 기록 |
+| **watch_jobs** | `project_id`, `job_type`, `status` | Watch 엔진 잡 |
+| **watch_events** | `watch_job_id`, `event_type`, `payload` | Watch 이벤트 |
 
-## Registry Tables (Tool → Skill → Playbook)
-| Table | Description |
-|-------|-------------|
-| **tools** | 원자 기능 정의 (run_command 등) |
-| **skills** | 재사용 가능한 capability, tool 조합 및 validation 힌트 |
-| **skill_tools** | Skill ↔ Tool 매핑 |
-| **playbooks** | 절차 정의, step 순서와 타입 지정 |
-| **playbook_steps** | Playbook 내부 단계 (skill, validation, report 등) |
-| **playbook_bindings** | 정책·자산·환경 등과 연계 |
+## 공통 컬럼
+- 모든 테이블은 `id`(UUID) 기본키와 `created_at` 타임스탬프를 가짐.
+- `updated_at` 은 주요 엔터티(`assets`, `projects`, `job_runs` 등) 에 적용.
+- 외래키 제약조건을 통해 데이터 무결성을 보장.
 
-## Supporting Tables
-- **approvals**, **policies**, **policy_bindings** – 정책·승인 흐름
-- **messages**, **audit_logs** – 운영 로그 & A2A 메시징
-- **task_memories**, **experiences**, **retrieval_documents** – 4‑layer history 전략
-- **schedules**, **watch_jobs**, **incidents** – batch / continuous 지원
-
-### Schema Definition Files
-- `migrations/0001_init_core.sql` – 핵심 테이블 DDL
-- `migrations/0002_registry.sql` – registry 전용 테이블 DDL
-- `migrations/0003_history_and_experience.sql` – history/experience DDL
-- `migrations/0004_scheduler_and_watch.sql` – 배치/연속 작업 DDL
-
-> **Note**: All tables include `created_at`, `updated_at` timestamps and use `jsonb` for flexible extensibility, satisfying the **asset‑first** & **evidence‑first** principles.
+---
+*임의 적용*: 일부 상세 인덱스·제약은 M1 단계에서 추가될 수 있습니다.*

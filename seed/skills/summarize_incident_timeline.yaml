@@ -1,0 +1,7 @@
+name: summarize_incident_timeline
+version: "1.0"
+description: Summarize incident timeline from evidence
+required_tools: ["run_command"]
+input_schema_ref: "schemas/registry/skills/summarize_incident_timeline.input.json"
+output_schema_ref: "schemas/registry/skills/summarize_incident_timeline.output.json"
+enabled: true

@@ -1,36 +1,7 @@
-- id: diagnose_web_latency
-  version: "1.0.0"
-  name: diagnose_web_latency
-  category: diagnosis
-  execution_mode: one_shot
-  description: Diagnose latency across web/api/db asset chain and produce a validated report.
-  input_schema_ref: schemas/registry/playbooks/diagnose_web_latency.input.json
-  output_schema_ref: schemas/registry/playbooks/diagnose_web_latency.output.json
-  dry_run_supported: true
-  explain_supported: true
-  default_risk_level: medium
-  required_asset_roles:
-    - web
-    - api
-  steps:
-    - order: 1
-      type: skill
-      ref: probe_linux_host
-      asset_selector: all
-    - order: 2
-      type: skill
-      ref: collect_web_latency_facts
-      asset_selector: scoped
-    - order: 3
-      type: validation
-      ref: validate_latency_findings
-    - order: 4
-      type: report
-      ref: generate_latency_report
-  failure_policy:
-    validate_fail: replan
-    execution_fail: retry_then_replan
-  policy_bindings:
-    - env: prod
-      approval: maybe_required
-  enabled: true
+name: diagnose_web_latency
+version: "1.0"
+description: Run a series of skills to diagnose web latency issues
+required_skills: ["collect_web_latency_facts"]
+input_schema_ref: "schemas/registry/playbooks/diagnose_web_latency.input.json"
+output_schema_ref: "schemas/registry/playbooks/diagnose_web_latency.output.json"
+enabled: true

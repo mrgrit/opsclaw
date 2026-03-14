@@ -1,0 +1,7 @@
+name: read_file
+version: "1.0"
+description: Read a file from the filesystem
+runtime_type: local
+input_schema_ref: "schemas/registry/tools/read_file.input.json"
+output_schema_ref: "schemas/registry/tools/read_file.output.json"
+enabled: true

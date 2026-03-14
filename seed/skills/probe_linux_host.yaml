@@ -1,0 +1,7 @@
+name: probe_linux_host
+version: "1.0"
+description: Run arbitrary commands on a Linux host via run_command
+required_tools: ["run_command"]
+input_schema_ref: "schemas/registry/skills/probe_linux_host.input.json"
+output_schema_ref: "schemas/registry/skills/probe_linux_host.output.json"
+enabled: true

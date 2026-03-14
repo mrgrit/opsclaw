@@ -1,0 +1,7 @@
+name: analyze_wazuh_alert_burst
+version: "1.0"
+description: Detect burst patterns in Wazuh alerts
+required_tools: ["run_command"]
+input_schema_ref: "schemas/registry/skills/analyze_wazuh_alert_burst.input.json"
+output_schema_ref: "schemas/registry/skills/analyze_wazuh_alert_burst.output.json"
+enabled: true

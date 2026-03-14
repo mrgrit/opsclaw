@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "restart_service output",
+  "type": "object",
+  "properties": {
+    "status": {"type": "string", "enum": ["success","failure"]},
+    "message": {"type": "string"}
+  },
+  "required": ["status"]
+}

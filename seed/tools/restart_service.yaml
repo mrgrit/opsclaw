@@ -1,0 +1,7 @@
+name: restart_service
+version: "1.0"
+description: Restart a system service
+runtime_type: local
+input_schema_ref: "schemas/registry/tools/restart_service.input.json"
+output_schema_ref: "schemas/registry/tools/restart_service.output.json"
+enabled: true

@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "check_tls_cert output",
+  "type": "object",
+  "properties": {
+    "valid": {"type": "boolean"},
+    "expiry": {"type": "string", "format": "date-time"}
+  },
+  "required": ["valid"]
+}

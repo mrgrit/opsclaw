@@ -1,0 +1,7 @@
+name: monitor_siem_and_raise_incident
+version: "1.0"
+description: Monitor SIEM alerts and raise incident when threshold exceeded
+required_skills: ["analyze_wazuh_alert_burst", "summarize_incident_timeline"]
+input_schema_ref: "schemas/registry/playbooks/monitor_siem_and_raise_incident.input.json"
+output_schema_ref: "schemas/registry/playbooks/monitor_siem_and_raise_incident.output.json"
+enabled: true

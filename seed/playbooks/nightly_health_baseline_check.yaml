@@ -1,0 +1,7 @@
+name: nightly_health_baseline_check
+version: "1.0"
+description: Perform nightly health checks across assets
+required_skills: ["probe_linux_host", "monitor_disk_growth"]
+input_schema_ref: "schemas/registry/playbooks/nightly_health_baseline_check.input.json"
+output_schema_ref: "schemas/registry/playbooks/nightly_health_baseline_check.output.json"
+enabled: true

@@ -1,0 +1,7 @@
+name: tune_siem_noise
+version: "1.0"
+description: Adjust SIEM rules to reduce noise
+required_skills: ["analyze_wazuh_alert_burst"]
+input_schema_ref: "schemas/registry/playbooks/tune_siem_noise.input.json"
+output_schema_ref: "schemas/registry/playbooks/tune_siem_noise.output.json"
+enabled: true

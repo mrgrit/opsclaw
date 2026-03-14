@@ -1,10 +1,14 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Run Command Input",
+  "title": "run_command input",
   "type": "object",
-  "required": ["command", "timeout_s"],
   "properties": {
     "command": {"type": "string"},
-    "timeout_s": {"type": "integer", "minimum": 1, "default": 60}
-  }
+    "args": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "timeout": {"type": "integer", "minimum": 0}
+  },
+  "required": ["command"]
 }

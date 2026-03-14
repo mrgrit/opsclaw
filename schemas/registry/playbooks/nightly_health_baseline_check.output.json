@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "nightly_health_baseline_check output",
+  "type": "object",
+  "properties": {
+    "issues": {"type": "array", "items": {"type": "string"}}
+  }
+}

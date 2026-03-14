@@ -1,15 +1,12 @@
-# API schema for Assets (create)
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Create Asset Request",
   "type": "object",
-  "required": ["name", "type", "mgmt_ip"],
   "properties": {
     "name": {"type": "string"},
     "type": {"type": "string"},
     "platform": {"type": "string"},
-    "env": {"type": "string"},
-    "mgmt_ip": {"type": "string"},
-    "roles": {"type": "array", "items": {"type": "string"}}
-  }
+    "metadata": {"type": "object"}
+  },
+  "required": ["name", "type"]
 }

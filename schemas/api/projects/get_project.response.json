@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Get Project Response",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"},
+    "name": {"type": "string"},
+    "status": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "assets": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["id", "name", "status"]
+}
