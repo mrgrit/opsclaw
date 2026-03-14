@@ -20,6 +20,16 @@
   - Ollama 성공 설정 기준으로 갱신
 - `tools/dev/pi_runtime_smoke.py`
   - open/invoke/close smoke test 추가
+- `apps/manager-api/src/main.py`
+  - `/runtime/invoke` endpoint 추가
+- `apps/master-service/src/main.py`
+  - `/runtime/invoke` endpoint 추가
+- `apps/subagent-runtime/src/main.py`
+  - `/runtime/invoke` endpoint 추가
+- `requirements.txt`
+  - FastAPI, uvicorn, requests 의존성 명시
+- `tools/dev/service_http_smoke.py`
+  - 실제 HTTP 호출 기반 통합 검증 스크립트 추가
 
 ## 2. 이번 단계에서 고정된 사실
 
