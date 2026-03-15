@@ -5,6 +5,8 @@
 - `packages/project_service/__init__.py`
   - PostgreSQL 기반 project create/get/plan/execute/validate/report finalize/evidence 최소 로직 구현
   - **evidence 리스트 조회 함수**, **close 전이 함수**, **report/evidence/project 요약 함수** 추가
+  - **asset 리스트 조회 함수**, **project‑asset 연결 함수**, **project‑asset 조회 함수** 추가
+
 - `packages/graph_runtime/__init__.py`
   - 최소 stage / transition / transition validation 정의
 - `apps/manager-api/src/main.py`

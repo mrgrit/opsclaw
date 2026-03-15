@@ -16,8 +16,9 @@ from packages.project_service import (
     get_project_report,
     get_evidence_for_project,
     close_project,
-    plan_project_record,
-    validate_project_record,
+    get_assets,
+    link_asset_to_project,
+    get_project_assets,
 )
 
 
@@ -226,11 +227,11 @@ def create_project_router() -> APIRouter:
                 detail={"message": str(exc)},
             )
 
-    @router.post("/{project_id}/close")
-    def close_project_endpoint(project_id: str) -> dict[str, Any]:
+    @router.post("/{project_id}/assets/{asset_id}")
+    def link_project_asset(project_id: str, asset_id: str) -> dict[str, Any]:
         try:
-            result = close_project(project_id)
-            return {"status": "ok", "project": result}
+            result = link_asset_to_project(project_id, asset_id)
+            return {"status": "ok", "project_id": result["project_id"], "asset_id": result["asset_id"], "role": result["scope_role"]}
         except ProjectNotFoundError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -241,22 +242,30 @@ def create_project_router() -> APIRouter:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"message": str(exc)},
             )
+
+
+    @router.get("/{project_id}/assets")
+    def get_project_assets_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            items = get_project_assets(project_id)
+            return {"status": "ok", "project_id": project_id, "items": items}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"message": str(exc)},
+            )
+
+
     return router
 
 
 def create_asset_router() -> APIRouter:
     router = APIRouter(prefix="/assets", tags=["assets"])
 
-    @router.post("")
-    def create_asset(payload: AssetCreateRequest) -> dict[str, Any]:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail={
-                "message": "Asset registry service is not implemented in M0.",
-                "next_milestone": "M4",
-                "payload": payload.model_dump(),
-            },
-        )
+    @router.get("")
+    def list_assets() -> dict[str, Any]:
+        items = get_assets()
+        return {"items": items}
 
     @router.get("/{asset_id}")
     def get_asset(asset_id: str) -> dict[str, Any]:

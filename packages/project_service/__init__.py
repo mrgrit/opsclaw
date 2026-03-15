@@ -320,37 +320,98 @@ def create_minimal_evidence_record(
             return dict(row)
 
 
-def get_project_report(project_id: str, database_url: str | None = None) -> dict[str, Any]:
+def get_assets(database_url: str | None = None) -> list[dict[str, Any]]:
+    """Return list of assets with selected fields."""
     sql = """
-    SELECT *
-    FROM reports
-    WHERE project_id = %s
-    ORDER BY created_at DESC
-    LIMIT 1
+    SELECT id,
+           type AS asset_type,
+           name,
+           subagent_status AS status,
+           NULL::text AS importance,
+           agent_id AS owner_ref,
+           created_at,
+           updated_at
+    FROM assets
+    ORDER BY created_at ASC
     """
     with get_connection(database_url) as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, (project_id,))
+            cur.execute(sql)
+            rows = cur.fetchall()
+            return [dict(row) for row in rows]
+
+
+def link_asset_to_project(project_id: str, asset_id: str, role: str = "primary", database_url: str | None = None) -> dict[str, Any]:
+    """Link an asset to a project. Idempotent."""
+    # Verify existence
+    get_project_record(project_id, database_url=database_url)
+    # verify asset exists
+    sql_check = "SELECT id FROM assets WHERE id = %s"
+    with get_connection(database_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql_check, (asset_id,))
+            if cur.fetchone() is None:
+                raise ProjectNotFoundError(f"Asset not found: {asset_id}")
+    # Insert with idempotency
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO project_assets (project_id, asset_id, scope_role)
+                VALUES (%s, %s, %s)
+                ON CONFLICT DO NOTHING
+                RETURNING project_id, asset_id, scope_role
+                """,
+                (project_id, asset_id, role),
+            )
             row = cur.fetchone()
             if row is None:
-                raise ProjectNotFoundError(f"Report not found for project: {project_id}")
+                # Already exists, fetch existing
+                cur.execute(
+                    """
+                    SELECT project_id, asset_id, scope_role FROM project_assets
+                    WHERE project_id = %s AND asset_id = %s
+                    """,
+                    (project_id, asset_id),
+                )
+                row = cur.fetchone()
             return dict(row)
 
-def get_evidence_for_project(project_id: str, database_url: str | None = None) -> list[dict[str, Any]]:
-    """Return a list of evidence rows for a project, sorted by created_at ascending."""
-    sql = """
-    SELECT id, project_id, evidence_type, agent_role AS producer_type, tool_name AS producer_id,
-           command_text AS body_ref, stdout_ref, stderr_ref, exit_code, started_at AS created_at
-    FROM evidence
-    WHERE project_id = %s
-    ORDER BY id ASC
-    """
 
+def get_project_assets(project_id: str, database_url: str | None = None) -> list[dict[str, Any]]:
+    """Return assets linked to a project with asset details."""
+    sql = """
+    SELECT pa.project_id,
+           pa.asset_id,
+           pa.scope_role AS role,
+           a.id,
+           a.type AS asset_type,
+           a.name,
+           a.subagent_status AS status,
+           NULL::text AS importance
+    FROM project_assets pa
+    JOIN assets a ON pa.asset_id = a.id
+    WHERE pa.project_id = %s
+    ORDER BY a.id ASC
+    """
     with get_connection(database_url) as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(sql, (project_id,))
             rows = cur.fetchall()
-            return [dict(row) for row in rows]
+            # Build nested asset dict
+            result = []
+            for row in rows:
+                row_dict = dict(row)
+                asset = {
+                    "id": row_dict.pop("id"),
+                    "asset_type": row_dict.pop("asset_type"),
+                    "name": row_dict.pop("name"),
+                    "status": row_dict.pop("status"),
+                    "importance": row_dict.pop("importance"),
+                }
+                row_dict["asset"] = asset
+                result.append(row_dict)
+            return result
 
 
 def close_project(project_id: str, database_url: str | None = None) -> dict[str, Any]:
@@ -377,12 +438,51 @@ def close_project(project_id: str, database_url: str | None = None) -> dict[str,
             return dict(row)
 
 
+def get_project_report(project_id: str, database_url: str | None = None) -> dict[str, Any]:
+    sql = """
+    SELECT *
+    FROM reports
+    WHERE project_id = %s
+    ORDER BY created_at DESC
+    LIMIT 1
+    """
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, (project_id,))
+            row = cur.fetchone()
+            if row is None:
+                raise ProjectNotFoundError(f"Report not found for project: {project_id}")
+            return dict(row)
+
+
+    # stray block removed
+
+
+def get_evidence_for_project(project_id: str, database_url: str | None = None) -> list[dict[str, Any]]:
+    """Return a list of evidence rows for a project, sorted by id ASC."""
+    sql = """
+    SELECT id, project_id, evidence_type, agent_role AS producer_type, tool_name AS producer_id,
+           command_text AS body_ref, stdout_ref, stderr_ref, exit_code, started_at AS created_at
+    FROM evidence
+    WHERE project_id = %s
+    ORDER BY id ASC
+    """
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, (project_id,))
+            rows = cur.fetchall()
+            return [dict(row) for row in rows]
+
+
+
 def get_project_report_evidence_summary(project_id: str, database_url: str | None = None) -> dict[str, Any]:
-    """Return a summary containing project, latest report, and evidence list."""
+    """Return a summary containing project, latest report, evidence list, and linked assets."""
     project = get_project_record(project_id, database_url=database_url)
     try:
         report = get_project_report(project_id, database_url=database_url)
     except ProjectNotFoundError:
         report = None
     evidence = get_evidence_for_project(project_id, database_url=database_url)
-    return {"project": project, "report": report, "evidence": evidence}
+    assets = get_project_assets(project_id, database_url=database_url)
+    return {"project": project, "report": report, "evidence": evidence, "assets": assets}
+
