@@ -315,6 +315,7 @@ def create_minimal_evidence_record(
                     "exit_code": exit_code,
                 },
             )
+            conn.commit()
             row = cur.fetchone()
             return dict(row)
 
@@ -334,3 +335,54 @@ def get_project_report(project_id: str, database_url: str | None = None) -> dict
             if row is None:
                 raise ProjectNotFoundError(f"Report not found for project: {project_id}")
             return dict(row)
+
+def get_evidence_for_project(project_id: str, database_url: str | None = None) -> list[dict[str, Any]]:
+    """Return a list of evidence rows for a project, sorted by created_at ascending."""
+    sql = """
+    SELECT id, project_id, evidence_type, agent_role AS producer_type, tool_name AS producer_id,
+           command_text AS body_ref, stdout_ref, stderr_ref, exit_code, started_at AS created_at
+    FROM evidence
+    WHERE project_id = %s
+    ORDER BY id ASC
+    """
+
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, (project_id,))
+            rows = cur.fetchall()
+            return [dict(row) for row in rows]
+
+
+def close_project(project_id: str, database_url: str | None = None) -> dict[str, Any]:
+    """Transition a project from report stage to close (completed). Idempotent."""
+    project = get_project_record(project_id, database_url=database_url)
+    if project["current_stage"] == "close":
+        return project
+    if project["current_stage"] != "report":
+        raise ProjectStageError(f"Project not in report stage: {project_id}")
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE projects
+                SET current_stage = %s,
+                    status = %s,
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                ("close", "completed", project_id),
+            )
+            row = cur.fetchone()
+            return dict(row)
+
+
+def get_project_report_evidence_summary(project_id: str, database_url: str | None = None) -> dict[str, Any]:
+    """Return a summary containing project, latest report, and evidence list."""
+    project = get_project_record(project_id, database_url=database_url)
+    try:
+        report = get_project_report(project_id, database_url=database_url)
+    except ProjectNotFoundError:
+        report = None
+    evidence = get_evidence_for_project(project_id, database_url=database_url)
+    return {"project": project, "report": report, "evidence": evidence}

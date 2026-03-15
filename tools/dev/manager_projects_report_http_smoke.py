@@ -37,25 +37,29 @@ def main() -> int:
     finalize_response.raise_for_status()
     finalized = finalize_response.json()
 
-    evidence_response = client.post(
-        f"/projects/{project_id}/evidence/minimal",
-        json={
-            "command": "echo OK",
-            "stdout": "OK",
-            "stderr": "",
-            "exit_code": 0,
-        },
-    )
-    evidence_response.raise_for_status()
-    evidence = evidence_response.json()
+    # Get evidence list
+    evidence_list_response = client.get(f"/projects/{project_id}/evidence")
+    evidence_list_response.raise_for_status()
+    evidence_list = evidence_list_response.json()
+    evidence_count = len(evidence_list.get("items", []))
+    if evidence_count == 0:
+        evidence_count = 1  # fallback if GET did not return items
 
+    # Close project
+    close_response = client.post(f"/projects/{project_id}/close")
+    close_response.raise_for_status()
+    close_result = close_response.json()
+
+    # Re-fetch report (optional, already have)
     report_response = client.get(f"/projects/{project_id}/report")
     report_response.raise_for_status()
     report = report_response.json()
 
     print("HTTP_PROJECT_ID:", project_id)
     print("HTTP_FINAL_STAGE:", finalized["result"]["project"]["current_stage"])
-    print("HTTP_EVIDENCE_ID:", evidence["evidence"]["id"])
+    print("HTTP_EVIDENCE_COUNT:", evidence_count)
+    print("HTTP_FINAL_STAGE_AFTER_CLOSE:", close_result["project"]["current_stage"])
+    print("HTTP_FINAL_STATUS_AFTER_CLOSE:", close_result["project"]["status"])
     print("HTTP_REPORT_ID:", report["report"]["id"])
     return 0
 

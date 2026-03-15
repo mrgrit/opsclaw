@@ -6,6 +6,9 @@ from packages.project_service import (
     get_project_report,
     plan_project_record,
     validate_project_record,
+    get_evidence_for_project,
+    close_project,
+    get_project_report_evidence_summary,
 )
 
 
@@ -28,13 +31,20 @@ def main() -> int:
         stderr="",
         exit_code=0,
     )
-    report = get_project_report(project_id)
+    # Retrieve evidence list
+    evidence_list = get_evidence_for_project(project_id)
+    evidence_count = len(evidence_list)
+    # Close project
+    close_result = close_project(project_id)
+    # Get summary (optional)
+    summary = get_project_report_evidence_summary(project_id)
 
     print("PROJECT_ID:", project_id)
-    print("FINAL_STAGE:", finalized["project"]["current_stage"])
-    print("FINAL_REPORT_ID:", report["id"])
-    print("EVIDENCE_ID:", evidence["id"])
-    print("EVIDENCE_EXIT_CODE:", evidence["exit_code"])
+    print("FINAL_STAGE_BEFORE_CLOSE:", finalized["project"]["current_stage"])
+    print("EVIDENCE_COUNT:", evidence_count)
+    print("FINAL_STAGE_AFTER_CLOSE:", close_result["current_stage"])
+    print("FINAL_STATUS_AFTER_CLOSE:", close_result["status"])
+    print("LATEST_REPORT_ID:", summary["report"]["id"] if summary["report"] else "None")
     return 0
 
 

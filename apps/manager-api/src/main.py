@@ -7,15 +7,19 @@ from packages.pi_adapter.runtime import PiAdapterError, PiRuntimeClient, PiRunti
 from packages.project_service import (
     ProjectNotFoundError,
     ProjectServiceError,
+    ProjectStageError,
     create_minimal_evidence_record,
     create_project_record,
     execute_project_record,
     finalize_report_stage_record,
     get_project_record,
     get_project_report,
+    get_evidence_for_project,
+    close_project,
     plan_project_record,
     validate_project_record,
 )
+
 
 
 class ProjectCreateRequest(BaseModel):
@@ -211,6 +215,32 @@ def create_project_router() -> APIRouter:
                 detail={"message": str(exc)},
             ) from exc
 
+    @router.get("/{project_id}/evidence")
+    def get_project_evidence_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            items = get_evidence_for_project(project_id)
+            return {"status": "ok", "project_id": project_id, "items": items}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"message": str(exc)},
+            )
+
+    @router.post("/{project_id}/close")
+    def close_project_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            result = close_project(project_id)
+            return {"status": "ok", "project": result}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"message": str(exc)},
+            )
+        except ProjectStageError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"message": str(exc)},
+            )
     return router
 
 
