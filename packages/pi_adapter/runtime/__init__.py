@@ -1,4 +1,4 @@
-from .client import PiRuntimeClient, PiRuntimeConfig
+from .client import PiAdapterError, PiRuntimeClient, PiRuntimeConfig
 
 
 class RuntimeError(NotImplementedError):
@@ -6,6 +6,7 @@ class RuntimeError(NotImplementedError):
 
 
 __all__ = [
+    "PiAdapterError",
     "PiRuntimeClient",
     "PiRuntimeConfig",
     "RuntimeError",

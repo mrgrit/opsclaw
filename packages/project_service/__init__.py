@@ -718,3 +718,91 @@ def get_project_report_evidence_summary(project_id: str, database_url: str | Non
         "targets": targets,
         "playbooks": playbooks,
     }
+
+
+def dispatch_command_to_subagent(
+    project_id: str,
+    command: str,
+    subagent_url: str | None = None,
+    timeout_s: int = 30,
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    from packages.a2a_protocol import (
+        A2AClient,
+        A2AClientConfig,
+        A2AError,
+        A2ARunRequest,
+        SUBAGENT_DEFAULT_URL,
+    )
+
+    project = get_project_record(project_id, database_url=database_url)
+    if project["current_stage"] != "execute":
+        raise ProjectStageError(
+            f"Project not in execute stage (current: {project['current_stage']}): {project_id}"
+        )
+
+    job_run_id = f"job_{uuid.uuid4().hex[:12]}"
+    target_url = subagent_url or SUBAGENT_DEFAULT_URL
+
+    client = A2AClient(A2AClientConfig(base_url=target_url, timeout_s=timeout_s + 10))
+
+    try:
+        result = client.run_script(
+            A2ARunRequest(
+                project_id=project_id,
+                job_run_id=job_run_id,
+                script=command,
+                timeout_s=timeout_s,
+            )
+        )
+    except A2AError as exc:
+        raise ProjectServiceError(f"A2A dispatch failed: {exc}") from exc
+
+    evidence = create_minimal_evidence_record(
+        project_id=project_id,
+        command=command,
+        stdout=result.stdout,
+        stderr=result.stderr,
+        exit_code=result.exit_code,
+        database_url=database_url,
+    )
+
+    return {
+        "project_id": project_id,
+        "job_run_id": job_run_id,
+        "command": command,
+        "subagent_url": target_url,
+        "status": result.status,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "exit_code": result.exit_code,
+        "evidence_id": evidence["id"],
+    }
+
+
+def update_asset_subagent_status(
+    asset_id: str,
+    subagent_status: str,
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    valid = ("unknown", "healthy", "unhealthy", "missing")
+    if subagent_status not in valid:
+        raise ProjectServiceError(
+            f"Invalid subagent_status: {subagent_status}. Must be one of {valid}"
+        )
+
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE assets
+                SET subagent_status = %s, updated_at = NOW()
+                WHERE id = %s
+                RETURNING id, name, subagent_status, updated_at
+                """,
+                (subagent_status, asset_id),
+            )
+            row = cur.fetchone()
+            if row is None:
+                raise ProjectNotFoundError(f"Asset not found: {asset_id}")
+            return dict(row)

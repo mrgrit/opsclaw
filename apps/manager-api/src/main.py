@@ -25,7 +25,9 @@ from packages.project_service import (
     link_asset_to_project,
     link_playbook_to_project,
     link_target_to_project,
+    dispatch_command_to_subagent,
     plan_project_record,
+    update_asset_subagent_status,
     validate_project_record,
 )
 
@@ -46,6 +48,12 @@ class MinimalEvidenceRequest(BaseModel):
     stdout: str
     stderr: str = ""
     exit_code: int = 0
+
+
+class DispatchRequest(BaseModel):
+    command: str
+    subagent_url: str | None = None
+    timeout_s: int = 30
 
 
 def create_health_router() -> APIRouter:
@@ -264,6 +272,21 @@ def create_project_router() -> APIRouter:
         except ProjectNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
 
+    @router.post("/{project_id}/dispatch")
+    def dispatch_project(project_id: str, payload: DispatchRequest) -> dict[str, Any]:
+        try:
+            result = dispatch_command_to_subagent(
+                project_id=project_id,
+                command=payload.command,
+                subagent_url=payload.subagent_url,
+                timeout_s=payload.timeout_s,
+            )
+            return {"status": "ok", "result": result}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except (ProjectStageError, ProjectServiceError) as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
     return router
 
 
@@ -273,6 +296,48 @@ def create_asset_router() -> APIRouter:
     @router.get("")
     def list_assets() -> dict[str, Any]:
         return {"items": get_assets()}
+
+    @router.post("/{asset_id}/subagent/status")
+    def set_subagent_status(asset_id: str, payload: dict) -> dict[str, Any]:
+        try:
+            result = update_asset_subagent_status(
+                asset_id=asset_id,
+                subagent_status=payload.get("status", "unknown"),
+            )
+            return {"status": "ok", "asset": result}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except ProjectServiceError as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.post("/{asset_id}/bootstrap")
+    def bootstrap_asset_endpoint(asset_id: str, payload: dict) -> dict[str, Any]:
+        from packages.bootstrap_service import BootstrapConfig, BootstrapError, bootstrap_asset
+        from packages.project_service import get_assets
+
+        assets = get_assets()
+        asset = next((a for a in assets if a["id"] == asset_id), None)
+        if asset is None:
+            raise HTTPException(status_code=404, detail={"message": f"Asset not found: {asset_id}"})
+
+        cfg = BootstrapConfig(
+            ssh_user=payload.get("ssh_user", "root"),
+            ssh_port=int(payload.get("ssh_port", 22)),
+            ssh_key_path=payload.get("ssh_key_path"),
+            subagent_port=int(payload.get("subagent_port", 8001)),
+        )
+        mgmt_ip = str(asset.get("mgmt_ip") or payload.get("mgmt_ip", ""))
+        if not mgmt_ip:
+            raise HTTPException(status_code=400, detail={"message": "Asset has no mgmt_ip"})
+
+        try:
+            result = bootstrap_asset(mgmt_ip=mgmt_ip, config=cfg)
+            new_status = "healthy" if result["exit_code"] == 0 else "unhealthy"
+            update_asset_subagent_status(asset_id=asset_id, subagent_status=new_status)
+            return {"status": "ok", "bootstrap": result, "subagent_status": new_status}
+        except BootstrapError as exc:
+            update_asset_subagent_status(asset_id=asset_id, subagent_status="unhealthy")
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
 
     return router
 

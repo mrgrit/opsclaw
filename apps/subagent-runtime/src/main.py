@@ -1,3 +1,4 @@
+import subprocess
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -46,11 +47,10 @@ def create_capabilities_router() -> APIRouter:
             "capabilities": [
                 "health",
                 "capabilities",
-                "run_script_request_boundary",
-                "evidence_return_boundary",
-                "runtime_invoke_boundary",
+                "run_script",
+                "evidence_return",
+                "runtime_invoke",
             ],
-            "note": "Execution engine is still not implemented; runtime invoke path is available.",
         }
 
     return router
@@ -90,15 +90,35 @@ def create_a2a_router() -> APIRouter:
 
     @router.post("/run_script")
     def run_script(payload: RunScriptRequest) -> A2ARunResponse:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail={
-                "message": "SubAgent execution engine is not implemented in M0.",
-                "next_milestone": "M3",
-                "request": asdict(payload),
-                "reason": "M0 only fixes the boundary and request contract.",
-            },
-        )
+        try:
+            result = subprocess.run(
+                payload.script,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=payload.timeout_s,
+            )
+            return A2ARunResponse(
+                status="ok" if result.returncode == 0 else "error",
+                detail={
+                    "project_id": payload.project_id,
+                    "job_run_id": payload.job_run_id,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                    "exit_code": result.returncode,
+                },
+            )
+        except subprocess.TimeoutExpired:
+            return A2ARunResponse(
+                status="timeout",
+                detail={
+                    "project_id": payload.project_id,
+                    "job_run_id": payload.job_run_id,
+                    "stdout": "",
+                    "stderr": f"Script timed out after {payload.timeout_s}s",
+                    "exit_code": -1,
+                },
+            )
 
     return router
 
@@ -106,8 +126,8 @@ def create_a2a_router() -> APIRouter:
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw SubAgent Runtime",
-        version="0.1.0-m1",
-        description="M1 subagent runtime with minimal pi adapter integration endpoint.",
+        version="0.3.0-m3",
+        description="M3 subagent runtime: A2A run_script execution engine.",
     )
 
     app.include_router(create_health_router())
