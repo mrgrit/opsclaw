@@ -13,7 +13,7 @@ M2 4차에서 구현한 report/evidence/close 흐름에 이어 asset-first 최�
 - tools/dev/manager_projects_asset_http_smoke.py
 - docs/verification/REVIEW-28.md
 - docs/verification/NEXT-29.md
-- docs/m2/oldclaw-m2-completion-report.md
+- docs/m2/opsclaw-m2-completion-report.md
 - docs/verification/WORK-29.md
 
 ## 구현 요구사항
@@ -34,7 +34,7 @@ M2 4차에서 구현한 report/evidence/close 흐름에 이어 asset-first 최�
 1. `git checkout main`
 2. `git pull origin main`
 3. 필요한 파일 수정
-4. `export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'`
+4. `export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'`
 5. `python3 -m pip install -r requirements.txt`
 6. `python3 -m compileall apps packages tools`
 7. project asset smoke 실행

@@ -17,7 +17,7 @@ tools/dev/project_playbook_smoke.py
 tools/dev/manager_projects_playbook_http_smoke.py
 tools/dev/m3_integrated_smoke.py
 README.md
-docs/m3/oldclaw-m3-start-report.md
+docs/m3/opsclaw-m3-start-report.md
 docs/verification/REVIEW-33.md
 docs/verification/NEXT-34.md
 docs/verification/WORK-34.md
@@ -36,8 +36,8 @@ Already up to date.
 
 2. **Set DATABASE_URL**
 ```
-$ export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'
-postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw
+$ export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'
+postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw
 ```
 - **exit code**: 0
 
@@ -117,7 +117,7 @@ $ git status --short
  M tools/dev/project_playbook_smoke.py
  M tools/dev/manager_projects_playbook_http_smoke.py
  M tools/dev/m3_integrated_smoke.py
- M docs/m3/oldclaw-m3-start-report.md
+ M docs/m3/opsclaw-m3-start-report.md
  M docs/verification/REVIEW-33.md
  M docs/verification/NEXT-34.md
  M docs/verification/WORK-34.md
@@ -132,7 +132,7 @@ $ git commit -m "M3-4 reconcile repo and manager-api consistency + minimal playb
  12 files changed, ... insertions(+), ... deletions(-)
 $ git push origin main
 Counting objects: ..., done.
-To https://github.com/mrgrit/oldclaw
+To https://github.com/mrgrit/opsclaw
    ... -> main
 ```
 - **exit code**: 0

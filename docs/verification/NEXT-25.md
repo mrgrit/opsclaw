@@ -10,8 +10,8 @@ M2의 첫 단계로, PostgreSQL이 준비된 현재 환경에서 최소한의 pr
 - `packages/project_service` 구현
 - `packages/graph_runtime` 최소 상태 정의
 - `apps/manager-api/src/main.py`의 `/projects` 라우터 구현
-- `docs/m2/oldclaw-m2-plan.md` 작성
-- `docs/m2/oldclaw-m2-completion-report.md` 작성
+- `docs/m2/opsclaw-m2-plan.md` 작성
+- `docs/m2/opsclaw-m2-completion-report.md` 작성
 - `tools/dev/project_service_smoke.py` 작성
 - `tools/dev/manager_projects_http_smoke.py` 작성
 

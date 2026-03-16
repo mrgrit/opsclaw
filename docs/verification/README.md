@@ -1,4 +1,4 @@
-# OldClaw Verification Channel
+# OpsClaw Verification Channel
 
 이 디렉터리는 작업별 검수 결과와 실행/테스트 요약을 저장하는 검수 채널이다.
 

@@ -51,10 +51,10 @@ class PiRuntimeConfig:
 
 class PiRuntimeClient:
     """
-    Boundary adapter between OldClaw and the external pi runtime.
+    Boundary adapter between OpsClaw and the external pi runtime.
 
     This class exists to make the integration point explicit.
-    OldClaw orchestration logic must not be implemented here.
+    OpsClaw orchestration logic must not be implemented here.
     Asset, project, policy, evidence, and validation domain logic must stay
     outside the pi adapter layer.
     """
@@ -96,7 +96,7 @@ class RuntimeError(NotImplementedError):
 """Tool Bridge definitions.
 
 Each concrete tool class should implement `execute(**kwargs)` and return a
-standard result dict compatible with OldClaw evidence schema.
+standard result dict compatible with OpsClaw evidence schema.
 """
 
 class BaseTool:
@@ -146,7 +146,7 @@ class PiSession:
 """Model profile definitions.
 
 A profile declares which model, temperature, and system prompt to use for a
-given OldClaw role (manager, master, subagent, etc.).
+given OpsClaw role (manager, master, subagent, etc.).
 """
 
 MODEL_PROFILES = {
@@ -161,20 +161,20 @@ MODEL_PROFILES = {
 ### packages/pi_adapter/translators/__init__.py
 ```
 # packages/pi_adapter/translators/__init__.py
-"""Translation layer between OldClaw types and pi runtime types.
+"""Translation layer between OpsClaw types and pi runtime types.
 
-Functions here convert OldClaw request/response structures to the format
+Functions here convert OpsClaw request/response structures to the format
 expected by the pi SDK and vice‑versa.
 """
 
-def to_pi_message(oldclaw_obj: dict) -> dict:
-    """Translate an OldClaw dict to a pi SDK message payload.
+def to_pi_message(opsclaw_obj: dict) -> dict:
+    """Translate an OpsClaw dict to a pi SDK message payload.
     """
     # Placeholder implementation – in M0 we simply forward the dict.
-    return oldclaw_obj
+    return opsclaw_obj
 
 def from_pi_message(pi_msg: dict) -> dict:
-    """Translate a pi SDK response back to OldClaw format.
+    """Translate a pi SDK response back to OpsClaw format.
     """
     return pi_msg
 ```
@@ -376,7 +376,7 @@ def create_evidence_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="OldClaw Manager API",
+        title="OpsClaw Manager API",
         version="0.1.0-m0",
         description="M0 skeleton for manager-facing API contracts and routing boundaries.",
     )
@@ -455,7 +455,7 @@ def create_review_router() -> APIRouter:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="OldClaw Master Service", version="0.1.0-m0")
+    app = FastAPI(title="OpsClaw Master Service", version="0.1.0-m0")
     app.include_router(create_health_router())
     app.include_router(create_review_router())
     return app
@@ -535,7 +535,7 @@ def create_a2a_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="OldClaw SubAgent Runtime",
+        title="OpsClaw SubAgent Runtime",
         version="0.1.0-m0",
         description="M0 skeleton for subagent runtime boundaries and A2A request contracts.",
     )
@@ -569,14 +569,14 @@ packages/pi_adapter/runtime/client.py:7:    model_profile: str
 packages/pi_adapter/model_profiles/__init__.py:1:# packages/pi_adapter/model_profiles/__init__.py
 ```
 ```
-./.env.example:5:OLDCLAW_PI_PROVIDER=pi
-./.env.example:6:OLDCLAW_PI_BASE_URL=
-./.env.example:7:OLDCLAW_PI_API_KEY=
-./.env.example:8:OLDCLAW_PI_MANAGER_MODEL=
-./.env.example:9:OLDCLAW_PI_MASTER_MODEL=
-./.env.example:10:OLDCLAW_PI_SUBAGENT_MODEL=
-./.env.example:11:OLDCLAW_PI_DEFAULT_TIMEOUT_S=120
-./.env.example:12:OLDCLAW_PI_SESSION_MODE=service
+./.env.example:5:OPSCLAW_PI_PROVIDER=pi
+./.env.example:6:OPSCLAW_PI_BASE_URL=
+./.env.example:7:OPSCLAW_PI_API_KEY=
+./.env.example:8:OPSCLAW_PI_MANAGER_MODEL=
+./.env.example:9:OPSCLAW_PI_MASTER_MODEL=
+./.env.example:10:OPSCLAW_PI_SUBAGENT_MODEL=
+./.env.example:11:OPSCLAW_PI_DEFAULT_TIMEOUT_S=120
+./.env.example:12:OPSCLAW_PI_SESSION_MODE=service
 ```
 
 ## 8. 줄 수 및 파일 크기
@@ -638,7 +638,7 @@ Listing 'packages'...
 - apps/scheduler-worker/src/main.py: 스케줄 로드/처리/루프 구현 필요
 - apps/watch-worker/src/main.py: 워치 잡 로드/처리/루프 구현 필요
 - apps/manager-api/src/main.py: 실제 엔드포인트 구현 필요
-- docs/m0/oldclaw-m0-design-baseline.md 등: 설계 문서 보강 필요 (추후 M1 전 단계)
+- docs/m0/opsclaw-m0-design-baseline.md 등: 설계 문서 보강 필요 (추후 M1 전 단계)
 
 ## 11. 미해결 사항
 - 현재 모든 pi_adapter 관련 로직이 NotImplemented 상태이며, 실제 실행 로직이 부재

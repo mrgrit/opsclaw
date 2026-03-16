@@ -1,15 +1,15 @@
-# OldClaw M0 Registry Specification
+# OpsClaw M0 Registry Specification
 
 ## 1. 문서 목적
 
-이 문서는 OldClaw의 registry 계층에서 **Tool / Skill / Playbook**을 어떻게 구분하고, 어떤 메타데이터와 계약을 가져야 하는지 정의한다.  
+이 문서는 OpsClaw의 registry 계층에서 **Tool / Skill / Playbook**을 어떻게 구분하고, 어떤 메타데이터와 계약을 가져야 하는지 정의한다.  
 이 문서는 단순 예시 모음이 아니라, 이후 registry_service와 playbook execution, validation, policy binding이 흔들리지 않도록 하는 **기준 문서**다.
 
 ---
 
 ## 2. 핵심 원칙
 
-OldClaw는 반드시 다음 구조를 유지한다.
+OpsClaw는 반드시 다음 구조를 유지한다.
 
 - **Tool** = primitive
 - **Skill** = reusable capability
@@ -207,7 +207,7 @@ Registry는 validation과 evidence를 염두에 두고 정의한다.
 - failure policy
 - report step
 
-이 구조를 통해 OldClaw는 evidence-first / validation-gated completion 구조를 유지한다.
+이 구조를 통해 OpsClaw는 evidence-first / validation-gated completion 구조를 유지한다.
 
 ---
 

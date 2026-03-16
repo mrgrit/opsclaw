@@ -1,4 +1,4 @@
-# OldClaw M2 Completion Report
+# OpsClaw M2 Completion Report
 
 ## 1. 이번 단계에서 실제 반영한 것
 
@@ -13,7 +13,7 @@
   - **`GET /projects/{project_id}/evidence`**, **`POST /projects/{project_id}/close`**, **`GET /assets`**, **`POST /projects/{project_id}/assets/{asset_id}`**, **`GET /projects/{project_id}/assets`** 경로 추가
 - `requirements.txt`
   - `psycopg2-binary`, `httpx` 포함
-- `docs/m2/oldclaw-m2-plan.md`
+- `docs/m2/opsclaw-m2-plan.md`
   - M2 1차 계획문서 작성
 - `tools/dev/project_service_smoke.py`
   - project 서비스 직접 smoke test 추가

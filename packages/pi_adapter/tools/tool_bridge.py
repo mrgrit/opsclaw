@@ -4,9 +4,9 @@ from packages.pi_adapter.tools import normalize_tool_names
 
 class PiToolBridge:
     """
-    Translate OldClaw tool selections into pi CLI arguments.
+    Translate OpsClaw tool selections into pi CLI arguments.
 
-    This bridge does not implement OldClaw business logic.
+    This bridge does not implement OpsClaw business logic.
     It only converts the desired tool set into CLI flags.
     """
 

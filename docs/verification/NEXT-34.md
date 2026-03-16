@@ -23,7 +23,7 @@ WORK-34 - 레포 정합성 복구 + manager-api 정상화 + minimal playbook pat
 - `tools/dev/manager_projects_playbook_http_smoke.py`
 - `tools/dev/m3_integrated_smoke.py`
 - `README.md`
-- `docs/m3/oldclaw-m3-start-report.md`
+- `docs/m3/opsclaw-m3-start-report.md`
 - `docs/verification/REVIEW-33.md`
 - `docs/verification/NEXT-34.md`
 - `docs/verification/WORK-34.md`

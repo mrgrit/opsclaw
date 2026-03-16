@@ -9,7 +9,7 @@ def build_prompt(prompt: str, context: dict[str, Any] | None = None) -> str:
 
     context_text = json.dumps(context, ensure_ascii=False, indent=2, sort_keys=True)
     return (
-        "OldClaw execution context:\n"
+        "OpsClaw execution context:\n"
         f"{context_text}\n\n"
         "User prompt:\n"
         f"{prompt}"

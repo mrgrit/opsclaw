@@ -13,13 +13,13 @@
 - tools/dev/manager_projects_asset_http_smoke.py
 - docs/verification/REVIEW-28.md
 - docs/verification/NEXT-29.md
-- docs/m2/oldclaw-m2-completion-report.md
+- docs/m2/opsclaw-m2-completion-report.md
 - docs/verification/WORK-29.md
 
 ## 3. 실행한 명령 목록
 - git checkout main
 - git pull origin main
-- export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'
+- export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'
 - python3 -m pip install -r requirements.txt
 - python3 -m compileall apps packages tools
 - PYTHONPATH=. python3 tools/dev/project_asset_smoke.py

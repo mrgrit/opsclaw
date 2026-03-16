@@ -1,4 +1,4 @@
-# OldClaw M1 Next TODO
+# OpsClaw M1 Next TODO
 
 ## 목표
 M1 단계에서는 **M0에서 고정된 설계·스키마** 를 기반으로 실제 실행 로직, 정책/검증 엔진, 그리고 pi runtime 연동을 구현한다. 모든 구현은 **Tool < Skill < Playbook** 흐름을 유지하면서, 정책과 검증을 자동화하고, 고성능 백그라운드 워커를 완전하게 동작시키는 것을 목표로 한다.

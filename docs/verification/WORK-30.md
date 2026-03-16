@@ -11,13 +11,13 @@
 - tools/dev/m2_integrated_smoke.py
 - docs/verification/REVIEW-29.md
 - docs/verification/NEXT-30.md
-- docs/m2/oldclaw-m2-completion-report.md
+- docs/m2/opsclaw-m2-completion-report.md
 - docs/verification/WORK-30.md
 
 ## 3. 실행한 명령 목록
 - git checkout main
 - git pull origin main
-- export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'
+- export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'
 - python3 -m pip install -r requirements.txt
 - python3 -m compileall apps packages tools
 - PYTHONPATH=. python3 tools/dev/m2_integrated_smoke.py
@@ -52,7 +52,7 @@ M2_REPORT_ID: rpt_...
 ## 7. 핵심 관찰점
 - `README.md`가 현재 M2 구현 상태를 정확히 반영하도록 전면 갱신됨.
 - `tools/dev/m2_integrated_smoke.py`가 assets, lifecycle, evidence, asset 연결, close 전 과정을 한 번에 검증하고 정상 종료함.
-- `docs/m2/oldclaw-m2-completion-report.md`가 통합 smoke와 README 변경을 반영하여 내용이 일관됨.
+- `docs/m2/opsclaw-m2-completion-report.md`가 통합 smoke와 README 변경을 반영하여 내용이 일관됨.
 - 기존 WORK‑29 검증 결과와 동일하게 lifecycle과 asset 연동이 정상 동작함을 확인.
 
 ## 8. 미해결 사항

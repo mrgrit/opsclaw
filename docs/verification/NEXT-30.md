@@ -8,7 +8,7 @@ M2 문서 정리 및 대표 README 갱신 + 통합 smoke 고정
 - tools/dev/m2_integrated_smoke.py
 - docs/verification/REVIEW-29.md
 - docs/verification/NEXT-30.md
-- docs/m2/oldclaw-m2-completion-report.md
+- docs/m2/opsclaw-m2-completion-report.md
 - docs/verification/WORK-30.md
 
 ## README 갱신 요구사항
@@ -20,7 +20,7 @@ M2 문서 정리 및 대표 README 갱신 + 통합 smoke 고정
 - 스크립트는 위에서 정의한 출력 형식과 성공 기준을 만족해야 함.
 
 ## M2 완료보고서 정합화 요구사항
-- `docs/m2/oldclaw-m2-completion-report.md` 를 현재 구현 범위와 대표 API/검증 항목에 맞게 업데이트.
+- `docs/m2/opsclaw-m2-completion-report.md` 를 현재 구현 범위와 대표 API/검증 항목에 맞게 업데이트.
 - README와 내용이 일관되게 유지되도록 섹션을 맞춤.
 
 ## WORK-30 작성 규칙

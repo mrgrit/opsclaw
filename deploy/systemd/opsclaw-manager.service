@@ -1,9 +1,9 @@
 [Unit]
-Description=OldClaw Manager Service
+Description=OpsClaw Manager Service
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/oldclaw-manager
+ExecStart=/usr/local/bin/opsclaw-manager
 Restart=always
 
 [Install]

@@ -13,13 +13,13 @@
 - tools/dev/manager_projects_playbook_http_smoke.py
 - docs/verification/REVIEW-31.md
 - docs/verification/NEXT-32.md
-- docs/m3/oldclaw-m3-start-report.md
+- docs/m3/opsclaw-m3-start-report.md
 - docs/verification/WORK-32.md
 
 ## 3. 실행한 명령 목록
 - git checkout main
 - git pull origin main
-- export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'
+- export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'
 - python3 -m pip install -r requirements.txt
 - python3 -m compileall apps packages tools
 - PYTHONPATH=. python3 tools/dev/project_playbook_smoke.py
@@ -31,7 +31,7 @@
 - git add tools/dev/manager_projects_playbook_http_smoke.py
 - git add docs/verification/REVIEW-31.md
 - git add docs/verification/NEXT-32.md
-- git add docs/m3/oldclaw-m3-start-report.md
+- git add docs/m3/opsclaw-m3-start-report.md
 - git add docs/verification/WORK-32.md
 - git commit -m "M3-2 add minimal playbook path"
 - git push origin main

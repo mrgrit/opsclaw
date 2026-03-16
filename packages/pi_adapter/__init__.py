@@ -1,9 +1,9 @@
 # pi_adapter package placeholder
 
-"""Adapter layer exposing pi runtime to OldClaw services.
+"""Adapter layer exposing pi runtime to OpsClaw services.
 
 * `PiSession` – thin wrapper for creating / destroying pi sessions.
-* `ToolBridge` – translate OldClaw tool calls into pi tool invocations.
+* `ToolBridge` – translate OpsClaw tool calls into pi tool invocations.
 * `ModelProfile` – configuration for Master / Manager / SubAgent models.
 """
 

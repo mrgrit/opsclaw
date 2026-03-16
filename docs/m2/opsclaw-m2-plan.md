@@ -1,4 +1,4 @@
-# OldClaw M2 Plan
+# OpsClaw M2 Plan
 
 ## 1. 목적
 

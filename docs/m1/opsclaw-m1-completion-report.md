@@ -1,4 +1,4 @@
-# OldClaw M1 Completion Report
+# OpsClaw M1 Completion Report
 
 ## 1. 이번 단계에서 실제 반영한 것
 
@@ -33,14 +33,14 @@
 
 ## 2. 이번 단계에서 고정된 사실
 
-- 현재 OldClaw의 pi adapter는 Python-native SDK가 아니라 `pi` CLI wrapper 방식이다.
+- 현재 OpsClaw의 pi adapter는 Python-native SDK가 아니라 `pi` CLI wrapper 방식이다.
 - 성공 기준 provider/model은 `ollama / gpt-oss:120b` 이다.
 - `~/.pi/agent/models.json` 이 실제 설정 경로다.
 - 비대화형 호출은 `-p` 플래그를 사용한다.
 
 ## 3. 한계
 
-- 실제 remote session close가 아니라 OldClaw 내부 session metadata 제거 수준이다.
+- 실제 remote session close가 아니라 OpsClaw 내부 session metadata 제거 수준이다.
 - tool bridge는 CLI `--tools` 플래그 생성까지만 구현되어 있다.
 - manager/master/subagent 앱은 아직 adapter를 호출하지 않는다.
 - evidence/validation/history 연계는 아직 없다.

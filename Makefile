@@ -1,4 +1,4 @@
-# Makefile for OldClaw
+# Makefile for OpsClaw
 
 .PHONY: install lint test run-manager run-master run-subagent
 

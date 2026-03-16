@@ -10,7 +10,7 @@ M3 코드 주입 1차 / target 목록·project 연결·project target 조회 최
 - tools/dev/manager_projects_target_http_smoke.py
 - docs/verification/REVIEW-30.md
 - docs/verification/NEXT-31.md
-- docs/m3/oldclaw-m3-start-report.md
+- docs/m3/opsclaw-m3-start-report.md
 - docs/verification/WORK-31.md
 
 ## 구현 요구사항
@@ -23,7 +23,7 @@ M3 코드 주입 1차 / target 목록·project 연결·project target 조회 최
 - `tools/dev/manager_projects_target_http_smoke.py`가 HTTP 레벨에서 동일 흐름을 검증하고 stdout에 지정된 항목을 출력
 
 ## M3 시작 보고서 작성 요구사항
-- `docs/m3/oldclaw-m3-start-report.md`에 M2 종료 상태, target 최소 경로 도입 이유, 이번 WORK‑31 범위, 아직 구현되지 않은 항목, 대표 테스트 항목 등을 포함
+- `docs/m3/opsclaw-m3-start-report.md`에 M2 종료 상태, target 최소 경로 도입 이유, 이번 WORK‑31 범위, 아직 구현되지 않은 항목, 대표 테스트 항목 등을 포함
 
 ## WORK-31 작성 규칙
 - 현재 브랜치, HEAD 커밋, 작업 시각(UTC) 등을 실제 값으로 기록
@@ -34,7 +34,7 @@ M3 코드 주입 1차 / target 목록·project 연결·project target 조회 최
 1. `git checkout main`
 2. `git pull origin main`
 3. 필요한 파일 수정
-4. `export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'`
+4. `export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'`
 5. `python3 -m pip install -r requirements.txt`
 6. `python3 -m compileall apps packages tools`
 7. project target smoke 실행

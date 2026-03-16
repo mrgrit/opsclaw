@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 def load_manager_module():
     file_path = Path("apps/manager-api/src/main.py").resolve()
-    spec = importlib.util.spec_from_file_location("oldclaw_manager_main", file_path)
+    spec = importlib.util.spec_from_file_location("opsclaw_manager_main", file_path)
     module = importlib.util.module_from_spec(spec)
     assert spec is not None and spec.loader is not None
     spec.loader.exec_module(module)

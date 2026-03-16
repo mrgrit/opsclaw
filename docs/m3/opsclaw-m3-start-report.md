@@ -1,4 +1,4 @@
-# OldClaw M3 Start Report
+# OpsClaw M3 Start Report
 
 ## M2 종료 상태 요약
 - M2 단계에서는 프로젝트 lifecycle (plan → execute → validate → report → close) 가 구현되었고,

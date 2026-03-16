@@ -14,7 +14,7 @@
 ## 3. 현재 pi 설정 경로 조사
 - `command -v pi || true`
 ```
-/home/oldclaw/.nvm/versions/node/v20.20.1/bin/pi
+/home/opsclaw/.nvm/versions/node/v20.20.1/bin/pi
 ```
 - `pi --help || true`
 ```
@@ -24,32 +24,32 @@ pi - AI coding assistant with read, bash, edit, write tools
 - `ls -la ~/.pi || true`
 ```
 total 12
-drwxrwxr-x  3 oldclaw oldclaw 4096  3월 14 02:26 .
-drwxr-x--- 21 oldclaw oldclaw 4096  3월 14 19:29 ..
-drwxrwxr-x  4 oldclaw oldclaw 4096  3월 15 00:07 agent
+drwxrwxr-x  3 opsclaw opsclaw 4096  3월 14 02:26 .
+drwxr-x--- 21 opsclaw opsclaw 4096  3월 14 19:29 ..
+drwxrwxr-x  4 opsclaw opsclaw 4096  3월 15 00:07 agent
 ```
 - `ls -la ~/.pi/agent || true`
 ```
 total 28
-drwxrwxr-x 4 oldclaw oldclaw 4096  3월 15 00:07 .
-drwxrwxr-x 3 oldclaw oldclaw 4096  3월 14 02:26 ..
--rw------- 1 oldclaw oldclaw    2  3월 14 02:31 auth.json
--drwxrwxr-x 2 oldclaw oldclaw 4096  3월 14 02:31 bin
--rw-rw-r-- 1 oldclaw oldclaw  237  3월 14 08:53 models.json
--drwxrwxr-x 4 oldclaw oldclaw 4096  3월 14 22:57 sessions
--rw-rw-r-- 1 oldclaw oldclaw   38  3월 14 22:36 settings.json
+drwxrwxr-x 4 opsclaw opsclaw 4096  3월 15 00:07 .
+drwxrwxr-x 3 opsclaw opsclaw 4096  3월 14 02:26 ..
+-rw------- 1 opsclaw opsclaw    2  3월 14 02:31 auth.json
+-drwxrwxr-x 2 opsclaw opsclaw 4096  3월 14 02:31 bin
+-rw-rw-r-- 1 opsclaw opsclaw  237  3월 14 08:53 models.json
+-drwxrwxr-x 4 opsclaw opsclaw 4096  3월 14 22:57 sessions
+-rw-rw-r-- 1 opsclaw opsclaw   38  3월 14 22:36 settings.json
 ```
 - `ls -la ~/.pi/agents || true`
 ```
-ls: cannot access '/home/oldclaw/.pi/agents': No such file or directory
+ls: cannot access '/home/opsclaw/.pi/agents': No such file or directory
 ```
 - `ls -l ~/.pi/agent/models.json || true`
 ```
--rw-rw-r-- 1 oldclaw oldclaw 237  3월 14 08:53 /home/oldclaw/.pi/agent/models.json
+-rw-rw-r-- 1 opsclaw opsclaw 237  3월 14 08:53 /home/opsclaw/.pi/agent/models.json
 ```
 - `ls -l ~/.pi/agents/models.json || true`
 ```
-ls: cannot access '/home/oldclaw/.pi/agents/models.json': No such file or directory
+ls: cannot access '/home/opsclaw/.pi/agents/models.json': No such file or directory
 ```
 - `sed -n '1,260p' ~/.pi/agent/models.json || true`
 ```
@@ -70,7 +70,7 @@ ls: cannot access '/home/oldclaw/.pi/agents/models.json': No such file or direct
 ```
 - `sed -n '1,260p' ~/.pi/agents/models.json || true`
 ```
-ls: cannot access '/home/oldclaw/.pi/agents/models.json': No such file or directory
+ls: cannot access '/home/opsclaw/.pi/agents/models.json': No such file or directory
 ```
 
 ## 4. pi가 실제 읽는 설정 경로 조사

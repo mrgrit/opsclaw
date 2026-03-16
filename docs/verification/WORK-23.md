@@ -15,7 +15,7 @@
 ```
 1. git checkout main
 2. git pull origin main
-3. export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'
+3. export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'
 4. psql "$DATABASE_URL" -c '\\conninfo'
 5. psql "$DATABASE_URL" -c 'DROP TABLE IF EXISTS watch_events CASCADE;'
 6. psql "$DATABASE_URL" -c 'DROP TABLE IF EXISTS watch_jobs CASCADE;'
@@ -97,32 +97,32 @@ COMMIT
                List of relations
  Schema |        Name         | Type  |  Owner  
 --------+---------------------+-------+---------
- public | asset_endpoints     | table | oldclaw
- public | assets              | table | oldclaw
- public | audit_logs          | table | oldclaw
- public | evidence            | table | oldclaw
- public | experiences         | table | oldclaw
- public | histories           | table | oldclaw
- public | incidents           | table | oldclaw
- public | job_runs            | table | oldclaw
- public | master_reviews      | table | oldclaw
- public | messages            | table | oldclaw
- public | playbook_bindings   | table | oldclaw
- public | playbook_steps      | table | oldclaw
- public | playbooks           | table | oldclaw
- public | project_assets      | table | oldclaw
- public | projects            | table | oldclaw
- public | reports             | table | oldclaw
- public | retrieval_documents | table | oldclaw
- public | schedules           | table | oldclaw
- public | skill_tools         | table | oldclaw
- public | skills              | table | oldclaw
- public | targets             | table | oldclaw
- public | task_memories       | table | oldclaw
- public | tools               | table | oldclaw
- public | validation_runs     | table | oldclaw
- public | watch_events        | table | oldclaw
- public | watch_jobs          | table | oldclaw
+ public | asset_endpoints     | table | opsclaw
+ public | assets              | table | opsclaw
+ public | audit_logs          | table | opsclaw
+ public | evidence            | table | opsclaw
+ public | experiences         | table | opsclaw
+ public | histories           | table | opsclaw
+ public | incidents           | table | opsclaw
+ public | job_runs            | table | opsclaw
+ public | master_reviews      | table | opsclaw
+ public | messages            | table | opsclaw
+ public | playbook_bindings   | table | opsclaw
+ public | playbook_steps      | table | opsclaw
+ public | playbooks           | table | opsclaw
+ public | project_assets      | table | opsclaw
+ public | projects            | table | opsclaw
+ public | reports             | table | opsclaw
+ public | retrieval_documents | table | opsclaw
+ public | schedules           | table | opsclaw
+ public | skill_tools         | table | opsclaw
+ public | skills              | table | opsclaw
+ public | targets             | table | opsclaw
+ public | task_memories       | table | opsclaw
+ public | tools               | table | opsclaw
+ public | validation_runs     | table | opsclaw
+ public | watch_events        | table | opsclaw
+ public | watch_jobs          | table | opsclaw
 (26 rows)
 ```
 - **histories count:** 0

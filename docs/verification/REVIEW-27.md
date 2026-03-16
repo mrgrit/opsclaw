@@ -32,7 +32,7 @@
    - `apps/manager-api/src/main.py`
    - `tools/dev/project_report_evidence_smoke.py`
    - `tools/dev/manager_projects_report_http_smoke.py`
-   - `docs/m2/oldclaw-m2-completion-report.md`
+   - `docs/m2/opsclaw-m2-completion-report.md`
 3. **report stage 종결 의미가 아직 약함**
    - 현재는 “report 단계 진입 + minimal evidence 1건 생성”까지 구현
    - 아래 목표는 아직 미달:

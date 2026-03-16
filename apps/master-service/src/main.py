@@ -96,7 +96,7 @@ def create_review_router() -> APIRouter:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="OldClaw Master Service", version="0.1.0-m1")
+    app = FastAPI(title="OpsClaw Master Service", version="0.1.0-m1")
     app.include_router(create_health_router())
     app.include_router(create_runtime_router())
     app.include_router(create_review_router())

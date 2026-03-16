@@ -9,7 +9,7 @@
 ## 2. 이번 작업에서 수정한 파일
 - tools/dev/service_http_smoke.py
 - requirements.txt (수정: 실제 패키지 의존성 명시)
-- docs/m1/oldclaw-m1-completion-report.md (수정: 실제 runtime endpoint 포함 사실 반영)
+- docs/m1/opsclaw-m1-completion-report.md (수정: 실제 runtime endpoint 포함 사실 반영)
 - docs/verification/WORK-20.md
 - stub 제거/이름변경 파일이 있으면 추가 (없음)
 
@@ -22,7 +22,7 @@ Python 3.10.14
 which pip3 || true
 /usr/local/bin/pip3
 python3 -m pip --version
-pip 26.0.1 from /home/oldclaw/.local/lib/python3.10/site-packages/pip (python 3.10)
+pip 26.0.1 from /home/opsclaw/.local/lib/python3.10/site-packages/pip (python 3.10)
 type pip3 || true
 pip3 is a function
 type python3 || true
@@ -31,13 +31,13 @@ python3 is a function
 
 ## 4. 실제 패키지 import 경로 확인
 - fastapi
-/home/oldclaw/.local/lib/python3.10/site-packages/fastapi/__init__.py
+/home/opsclaw/.local/lib/python3.10/site-packages/fastapi/__init__.py
 - pydantic
-/home/oldclaw/.local/lib/python3.10/site-packages/pydantic/__init__.py
+/home/opsclaw/.local/lib/python3.10/site-packages/pydantic/__init__.py
 - uvicorn
-/home/oldclaw/.local/lib/python3.10/site-packages/uvicorn/__init__.py
+/home/opsclaw/.local/lib/python3.10/site-packages/uvicorn/__init__.py
 - requests
-/home/oldclaw/.local/lib/python3.10/site-packages/requests/__init__.py
+/home/opsclaw/.local/lib/python3.10/site-packages/requests/__init__.py
 
 ## 5. stub 조사 결과
 ```
@@ -76,9 +76,9 @@ EXIT_CODE: 0
 - 명령: `PYTHONPATH=. python3 tools/dev/service_adapter_smoke.py`
 - stdout:
 ```
-MANAGER_TITLE: OldClaw Manager API
-MASTER_TITLE: OldClaw Master Service
-SUBAGENT_TITLE: OldClaw SubAgent Runtime
+MANAGER_TITLE: OpsClaw Manager API
+MASTER_TITLE: OpsClaw Master Service
+SUBAGENT_TITLE: OpsClaw SubAgent Runtime
 ```
 - stderr: (none)
 - exit code: 0

@@ -1,9 +1,9 @@
-# OldClaw M0 Completion Report
+# OpsClaw M0 Completion Report
 
 ## 직접 주입된 파일 목록
 
-- `docs/m0/oldclaw-m0-design-baseline.md`
-- `docs/m0/oldclaw-m0-registry-spec.md`
+- `docs/m0/opsclaw-m0-design-baseline.md`
+- `docs/m0/opsclaw-m0-registry-spec.md`
 - `apps/manager-api/src/main.py`
 - `apps/subagent-runtime/src/main.py`
 - `packages/pi_adapter/runtime/client.py`

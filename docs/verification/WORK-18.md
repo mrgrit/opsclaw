@@ -11,7 +11,7 @@
 - apps/master-service/src/main.py
 - apps/subagent-runtime/src/main.py
 - tools/dev/service_adapter_smoke.py
-- docs/m1/oldclaw-m1-completion-report.md
+- docs/m1/opsclaw-m1-completion-report.md
 - docs/verification/WORK-18.md
 
 ## 3. 실행한 명령 목록
@@ -42,9 +42,9 @@ EXIT_CODE: 0
 - 명령: `PYTHONPATH=. python3 tools/dev/service_adapter_smoke.py`
 - stdout:
 ```
-MANAGER_TITLE: OldClaw Manager API
-MASTER_TITLE: OldClaw Master Service
-SUBAGENT_TITLE: OldClaw SubAgent Runtime
+MANAGER_TITLE: OpsClaw Manager API
+MASTER_TITLE: OpsClaw Master Service
+SUBAGENT_TITLE: OpsClaw SubAgent Runtime
 ```
 - stderr: (none)
 - exit code: 0

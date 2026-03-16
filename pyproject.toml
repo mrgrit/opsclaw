@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "oldclaw"
+name = "opsclaw"
 version = "0.1.0"
 definition = """
 A control‑plane for pi runtime.
 """
-authors = ["OldClaw Team <team@oldclaw.io>"]
+authors = ["OpsClaw Team <team@opsclaw.io>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11"

@@ -10,7 +10,7 @@ from packages.graph_runtime import GraphRuntimeError, require_transition
 
 DEFAULT_DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw",
+    "postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw",
 )
 
 

@@ -1,9 +1,9 @@
 [Unit]
-Description=OldClaw SubAgent Service
+Description=OpsClaw SubAgent Service
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/oldclaw-subagent
+ExecStart=/usr/local/bin/opsclaw-subagent
 Restart=always
 
 [Install]

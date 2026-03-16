@@ -16,8 +16,8 @@
 - packages/pi_adapter/translators/__init__.py
 - packages/pi_adapter/contracts/__init__.py
 - .env.example
-- docs/m1/oldclaw-m1-plan.md
-- docs/m1/oldclaw-m1-completion-report.md
+- docs/m1/opsclaw-m1-plan.md
+- docs/m1/opsclaw-m1-completion-report.md
 - tools/dev/pi_runtime_smoke.py
 - docs/verification/WORK-17.md
 
@@ -37,8 +37,8 @@ git add packages/pi_adapter/model_profiles/__init__.py
 git add packages/pi_adapter/translators/__init__.py
 git add packages/pi_adapter/contracts/__init__.py
 git add .env.example
-git add docs/m1/oldclaw-m1-plan.md
-git add docs/m1/oldclaw-m1-completion-report.md
+git add docs/m1/opsclaw-m1-plan.md
+git add docs/m1/opsclaw-m1-completion-report.md
 git add tools/dev/pi_runtime_smoke.py
 git add docs/verification/WORK-17.md
 ```

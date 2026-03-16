@@ -80,8 +80,8 @@ Executing: /lib/systemd/systemd-sysv-install enable postgresql
    Main PID: 220772 (code=exited, status=0/SUCCESS)
         CPU: 6ms
 
- 3월 15 09:12:43 oldclaw systemd[1]: Starting PostgreSQL RDBMS...
- 3월 15 09:12:43 oldclaw systemd[1]: Finished PostgreSQL RDBMS.
+ 3월 15 09:12:43 opsclaw systemd[1]: Starting PostgreSQL RDBMS...
+ 3월 15 09:12:43 opsclaw systemd[1]: Finished PostgreSQL RDBMS.
 ```
 - `pg_isready`
 ```
@@ -104,22 +104,22 @@ psql (PostgreSQL) 14.22 (Ubuntu 14.22-0ubuntu0.22.04.1)
 ```
 
 ## 6. DB 및 계정 생성
-- Role 생성 (`sudo -S -u postgres psql -c "CREATE ROLE oldclaw LOGIN PASSWORD 'oldclaw';"`)
+- Role 생성 (`sudo -S -u postgres psql -c "CREATE ROLE opsclaw LOGIN PASSWORD 'opsclaw';"`)
 ```
 CREATE ROLE
 ```
-- DB 생성 (`sudo -S -u postgres psql -c "CREATE DATABASE oldclaw OWNER oldclaw;"`)
+- DB 생성 (`sudo -S -u postgres psql -c "CREATE DATABASE opsclaw OWNER opsclaw;"`)
 ```
 CREATE DATABASE
 ```
-- 권한 부여 (`sudo -S -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE oldclaw TO oldclaw;"`)
+- 권한 부여 (`sudo -S -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE opsclaw TO opsclaw;"`)
 ```
 GRANT
 ```
-- 접속 문자열: `postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw`
+- 접속 문자열: `postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw`
 - `psql "$DATABASE_URL" -c '\\conninfo'`
 ```
-You are connected to database "oldclaw" as user "oldclaw" via socket in "/var/run/postgresql" at port "5432".
+You are connected to database "opsclaw" as user "opsclaw" via socket in "/var/run/postgresql" at port "5432".
 ```
 
 ## 7. migration 적용
@@ -171,25 +171,25 @@ DETAIL:  Key columns "project_id" and "id" are of incompatible types: uuid and t
                List of relations
  Schema |        Name         | Type  |  Owner  
 --------+---------------------+-------+---------
- public | asset_endpoints     | table | oldclaw
- public | assets              | table | oldclaw
- public | audit_logs          | table | oldclaw
- public | evidence            | table | oldclaw
- public | job_runs            | table | oldclaw
- public | master_reviews      | table | oldclaw
- public | messages            | table | oldclaw
- public | playbook_bindings   | table | oldclaw
- public | playbook_steps      | table | oldclaw
- public | playbooks           | table | oldclaw
- public | project_assets      | table | oldclaw
- public | projects            | table | oldclaw
- public | reports             | table | oldclaw
- public | retrieval_documents | table | oldclaw
- public | skill_tools         | table | oldclaw
- public | skills              | table | oldclaw
- public | targets             | table | oldclaw
- public | tools               | table | oldclaw
- public | validation_runs     | table | oldclaw
+ public | asset_endpoints     | table | opsclaw
+ public | assets              | table | opsclaw
+ public | audit_logs          | table | opsclaw
+ public | evidence            | table | opsclaw
+ public | job_runs            | table | opsclaw
+ public | master_reviews      | table | opsclaw
+ public | messages            | table | opsclaw
+ public | playbook_bindings   | table | opsclaw
+ public | playbook_steps      | table | opsclaw
+ public | playbooks           | table | opsclaw
+ public | project_assets      | table | opsclaw
+ public | projects            | table | opsclaw
+ public | reports             | table | opsclaw
+ public | retrieval_documents | table | opsclaw
+ public | skill_tools         | table | opsclaw
+ public | skills              | table | opsclaw
+ public | targets             | table | opsclaw
+ public | tools               | table | opsclaw
+ public | validation_runs     | table | opsclaw
 (19 rows)
 ```
 - `psql "$DATABASE_URL" -c 'SELECT COUNT(*) FROM projects;'`

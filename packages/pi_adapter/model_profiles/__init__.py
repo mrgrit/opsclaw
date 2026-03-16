@@ -29,18 +29,18 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
-DEFAULT_PROVIDER = _env("OLDCLAW_PI_PROVIDER", "ollama")
-DEFAULT_BASE_URL = _env("OLDCLAW_PI_BASE_URL", "http://211.170.162.139:10534/v1")
-DEFAULT_API_KEY = _env("OLDCLAW_PI_API_KEY", "ollama")
-DEFAULT_TIMEOUT_S = _int_env("OLDCLAW_PI_DEFAULT_TIMEOUT_S", 120)
-DEFAULT_COMMAND = _env("OLDCLAW_PI_COMMAND", "pi")
-DEFAULT_WORKING_DIR = _env("OLDCLAW_PI_WORKING_DIR", "")
+DEFAULT_PROVIDER = _env("OPSCLAW_PI_PROVIDER", "ollama")
+DEFAULT_BASE_URL = _env("OPSCLAW_PI_BASE_URL", "http://211.170.162.139:10534/v1")
+DEFAULT_API_KEY = _env("OPSCLAW_PI_API_KEY", "ollama")
+DEFAULT_TIMEOUT_S = _int_env("OPSCLAW_PI_DEFAULT_TIMEOUT_S", 120)
+DEFAULT_COMMAND = _env("OPSCLAW_PI_COMMAND", "pi")
+DEFAULT_WORKING_DIR = _env("OPSCLAW_PI_WORKING_DIR", "")
 
 MODEL_PROFILES: dict[str, PiModelProfile] = {
     "manager": PiModelProfile(
         role="manager",
         provider=DEFAULT_PROVIDER,
-        model=_env("OLDCLAW_PI_MANAGER_MODEL", "gpt-oss:120b"),
+        model=_env("OPSCLAW_PI_MANAGER_MODEL", "gpt-oss:120b"),
         timeout_s=DEFAULT_TIMEOUT_S,
         temperature=0.2,
         tool_calling_enabled=True,
@@ -52,7 +52,7 @@ MODEL_PROFILES: dict[str, PiModelProfile] = {
     "master": PiModelProfile(
         role="master",
         provider=DEFAULT_PROVIDER,
-        model=_env("OLDCLAW_PI_MASTER_MODEL", "gpt-oss:120b"),
+        model=_env("OPSCLAW_PI_MASTER_MODEL", "gpt-oss:120b"),
         timeout_s=DEFAULT_TIMEOUT_S,
         temperature=0.1,
         tool_calling_enabled=True,
@@ -64,7 +64,7 @@ MODEL_PROFILES: dict[str, PiModelProfile] = {
     "subagent": PiModelProfile(
         role="subagent",
         provider=DEFAULT_PROVIDER,
-        model=_env("OLDCLAW_PI_SUBAGENT_MODEL", "gpt-oss:120b"),
+        model=_env("OPSCLAW_PI_SUBAGENT_MODEL", "gpt-oss:120b"),
         timeout_s=DEFAULT_TIMEOUT_S,
         temperature=0.1,
         tool_calling_enabled=True,

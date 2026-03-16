@@ -31,8 +31,8 @@
 - packages/pi_adapter/translators/__init__.py
 - packages/pi_adapter/contracts/__init__.py
 - .env.example
-- docs/m1/oldclaw-m1-plan.md (없음 명시)
-- docs/m1/oldclaw-m1-completion-report.md (없음 명시)
+- docs/m1/opsclaw-m1-plan.md (없음 명시)
+- docs/m1/opsclaw-m1-completion-report.md (없음 명시)
 - tests/integration/ (없음 명시)
 - tools/dev/ (없음 명시)
 
@@ -52,10 +52,10 @@ class PiRuntimeConfig:
 
 class PiRuntimeClient:
     """
-    Boundary adapter between OldClaw and the external pi runtime.
+    Boundary adapter between OpsClaw and the external pi runtime.
 
     This class exists to make the integration point explicit.
-    OldClaw orchestration logic must not be implemented here.
+    OpsClaw orchestration logic must not be implemented here.
     Asset, project, policy, evidence, and validation domain logic must stay
     outside the pi adapter layer.
     """
@@ -95,7 +95,7 @@ class RuntimeError(NotImplementedError):
 """Tool Bridge definitions.
 
 Each concrete tool class should implement `execute(**kwargs)` and return a
-standard result dict compatible with OldClaw evidence schema.
+standard result dict compatible with OpsClaw evidence schema.
 """
 
 class BaseTool:
@@ -142,7 +142,7 @@ class PiSession:
 """Model profile definitions.
 
 A profile declares which model, temperature, and system prompt to use for a
-given OldClaw role (manager, master, subagent, etc.).
+given OpsClaw role (manager, master, subagent, etc.).
 """
 
 MODEL_PROFILES = {
@@ -156,20 +156,20 @@ MODEL_PROFILES = {
 --- packages/pi_adapter/translators/__init__.py ---
 ```python
 # packages/pi_adapter/translators/__init__.py
-"""Translation layer between OldClaw types and pi runtime types.
+"""Translation layer between OpsClaw types and pi runtime types.
 
-Functions here convert OldClaw request/response structures to the format
+Functions here convert OpsClaw request/response structures to the format
 expected by the pi SDK and vice‑versa.
 """
 
-def to_pi_message(oldclaw_obj: dict) -> dict:
-    """Translate an OldClaw dict to a pi SDK message payload.
+def to_pi_message(opsclaw_obj: dict) -> dict:
+    """Translate an OpsClaw dict to a pi SDK message payload.
     """
     # Placeholder implementation – in M0 we simply forward the dict.
-    return oldclaw_obj
+    return opsclaw_obj
 
 def from_pi_message(pi_msg: dict) -> dict:
-    """Translate a pi SDK response back to OldClaw format.
+    """Translate a pi SDK response back to OpsClaw format.
     """
     return pi_msg
 ```
@@ -202,17 +202,17 @@ TOOL_RESPONSE_SCHEMA = {
 --- .env.example ---
 ```dotenv
 # Environment variables example
-# DATABASE_URL=postgresql://oldclaw:password@localhost:5432/oldclaw
+# DATABASE_URL=postgresql://opsclaw:password@localhost:5432/opsclaw
 # PI_MODEL=default
 # pi adapter settings (M1)
-OLDCLAW_PI_PROVIDER=pi
-OLDCLAW_PI_BASE_URL=
-OLDCLAW_PI_API_KEY=
-OLDCLAW_PI_MANAGER_MODEL=
-OLDCLAW_PI_MASTER_MODEL=
-OLDCLAW_PI_SUBAGENT_MODEL=
-OLDCLAW_PI_DEFAULT_TIMEOUT_S=120
-OLDCLAW_PI_SESSION_MODE=service
+OPSCLAW_PI_PROVIDER=pi
+OPSCLAW_PI_BASE_URL=
+OPSCLAW_PI_API_KEY=
+OPSCLAW_PI_MANAGER_MODEL=
+OPSCLAW_PI_MASTER_MODEL=
+OPSCLAW_PI_SUBAGENT_MODEL=
+OPSCLAW_PI_DEFAULT_TIMEOUT_S=120
+OPSCLAW_PI_SESSION_MODE=service
 ```
 --- apps/manager-api/src/main.py ---
 ```python
@@ -383,7 +383,7 @@ def create_evidence_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="OldClaw Manager API",
+        title="OpsClaw Manager API",
         version="0.1.0-m0",
         description="M0 skeleton for manager-facing API contracts and routing boundaries.",
     )
@@ -461,7 +461,7 @@ def create_review_router() -> APIRouter:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="OldClaw Master Service", version="0.1.0-m0")
+    app = FastAPI(title="OpsClaw Master Service", version="0.1.0-m0")
     app.include_router(create_health_router())
     app.include_router(create_review_router())
     return app
@@ -540,7 +540,7 @@ def create_a2a_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="OldClaw SubAgent Runtime",
+        title="OpsClaw SubAgent Runtime",
         version="0.1.0-m0",
         description="M0 skeleton for subagent runtime boundaries and A2A request contracts.",
     )

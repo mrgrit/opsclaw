@@ -32,7 +32,7 @@ git status --short
  M apps/manager-api/src/main.py
  M apps/master-service/src/main.py
  M apps/subagent-runtime/src/main.py
- M docs/m3/oldclaw-m3-start-report.md
+ M docs/m3/opsclaw-m3-start-report.md
  M packages/graph_runtime/__init__.py
  M packages/pi_adapter/contracts/__init__.py
  M packages/pi_adapter/model_profiles/__init__.py
@@ -130,19 +130,19 @@ CommitDate: Sun Mar 15 22:29:49 2026 +0900
 ## 7. 현재 작업트리 핵심 파일 상태
 ```
 ls -l apps/manager-api/src/main.py
--rw-rw-r-- 1 oldclaw oldclaw 11793  3월 15 22:10 apps/manager-api/src/main.py
+-rw-rw-r-- 1 opsclaw opsclaw 11793  3월 15 22:10 apps/manager-api/src/main.py
 ```
 ```
 ls -l packages/project_service/__init__.py
--rw-rw-r-- 1 oldclaw oldclaw 24361  3월 15 21:53 packages/project_service/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw 24361  3월 15 21:53 packages/project_service/__init__.py
 ```
 ```
 ls -l packages/graph_runtime/__init__.py
--rw-rw-r-- 1 oldclaw oldclaw  997  3월 15 21:35 packages/graph_runtime/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw  997  3월 15 21:35 packages/graph_runtime/__init__.py
 ```
 ```
 ls -l README.md
--rw-rw-r-- 1 oldclaw oldclaw 6022  3월 15 21:57 README.md
+-rw-rw-r-- 1 opsclaw opsclaw 6022  3월 15 21:57 README.md
 ```
 ```
 find docs/verification -maxdepth 1 -type f | sort

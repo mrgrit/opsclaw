@@ -105,7 +105,7 @@ def create_a2a_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="OldClaw SubAgent Runtime",
+        title="OpsClaw SubAgent Runtime",
         version="0.1.0-m1",
         description="M1 subagent runtime with minimal pi adapter integration endpoint.",
     )

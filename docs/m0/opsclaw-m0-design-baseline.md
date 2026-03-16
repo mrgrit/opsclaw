@@ -1,8 +1,8 @@
-# OldClaw M0 Design Baseline
+# OpsClaw M0 Design Baseline
 
 ## 1. 문서 목적
 
-이 문서는 OldClaw의 **M0 설계 고정 기준 문서**다.  
+이 문서는 OpsClaw의 **M0 설계 고정 기준 문서**다.  
 이 문서의 목적은 이후 M1~M9 구현에서 설계 방향이 흔들리지 않도록, 용어·책임·경계·저장 전략·확장 원칙을 명시적으로 고정하는 것이다.
 
 이 문서는 “개요 메모”가 아니라, 구현자가 다음 단계 코드를 작성할 때 참조해야 하는 **최상위 설계 기준 문서**다.  
@@ -12,7 +12,7 @@
 
 ## 2. 시스템 한 줄 정의
 
-OldClaw는 **pi runtime을 실행 엔진으로 재사용하되**, 그 위에 다음 control-plane 계층을 올리는 정보시스템 운영 오케스트레이션 플랫폼이다.
+OpsClaw는 **pi runtime을 실행 엔진으로 재사용하되**, 그 위에 다음 control-plane 계층을 올리는 정보시스템 운영 오케스트레이션 플랫폼이다.
 
 - Master–Manager–SubAgent 역할 분리
 - Asset Registry
@@ -22,7 +22,7 @@ OldClaw는 **pi runtime을 실행 엔진으로 재사용하되**, 그 위에 다
 - Batch / Continuous Execution
 - History / Experience / Retrieval
 
-즉 OldClaw는 pi를 포크해 이름만 바꾸는 프로젝트가 아니라, **pi를 embedded executor로 사용하는 운영 오케스트레이션 시스템**이다.
+즉 OpsClaw는 pi를 포크해 이름만 바꾸는 프로젝트가 아니라, **pi를 embedded executor로 사용하는 운영 오케스트레이션 시스템**이다.
 
 ---
 
@@ -87,11 +87,11 @@ M0에서 반드시 고정하는 항목은 다음과 같다.
 
 ## 4. 이번 M0에서 확정하는 구조 경계
 
-### 4.1 pi와 OldClaw의 경계
+### 4.1 pi와 OpsClaw의 경계
 - pi는 실행 런타임이다.
-- OldClaw는 orchestration, registry, evidence, validation, history를 담당한다.
+- OpsClaw는 orchestration, registry, evidence, validation, history를 담당한다.
 - pi 내부에 asset/project/evidence/policy 로직을 넣지 않는다.
-- OldClaw 비즈니스 로직을 pi_adapter 바깥으로 새지 않게 한다.
+- OpsClaw 비즈니스 로직을 pi_adapter 바깥으로 새지 않게 한다.
 
 ### 4.2 서비스 경계
 - `apps/manager-api`
@@ -194,7 +194,7 @@ M0 기준 의존 방향은 아래를 따른다.
 
 ## 7. M0에서 확정하는 history 4층 구조
 
-OldClaw는 전체 히스토리를 context에 밀어 넣지 않는다.  
+OpsClaw는 전체 히스토리를 context에 밀어 넣지 않는다.  
 대신 아래 4층으로 다룬다.
 
 ### 7.1 Raw History

@@ -299,7 +299,7 @@ def create_playbook_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="OldClaw Manager API",
+        title="OpsClaw Manager API",
         version="0.3.0-m3",
         description="Manager API with minimal lifecycle, evidence, asset, target, and playbook routes.",
     )

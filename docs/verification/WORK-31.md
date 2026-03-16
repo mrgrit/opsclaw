@@ -13,19 +13,19 @@
 - tools/dev/manager_projects_target_http_smoke.py
 - docs/verification/REVIEW-30.md
 - docs/verification/NEXT-31.md
-- docs/m3/oldclaw-m3-start-report.md
+- docs/m3/opsclaw-m3-start-report.md
 - docs/verification/WORK-31.md
 
 ## 3. 실행한 명령 목록
 - git checkout main
 - git pull origin main
-- export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'
+- export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'
 - python3 -m pip install -r requirements.txt
 - python3 -m compileall apps packages tools
 - PYTHONPATH=. python3 tools/dev/project_target_smoke.py
 - PYTHONPATH=. python3 tools/dev/manager_projects_target_http_smoke.py
 - git status --short
-- git add README.md packages/project_service/__init__.py apps/manager-api/src/main.py tools/dev/project_target_smoke.py tools/dev/manager_projects_target_http_smoke.py docs/verification/REVIEW-30.md docs/verification/NEXT-31.md docs/m3/oldclaw-m3-start-report.md
+- git add README.md packages/project_service/__init__.py apps/manager-api/src/main.py tools/dev/project_target_smoke.py tools/dev/manager_projects_target_http_smoke.py docs/verification/REVIEW-30.md docs/verification/NEXT-31.md docs/m3/opsclaw-m3-start-report.md
 - git commit -m "M3-1 add minimal target path"
 - git push origin main
 

@@ -1,4 +1,4 @@
-# OldClaw Scheduler Worker
+# OpsClaw Scheduler Worker
 # Periodically checks `schedules` table and enqueues job runs.
 
 import time

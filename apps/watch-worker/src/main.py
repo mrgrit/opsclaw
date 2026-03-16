@@ -1,4 +1,4 @@
-# OldClaw Watch Worker
+# OpsClaw Watch Worker
 # Monitors `watch_jobs` and processes events.
 
 import time

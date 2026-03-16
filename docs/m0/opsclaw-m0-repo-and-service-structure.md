@@ -1,7 +1,7 @@
 # Repository & Service Structure (M0 Reference)
 
 ```
-oldclaw/
+opsclaw/
 ├─ apps/
 │   ├─ manager-api/      # FastAPI entrypoint, REST façade
 │   ├─ master-service/   # Review / Re‑plan / Escalation service
@@ -26,7 +26,7 @@ oldclaw/
 
 ### 의존성 규칙
 1. **수직 의존** – 하위 서비스는 상위 서비스에 직접 의존하지 않으며, 모두 공통 `core` 패키지를 통해 데이터 교환합니다.
-2. **외부 경계** – `pi_adapter` 는 **외부** pi 엔진에만 의존하고, OldClaw 내부 로직에 절대 침투하지 않으며, 인터페이스만 노출합니다.
+2. **외부 경계** – `pi_adapter` 는 **외부** pi 엔진에만 의존하고, OpsClaw 내부 로직에 절대 침투하지 않으며, 인터페이스만 노출합니다.
 3. **독립 배포** – 각 서비스는 독립적인 Docker 이미지/시스템 서비스로 배포될 수 있도록 설계되었습니다.
 
 ---

@@ -12,8 +12,8 @@ M2 코드 주입 준비 / project_service · graph_runtime · manager-api 현행
 - packages/project_service/__init__.py
 - packages/graph_runtime/__init__.py
 - requirements.txt
-- docs/m2/oldclaw-m2-plan.md
-- docs/m2/oldclaw-m2-completion-report.md
+- docs/m2/opsclaw-m2-plan.md
+- docs/m2/opsclaw-m2-completion-report.md
 - tools/dev/project_service_smoke.py
 - tools/dev/manager_projects_http_smoke.py
 

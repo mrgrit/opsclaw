@@ -12,7 +12,7 @@
 - packages/project_service/__init__.py
 - packages/graph_runtime/__init__.py
 - apps/manager-api/src/main.py
-- docs/m2/oldclaw-m2-completion-report.md
+- docs/m2/opsclaw-m2-completion-report.md
 - tools/dev/graph_runtime_smoke.py
 - tools/dev/manager_projects_lifecycle_http_smoke.py
 - docs/verification/WORK-26.md
@@ -24,7 +24,7 @@
 3. mkdir -p docs/verification
 4. mkdir -p docs/m2
 5. mkdir -p tools/dev
-6. export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'
+6. export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'
 7. python3 -m pip install -r requirements.txt
 8. python3 -m compileall apps packages tools
 9. PYTHONPATH=. python3 tools/dev/project_service_smoke.py

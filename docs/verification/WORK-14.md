@@ -34,8 +34,8 @@ git --version || true
 $(git --version || true)
 ```
 ```
-Linux oldclaw 6.8.0-101-generic #101~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Feb 11 13:19:54 UTC  x86_64 x86_64 x86_64 GNU/Linux
-/home/oldclaw/oldclaw
+Linux opsclaw 6.8.0-101-generic #101~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Feb 11 13:19:54 UTC  x86_64 x86_64 x86_64 GNU/Linux
+/home/opsclaw/opsclaw
 v20.20.1
 10.8.2
 (pnpm not installed)
@@ -58,10 +58,10 @@ ad48b52d fix(ai): align codex websocket headers and terminate SSE closes #1961
 - **루트 목록 (`ls -la`)**:
 ```
 total 376
-drwxrwxr-x  8 oldclaw oldclaw   4096  3월 14 22:05 .
+drwxrwxr-x  8 opsclaw opsclaw   4096  3월 14 22:05 .
 ... (truncated for brevity) ...
--rwxrwxr-x  1 oldclaw oldclaw   1400  3월 14 22:05 pi-test.sh
--rw-rw-r--  1 oldclaw oldclaw   2437  3월 14 22:05 README.md
+-rwxrwxr-x  1 opsclaw opsclaw   1400  3월 14 22:05 pi-test.sh
+-rw-rw-r--  1 opsclaw opsclaw   2437  3월 14 22:05 README.md
 ```
 - **주요 파일/디렉터리**: `package.json`, `package-lock.json`, `packages/agent`, `packages/ai`, `packages/coding-agent`, `README.md` etc.
 

@@ -20,14 +20,14 @@ $(grep -R "badlogic/pi-mono" -n . || true)
 $(grep -R "pi-mono" -n . || true)
 ```
 ```
-/home/oldclaw/oldclaw
+/home/opsclaw/opsclaw
 Python 3.10.12
 
 ../.copilot
-../oldclaw/apps/manager-api
-../oldclaw/docs/api
-../oldclaw/packages/pi_adapter
-../oldclaw/schemas/api
+../opsclaw/apps/manager-api
+../opsclaw/docs/api
+../opsclaw/packages/pi_adapter
+../opsclaw/schemas/api
 ../.pi
 ../Pictures
 ../.vscode-server/extensions/github.copilot-chat-0.38.2
@@ -219,9 +219,9 @@ Python 3.10.12
 - `apps/scheduler-worker/src/main.py`: 스케줄 로드/처리/루프 구현 필요
 - `apps/watch-worker/src/main.py`: 워치 잡 로드/처리/루프 구현 필요
 - `apps/manager-api/src/main.py`: 실제 엔드포인트 구현 필요
-- `docs/m0/oldclaw-m0-design-baseline.md` 등: 설계 문서 보강 필요 (추후 M1 전 단계)
+- `docs/m0/opsclaw-m0-design-baseline.md` 등: 설계 문서 보강 필요 (추후 M1 전 단계)
 
 ## 8. 미해결 사항
 - pi-mono는 TypeScript/Node 중심이며、Pythonから直接呼び出す公式バインディングが無く、ラッパー実装が必須。
 - Session lifecycle の明示的な close 機構が欠如しており、エージェント終了時のクリーンアップ方法が不透明。
-- Tool 実装はプラグイン方式で提供されるが、OldClaw の期待するシンプルな `run_command` 等のインターフェースへマッピングする具体例が不足。
+- Tool 実装はプラグイン方式で提供されるが、OpsClaw の期待するシンプルな `run_command` 等のインターフェースへマッピングする具体例が不足。

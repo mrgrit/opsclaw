@@ -34,7 +34,7 @@ class PiRuntimeConfig:
 
 class PiRuntimeClient:
     """
-    OldClaw-side wrapper over the external `pi` CLI runtime.
+    OpsClaw-side wrapper over the external `pi` CLI runtime.
 
     This is a service-facing adapter. The implementation currently uses
     subprocess invocation of the `pi` CLI because pi-mono exposes a working
@@ -107,9 +107,9 @@ class PiRuntimeClient:
             command.extend(tool_args.cli_args)
 
         env = os.environ.copy()
-        env["OLDCLAW_PI_PROVIDER"] = provider
-        env["OLDCLAW_PI_BASE_URL"] = profile.base_url
-        env["OLDCLAW_PI_API_KEY"] = profile.api_key
+        env["OPSCLAW_PI_PROVIDER"] = provider
+        env["OPSCLAW_PI_BASE_URL"] = profile.base_url
+        env["OPSCLAW_PI_API_KEY"] = profile.api_key
 
         working_dir = profile.working_dir or None
 

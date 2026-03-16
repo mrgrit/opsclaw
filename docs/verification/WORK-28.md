@@ -13,13 +13,13 @@
 - tools/dev/manager_projects_report_http_smoke.py
 - docs/verification/REVIEW-27.md
 - docs/verification/NEXT-28.md
-- docs/m2/oldclaw-m2-completion-report.md
+- docs/m2/opsclaw-m2-completion-report.md
 - docs/verification/WORK-28.md
 
 ## 3. 실행한 명령 목록
 - git checkout main
 - git pull origin main
-- export DATABASE_URL='postgresql://oldclaw:oldclaw@127.0.0.1:5432/oldclaw'
+- export DATABASE_URL='postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw'
 - python3 -m pip install -r requirements.txt
 - python3 -m compileall apps packages tools
 - PYTHONPATH=. python3 tools/dev/project_report_evidence_smoke.py
@@ -30,26 +30,26 @@
 - stdout:
 ```
 Defaulting to user installation because normal site-packages is not writeable
-Requirement already satisfied: fastapi==0.116.1 in /home/oldclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 1)) (0.116.1)
-Requirement already satisfied: pydantic==2.11.7 in /home/oldclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 2)) (2.11.7)
-Requirement already satisfied: uvicorn==0.35.0 in /home/oldclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 3)) (0.35.0)
-Requirement already satisfied: requests==2.32.5 in /home/oldclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 4)) (2.32.5)
-Requirement already satisfied: psycopg2-binary==2.9.10 in /home/oldclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 5)) (2.9.10)
-Requirement already satisfied: httpx==0.28.1 in /home/oldclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 6)) (0.28.1)
-Requirement already satisfied: starlette<0.48.0,>=0.40.0 in /home/oldclaw/.local/lib/python3.10/site-packages (from fastapi==0.116.1->-r requirements.txt (line 1)) (0.47.3)
-Requirement already satisfied: typing-extensions>=4.8.0 in /home/oldclaw/.local/lib/python3.10/site-packages (from fastapi==0.116.1->-r requirements.txt (line 1)) (4.15.0)
-Requirement already satisfied: annotated-types>=0.6.0 in /home/oldclaw/.local/lib/python3.10/site-packages (from pydantic==2.11.7->-r requirements.txt (line 2)) (0.7.0)
-Requirement already satisfied: pydantic-core==2.33.2 in /home/oldclaw/.local/lib/python3.10/site-packages (from pydantic==2.11.7->-r requirements.txt (line 2)) (2.33.2)
-Requirement already satisfied: typing-inspection>=0.4.0 in /home/oldclaw/.local/lib/python3.10/site-packages (from pydantic==2.11.7->-r requirements.txt (line 2)) (0.4.2)
+Requirement already satisfied: fastapi==0.116.1 in /home/opsclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 1)) (0.116.1)
+Requirement already satisfied: pydantic==2.11.7 in /home/opsclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 2)) (2.11.7)
+Requirement already satisfied: uvicorn==0.35.0 in /home/opsclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 3)) (0.35.0)
+Requirement already satisfied: requests==2.32.5 in /home/opsclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 4)) (2.32.5)
+Requirement already satisfied: psycopg2-binary==2.9.10 in /home/opsclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 5)) (2.9.10)
+Requirement already satisfied: httpx==0.28.1 in /home/opsclaw/.local/lib/python3.10/site-packages (from -r requirements.txt (line 6)) (0.28.1)
+Requirement already satisfied: starlette<0.48.0,>=0.40.0 in /home/opsclaw/.local/lib/python3.10/site-packages (from fastapi==0.116.1->-r requirements.txt (line 1)) (0.47.3)
+Requirement already satisfied: typing-extensions>=4.8.0 in /home/opsclaw/.local/lib/python3.10/site-packages (from fastapi==0.116.1->-r requirements.txt (line 1)) (4.15.0)
+Requirement already satisfied: annotated-types>=0.6.0 in /home/opsclaw/.local/lib/python3.10/site-packages (from pydantic==2.11.7->-r requirements.txt (line 2)) (0.7.0)
+Requirement already satisfied: pydantic-core==2.33.2 in /home/opsclaw/.local/lib/python3.10/site-packages (from pydantic==2.11.7->-r requirements.txt (line 2)) (2.33.2)
+Requirement already satisfied: typing-inspection>=0.4.0 in /home/opsclaw/.local/lib/python3.10/site-packages (from pydantic==2.11.7->-r requirements.txt (line 2)) (0.4.2)
 Requirement already satisfied: click>=7.0 in /usr/lib/python3/dist-packages (from uvicorn==0.35.0->-r requirements.txt (line 3)) (8.0.3)
-Requirement already satisfied: h11>=0.8 in /home/oldclaw/.local/lib/python3.10/site-packages (from uvicorn==0.35.0->-r requirements.txt (line 3)) (0.16.0)
-Requirement already satisfied: charset_normalizer<4,>=2 in /home/oldclaw/.local/lib/python3.10/site-packages (from requests==2.32.5->-r requirements.txt (line 4)) (3.4.5)
+Requirement already satisfied: h11>=0.8 in /home/opsclaw/.local/lib/python3.10/site-packages (from uvicorn==0.35.0->-r requirements.txt (line 3)) (0.16.0)
+Requirement already satisfied: charset_normalizer<4,>=2 in /home/opsclaw/.local/lib/python3.10/site-packages (from requests==2.32.5->-r requirements.txt (line 4)) (3.4.5)
 Requirement already satisfied: idna<4,>=2.5 in /usr/lib/python3/dist-packages (from requests==2.32.5->-r requirements.txt (line 4)) (3.3)
 Requirement already satisfied: urllib3<3,>=1.21.1 in /usr/lib/python3/dist-packages (from requests==2.32.5->-r requirements.txt (line 4)) (1.26.5)
 Requirement already satisfied: certifi>=2017.4.17 in /usr/lib/python3/dist-packages (from requests==2.32.5->-r requirements.txt (line 4)) (2020.06.20)
-Requirement already satisfied: anyio in /home/oldclaw/.local/lib/python3.10/site-packages (from httpx==0.28.1->-r requirements.txt (line 6)) (4.12.1)
-Requirement already satisfied: httpcore==1.* in /home/oldclaw/.local/lib/python3.10/site-packages (from httpx==0.28.1->-r requirements.txt (line 6)) (1.0.9)
-Requirement already satisfied: exceptiongroup>=1.0.2 in /home/oldclaw/.local/lib/python3.10/site-packages (from anyio->httpx==0.28.1->-r requirements.txt (line 6)) (1.3.1)
+Requirement already satisfied: anyio in /home/opsclaw/.local/lib/python3.10/site-packages (from httpx==0.28.1->-r requirements.txt (line 6)) (4.12.1)
+Requirement already satisfied: httpcore==1.* in /home/opsclaw/.local/lib/python3.10/site-packages (from httpx==0.28.1->-r requirements.txt (line 6)) (1.0.9)
+Requirement already satisfied: exceptiongroup>=1.0.2 in /home/opsclaw/.local/lib/python3.10/site-packages (from anyio->httpx==0.28.1->-r requirements.txt (line 6)) (1.3.1)
 ```
 - stderr: *(none)*
 - exit code: 0

@@ -19,7 +19,7 @@
    * `project_playbook_smoke.py`
    * `manager_projects_playbook_http_smoke.py`
    * `m3_integrated_smoke.py`
-5. `README.md`, `docs/m3/oldclaw-m3-start-report.md` 문서는 target/playbook 상태를 충분히 반영하지 못한다.
+5. `README.md`, `docs/m3/opsclaw-m3-start-report.md` 문서는 target/playbook 상태를 충분히 반영하지 못한다.
 
 ## 결론
 코드와 문서가 크게 불일치한다. 레포 정합성 복구가 필요하다.

@@ -189,15 +189,15 @@ packages/pi_adapter/model_profiles/__init__.py:4:# packages/pi_adapter/model_pro
   27 total
 ```
 ```
--rw-rw-r-- 1 oldclaw oldclaw 1.1K  3월 14 09:36 packages/pi_adapter/__init__.py
--rw-rw-r-- 1 oldclaw oldclaw 123  3월 14 20:07 packages/pi_adapter/runtime/__init__.py
--rw-rw-r-- 1 oldclaw oldclaw 1.4K  3월 14 20:07 packages/pi_adapter/runtime/client.py
--rw-rw-r-- 1 oldclaw oldclaw 364  3월 14 20:07 packages/pi_adapter/sessions/__init__.py
--rw-rw-r-- 1 oldclaw oldclaw 400  3월 14 20:07 packages/pi_adapter/tools/__init__.py
--rw-rw-r-- 1 oldclaw oldclaw 469  3월 14 20:07 packages/pi_adapter/tools/tool_bridge.py
--rw-rw-r-- 1 oldclaw oldclaw 472  3월 14 20:07 packages/pi_adapter/model_profiles/__init__.py
--rw-rw-r-- 1 oldclaw oldclaw 526  3월 14 20:07 packages/pi_adapter/contracts/__init__.py
--rw-rw-r-- 1 oldclaw oldclaw 570  3월 14 20:07 packages/pi_adapter/translators/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw 1.1K  3월 14 09:36 packages/pi_adapter/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw 123  3월 14 20:07 packages/pi_adapter/runtime/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw 1.4K  3월 14 20:07 packages/pi_adapter/runtime/client.py
+-rw-rw-r-- 1 opsclaw opsclaw 364  3월 14 20:07 packages/pi_adapter/sessions/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw 400  3월 14 20:07 packages/pi_adapter/tools/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw 469  3월 14 20:07 packages/pi_adapter/tools/tool_bridge.py
+-rw-rw-r-- 1 opsclaw opsclaw 472  3월 14 20:07 packages/pi_adapter/model_profiles/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw 526  3월 14 20:07 packages/pi_adapter/contracts/__init__.py
+-rw-rw-r-- 1 opsclaw opsclaw 570  3월 14 20:07 packages/pi_adapter/translators/__init__.py
 ```
 ```
 Listing 'apps'...
@@ -246,7 +246,7 @@ Listing 'packages/validation_service'...
 - apps/scheduler-worker/src/main.py: 스케줄 로드/처리/루프 구현 필요
 - apps/watch-worker/src/main.py: 워치 잡 로드/처리/루프 구현 필요
 - apps/manager-api/src/main.py: 실제 엔드포인트 구현 필요
-- docs/m0/oldclaw-m0-design-baseline.md 등: 설계 문서 보강 필요 (추후 M1 전 단계)
+- docs/m0/opsclaw-m0-design-baseline.md 등: 설계 문서 보강 필요 (추후 M1 전 단계)
 
 ## 11. 미해결 사항
 - 현재 모든 pi_adapter 관련 로직이 NotImplemented 상태이며, 실제 실행 로직이 부재

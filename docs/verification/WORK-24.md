@@ -257,7 +257,7 @@ def create_evidence_router() -> APIRouter:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="OldClaw Manager API",
+        title="OpsClaw Manager API",
         version="0.1.0-m1",
         description="M1 manager API with minimal pi adapter integration endpoint.",
     )
@@ -302,8 +302,8 @@ requests==2.32.5
 - packages/project_service/__init__.py – 비어 있음, 프로젝트 lifecycle 서비스 구현 필요
 - packages/graph_runtime/__init__.py – 비어 있음, 상태기계 구현 필요
 - requirements.txt – 향후 추가 의존성(예: SQLAlchemy, asyncpg 등) 필요
-- docs/m2/oldclaw-m2-plan.md – 현재 없음, M2 설계·계획 문서 작성 필요
-- docs/m2/oldclaw-m2-completion-report.md – 현재 없음, M2 완료 보고서 템플릿 필요
+- docs/m2/opsclaw-m2-plan.md – 현재 없음, M2 설계·계획 문서 작성 필요
+- docs/m2/opsclaw-m2-completion-report.md – 현재 없음, M2 완료 보고서 템플릿 필요
 - tools/dev/project_service_smoke.py – 현재 없음, 프로젝트 서비스 smoke test 스크립트 필요
 - tools/dev/manager_projects_http_smoke.py – 현재 없음, manager API HTTP smoke test 필요
 - (optional) docs/architecture/README.md – 현재 placeholder, M2 아키텍처 문서 보강 필요

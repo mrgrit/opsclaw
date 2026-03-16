@@ -31,11 +31,11 @@ f24bebc Add verification channel and M1 readiness report
 ```
 - `command -v pi || true`
 ```
-/home/oldclaw/.nvm/versions/node/v20.20.1/bin/pi
+/home/opsclaw/.nvm/versions/node/v20.20.1/bin/pi
 ```
 - `ls -l /tmp/pi-mono-work/packages/coding-agent/dist/cli.js || true`
 ```
--rwxrwxr-x 1 oldclaw oldclaw 604  3월 14 22:15 /tmp/pi-mono-work/packages/coding-agent/dist/cli.js
+-rwxrwxr-x 1 opsclaw opsclaw 604  3월 14 22:15 /tmp/pi-mono-work/packages/coding-agent/dist/cli.js
 ```
 - `node --version || true`
 ```
