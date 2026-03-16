@@ -4,6 +4,19 @@ from fastapi import APIRouter, FastAPI, HTTPException, status
 from pydantic import BaseModel
 
 from packages.pi_adapter.runtime import PiRuntimeClient, PiRuntimeConfig
+from packages.asset_registry import (
+    AssetConflictError,
+    AssetNotFoundError,
+    AssetRegistryError,
+    check_asset_health,
+    create_asset,
+    delete_asset,
+    get_asset,
+    list_assets,
+    onboard_asset,
+    resolve_target_from_asset,
+    update_asset,
+)
 from packages.project_service import (
     ProjectNotFoundError,
     ProjectServiceError,
@@ -294,49 +307,118 @@ def create_asset_router() -> APIRouter:
     router = APIRouter(prefix="/assets", tags=["assets"])
 
     @router.get("")
-    def list_assets() -> dict[str, Any]:
-        return {"items": get_assets()}
+    def list_assets_endpoint(env: str | None = None, type: str | None = None) -> dict[str, Any]:
+        return {"items": list_assets(env=env, type=type)}
 
-    @router.post("/{asset_id}/subagent/status")
-    def set_subagent_status(asset_id: str, payload: dict) -> dict[str, Any]:
+    @router.post("")
+    def create_asset_endpoint(payload: dict) -> dict[str, Any]:
         try:
-            result = update_asset_subagent_status(
-                asset_id=asset_id,
-                subagent_status=payload.get("status", "unknown"),
+            asset = create_asset(
+                name=payload["name"],
+                type=payload["type"],
+                platform=payload["platform"],
+                env=payload["env"],
+                mgmt_ip=payload["mgmt_ip"],
+                roles=payload.get("roles"),
+                expected_subagent_port=int(payload.get("expected_subagent_port", 8001)),
+                auth_ref=payload.get("auth_ref"),
+                metadata=payload.get("metadata"),
             )
-            return {"status": "ok", "asset": result}
-        except ProjectNotFoundError as exc:
+            return {"status": "ok", "asset": asset}
+        except AssetConflictError as exc:
+            raise HTTPException(status_code=409, detail={"message": str(exc)}) from exc
+        except (KeyError, TypeError) as exc:
+            raise HTTPException(status_code=400, detail={"message": f"Missing required field: {exc}"}) from exc
+
+    @router.post("/onboard")
+    def onboard_asset_endpoint(payload: dict) -> dict[str, Any]:
+        try:
+            result = onboard_asset(
+                name=payload["name"],
+                type=payload["type"],
+                platform=payload["platform"],
+                env=payload["env"],
+                mgmt_ip=payload["mgmt_ip"],
+                roles=payload.get("roles"),
+                expected_subagent_port=int(payload.get("expected_subagent_port", 8001)),
+                auth_ref=payload.get("auth_ref"),
+                metadata=payload.get("metadata"),
+                bootstrap=bool(payload.get("bootstrap", False)),
+                ssh_user=payload.get("ssh_user", "root"),
+                ssh_port=int(payload.get("ssh_port", 22)),
+                ssh_key_path=payload.get("ssh_key_path"),
+            )
+            return {"status": "ok", **result}
+        except AssetConflictError as exc:
+            raise HTTPException(status_code=409, detail={"message": str(exc)}) from exc
+        except (KeyError, TypeError) as exc:
+            raise HTTPException(status_code=400, detail={"message": f"Missing required field: {exc}"}) from exc
+
+    @router.get("/{asset_id}")
+    def get_asset_endpoint(asset_id: str) -> dict[str, Any]:
+        try:
+            return {"status": "ok", "asset": get_asset(asset_id)}
+        except AssetNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
-        except ProjectServiceError as exc:
-            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.put("/{asset_id}")
+    def update_asset_endpoint(asset_id: str, payload: dict) -> dict[str, Any]:
+        try:
+            asset = update_asset(asset_id, payload)
+            return {"status": "ok", "asset": asset}
+        except AssetNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    @router.delete("/{asset_id}")
+    def delete_asset_endpoint(asset_id: str) -> dict[str, Any]:
+        try:
+            delete_asset(asset_id)
+            return {"status": "ok", "deleted": asset_id}
+        except AssetNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    @router.post("/{asset_id}/resolve")
+    def resolve_target_endpoint(asset_id: str) -> dict[str, Any]:
+        try:
+            result = resolve_target_from_asset(asset_id)
+            return {"status": "ok", **result}
+        except AssetNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    @router.get("/{asset_id}/health")
+    def health_check_endpoint(asset_id: str) -> dict[str, Any]:
+        try:
+            result = check_asset_health(asset_id)
+            return {"status": "ok", **result}
+        except AssetNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
 
     @router.post("/{asset_id}/bootstrap")
     def bootstrap_asset_endpoint(asset_id: str, payload: dict) -> dict[str, Any]:
-        from packages.bootstrap_service import BootstrapConfig, BootstrapError, bootstrap_asset
-        from packages.project_service import get_assets
-
-        assets = get_assets()
-        asset = next((a for a in assets if a["id"] == asset_id), None)
-        if asset is None:
-            raise HTTPException(status_code=404, detail={"message": f"Asset not found: {asset_id}"})
+        from packages.bootstrap_service import BootstrapConfig, BootstrapError, bootstrap_asset as do_bootstrap
+        try:
+            asset = get_asset(asset_id)
+        except AssetNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
 
         cfg = BootstrapConfig(
             ssh_user=payload.get("ssh_user", "root"),
             ssh_port=int(payload.get("ssh_port", 22)),
             ssh_key_path=payload.get("ssh_key_path"),
-            subagent_port=int(payload.get("subagent_port", 8001)),
+            subagent_port=int(payload.get("subagent_port", asset.get("expected_subagent_port") or 8001)),
         )
-        mgmt_ip = str(asset.get("mgmt_ip") or payload.get("mgmt_ip", ""))
+        mgmt_ip = str(asset.get("mgmt_ip", ""))
         if not mgmt_ip:
             raise HTTPException(status_code=400, detail={"message": "Asset has no mgmt_ip"})
 
         try:
-            result = bootstrap_asset(mgmt_ip=mgmt_ip, config=cfg)
+            from packages.bootstrap_service import BootstrapError
+            result = do_bootstrap(mgmt_ip=mgmt_ip, config=cfg)
             new_status = "healthy" if result["exit_code"] == 0 else "unhealthy"
-            update_asset_subagent_status(asset_id=asset_id, subagent_status=new_status)
+            update_asset(asset_id, {"subagent_status": new_status})
             return {"status": "ok", "bootstrap": result, "subagent_status": new_status}
         except BootstrapError as exc:
-            update_asset_subagent_status(asset_id=asset_id, subagent_status="unhealthy")
+            update_asset(asset_id, {"subagent_status": "unhealthy"})
             raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
 
     return router
