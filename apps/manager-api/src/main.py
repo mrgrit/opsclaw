@@ -17,6 +17,12 @@ from packages.asset_registry import (
     resolve_target_from_asset,
     update_asset,
 )
+from packages.evidence_service import get_evidence_content, get_evidence_summary
+from packages.validation_service import (
+    get_validation_runs,
+    get_validation_status,
+    run_validation_check,
+)
 from packages.project_service import (
     ProjectNotFoundError,
     ProjectServiceError,
@@ -40,6 +46,7 @@ from packages.project_service import (
     link_target_to_project,
     dispatch_command_to_subagent,
     plan_project_record,
+    replan_project,
     update_asset_subagent_status,
     validate_project_record,
 )
@@ -295,6 +302,53 @@ def create_project_router() -> APIRouter:
                 timeout_s=payload.timeout_s,
             )
             return {"status": "ok", "result": result}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except (ProjectStageError, ProjectServiceError) as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.post("/{project_id}/validate/check")
+    def validate_check(project_id: str, payload: dict) -> dict[str, Any]:
+        try:
+            result = run_validation_check(
+                project_id=project_id,
+                validator_name=payload.get("validator_name", "manual"),
+                command=payload["command"],
+                expected_contains=payload.get("expected_contains"),
+                expected_exit_code=int(payload.get("expected_exit_code", 0)),
+                subagent_url=payload.get("subagent_url"),
+                asset_id=payload.get("asset_id"),
+            )
+            return {"status": "ok", "result": result}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.get("/{project_id}/validations")
+    def list_validations(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        runs = get_validation_runs(project_id)
+        val_status = get_validation_status(project_id)
+        return {"status": "ok", "project_id": project_id, "validation_status": val_status, "items": runs}
+
+    @router.get("/{project_id}/evidence/summary")
+    def evidence_summary(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        summary = get_evidence_summary(project_id)
+        return {"status": "ok", **summary}
+
+    @router.post("/{project_id}/replan")
+    def replan_project_endpoint(project_id: str, payload: dict) -> dict[str, Any]:
+        try:
+            project = replan_project(project_id, reason=payload.get("reason", "manager replan"))
+            return {"status": "ok", "project": project}
         except ProjectNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
         except (ProjectStageError, ProjectServiceError) as exc:

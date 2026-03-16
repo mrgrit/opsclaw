@@ -6,7 +6,7 @@ from typing import Any
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from packages.graph_runtime import GraphRuntimeError, require_transition
+from packages.graph_runtime import GraphRuntimeError, REPLAN_FROM_STAGES, require_replan_allowed, require_transition
 
 DEFAULT_DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -282,11 +282,16 @@ def finalize_report_stage_record(project_id: str, database_url: str | None = Non
 
 
 def close_project(project_id: str, database_url: str | None = None) -> dict[str, Any]:
+    from packages.evidence_service import EvidenceRequiredError, require_evidence_for_close
     project = get_project_record(project_id, database_url=database_url)
     if project["current_stage"] == "close":
         return project
     if project["current_stage"] != "report":
         raise ProjectStageError(f"Project not in report stage: {project_id}")
+    try:
+        require_evidence_for_close(project_id, database_url=database_url)
+    except EvidenceRequiredError as exc:
+        raise ProjectStageError(str(exc)) from exc
 
     with get_connection(database_url) as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -805,4 +810,34 @@ def update_asset_subagent_status(
             row = cur.fetchone()
             if row is None:
                 raise ProjectNotFoundError(f"Asset not found: {asset_id}")
+            return dict(row)
+
+
+def replan_project(
+    project_id: str,
+    reason: str = "replan requested",
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    """Force project back to plan stage from execute/validate/report."""
+    project = get_project_record(project_id, database_url=database_url)
+    try:
+        require_replan_allowed(project["current_stage"])
+    except GraphRuntimeError as exc:
+        raise ProjectStageError(str(exc)) from exc
+
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE projects
+                SET current_stage = 'plan',
+                    status = 'planned',
+                    summary = %s,
+                    updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (f"replanned: {reason}", project_id),
+            )
+            row = cur.fetchone()
             return dict(row)

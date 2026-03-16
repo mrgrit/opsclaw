@@ -40,3 +40,15 @@ def build_minimal_project_graph() -> dict[str, object]:
         "stages": list(DEFAULT_MANAGER_STAGES),
         "transitions": dict(DEFAULT_STAGE_TRANSITIONS),
     }
+
+
+# Replan transitions: allowed from execute or validate back to plan
+REPLAN_FROM_STAGES = {"execute", "validate", "report"}
+
+
+def require_replan_allowed(current_stage: str) -> None:
+    if current_stage not in REPLAN_FROM_STAGES:
+        raise GraphRuntimeError(
+            f"Replan not allowed from stage '{current_stage}'. "
+            f"Allowed from: {sorted(REPLAN_FROM_STAGES)}"
+        )
