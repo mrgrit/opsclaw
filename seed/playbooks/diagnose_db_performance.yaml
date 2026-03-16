@@ -1,0 +1,35 @@
+name: diagnose_db_performance
+version: "1.0"
+category: operations
+description: "DB 성능 진단: 슬로우 쿼리 수집 → 잠금 분석 → 인덱스 권고 → 리포트"
+execution_mode: one_shot
+default_risk_level: low
+dry_run_supported: true
+explain_supported: true
+enabled: true
+steps:
+  - order: 1
+    type: tool
+    ref: run_command
+    name: "슬로우 쿼리 로그 수집"
+    on_failure: abort
+  - order: 2
+    type: tool
+    ref: query_metric
+    name: "DB 커넥션/메모리 메트릭 조회"
+    on_failure: continue
+  - order: 3
+    type: tool
+    ref: run_command
+    name: "잠금 대기 쿼리 조회"
+    on_failure: continue
+  - order: 4
+    type: tool
+    ref: run_command
+    name: "인덱스 사용률 분석"
+    on_failure: continue
+  - order: 5
+    type: tool
+    ref: write_file
+    name: "진단 리포트 저장"
+    on_failure: continue

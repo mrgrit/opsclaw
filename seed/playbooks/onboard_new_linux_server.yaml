@@ -1,7 +1,40 @@
 name: onboard_new_linux_server
 version: "1.0"
-description: Provision and configure a new Linux server
-required_skills: ["probe_linux_host", "check_tls_cert"]
-input_schema_ref: "schemas/registry/playbooks/onboard_new_linux_server.input.json"
-output_schema_ref: "schemas/registry/playbooks/onboard_new_linux_server.output.json"
+category: operations
+description: "신규 리눅스 서버 온보딩: 초기 점검 → 서비스 설치 → 보안 기준 적용 → 등록"
+execution_mode: one_shot
+default_risk_level: medium
+dry_run_supported: true
+explain_supported: true
 enabled: true
+steps:
+  - order: 1
+    type: skill
+    ref: probe_linux_host
+    name: "초기 호스트 상태 점검"
+    on_failure: abort
+  - order: 2
+    type: tool
+    ref: run_command
+    name: "패키지 업데이트"
+    on_failure: abort
+  - order: 3
+    type: tool
+    ref: run_command
+    name: "필수 서비스 설치"
+    on_failure: abort
+  - order: 4
+    type: skill
+    ref: check_tls_cert
+    name: "TLS 인증서 확인"
+    on_failure: continue
+  - order: 5
+    type: tool
+    ref: write_file
+    name: "설정 파일 배포"
+    on_failure: abort
+  - order: 6
+    type: skill
+    ref: probe_linux_host
+    name: "온보딩 완료 상태 검증"
+    on_failure: continue

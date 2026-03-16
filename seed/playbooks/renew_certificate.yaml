@@ -1,0 +1,35 @@
+name: renew_certificate
+version: "1.0"
+category: operations
+description: "TLS 인증서 갱신: 만료 확인 → 신규 발급 → 배포 → 서비스 재시작 → 검증"
+execution_mode: one_shot
+default_risk_level: medium
+dry_run_supported: true
+explain_supported: true
+enabled: true
+steps:
+  - order: 1
+    type: skill
+    ref: check_tls_cert
+    name: "현재 인증서 만료일 확인"
+    on_failure: abort
+  - order: 2
+    type: tool
+    ref: run_command
+    name: "신규 인증서 발급 (certbot/acme)"
+    on_failure: abort
+  - order: 3
+    type: tool
+    ref: write_file
+    name: "인증서 파일 배포"
+    on_failure: abort
+  - order: 4
+    type: tool
+    ref: restart_service
+    name: "웹 서버 재시작"
+    on_failure: abort
+  - order: 5
+    type: skill
+    ref: check_tls_cert
+    name: "갱신 후 인증서 검증"
+    on_failure: continue

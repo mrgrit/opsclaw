@@ -1,7 +1,35 @@
 name: tune_siem_noise
 version: "1.0"
-description: Adjust SIEM rules to reduce noise
-required_skills: ["analyze_wazuh_alert_burst"]
-input_schema_ref: "schemas/registry/playbooks/tune_siem_noise.input.json"
-output_schema_ref: "schemas/registry/playbooks/tune_siem_noise.output.json"
+category: security
+description: "SIEM 알림 노이즈 튜닝: 과다 알림 분석 → 규칙 조정 → 효과 검증"
+execution_mode: one_shot
+default_risk_level: low
+dry_run_supported: true
+explain_supported: true
 enabled: true
+steps:
+  - order: 1
+    type: skill
+    ref: analyze_wazuh_alert_burst
+    name: "알림 버스트 패턴 분석"
+    on_failure: abort
+  - order: 2
+    type: tool
+    ref: fetch_log
+    name: "SIEM 로그 수집"
+    on_failure: continue
+  - order: 3
+    type: skill
+    ref: summarize_incident_timeline
+    name: "인시던트 타임라인 요약"
+    on_failure: continue
+  - order: 4
+    type: tool
+    ref: write_file
+    name: "튜닝 규칙 파일 갱신"
+    on_failure: abort
+  - order: 5
+    type: tool
+    ref: restart_service
+    name: "SIEM 서비스 재로드"
+    on_failure: abort

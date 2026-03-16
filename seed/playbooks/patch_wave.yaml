@@ -1,0 +1,35 @@
+name: patch_wave
+version: "1.0"
+category: operations
+description: "플릿 전체 OS 패치 적용: 사전 검증 → 패치 적용 → 재부팅 → 사후 검증"
+execution_mode: batch
+default_risk_level: high
+dry_run_supported: true
+explain_supported: true
+enabled: true
+steps:
+  - order: 1
+    type: skill
+    ref: probe_linux_host
+    name: "패치 전 호스트 상태 점검"
+    on_failure: abort
+  - order: 2
+    type: tool
+    ref: run_command
+    name: "패치 가능 목록 확인 (dry-run)"
+    on_failure: abort
+  - order: 3
+    type: tool
+    ref: run_command
+    name: "OS 패치 적용"
+    on_failure: abort
+  - order: 4
+    type: tool
+    ref: run_command
+    name: "시스템 재부팅"
+    on_failure: abort
+  - order: 5
+    type: skill
+    ref: probe_linux_host
+    name: "패치 후 상태 검증"
+    on_failure: continue

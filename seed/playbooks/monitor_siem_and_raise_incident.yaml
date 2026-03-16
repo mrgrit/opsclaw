@@ -1,7 +1,30 @@
 name: monitor_siem_and_raise_incident
 version: "1.0"
-description: Monitor SIEM alerts and raise incident when threshold exceeded
-required_skills: ["analyze_wazuh_alert_burst", "summarize_incident_timeline"]
-input_schema_ref: "schemas/registry/playbooks/monitor_siem_and_raise_incident.input.json"
-output_schema_ref: "schemas/registry/playbooks/monitor_siem_and_raise_incident.output.json"
+category: security
+description: "SIEM 알림 모니터링 및 인시던트 생성: 이상 탐지 → 분석 → 티켓 생성"
+execution_mode: continuous
+default_risk_level: medium
+dry_run_supported: false
+explain_supported: true
 enabled: true
+steps:
+  - order: 1
+    type: skill
+    ref: analyze_wazuh_alert_burst
+    name: "Wazuh 알림 버스트 탐지"
+    on_failure: continue
+  - order: 2
+    type: tool
+    ref: fetch_log
+    name: "상세 로그 수집"
+    on_failure: continue
+  - order: 3
+    type: skill
+    ref: summarize_incident_timeline
+    name: "공격 타임라인 요약"
+    on_failure: continue
+  - order: 4
+    type: tool
+    ref: write_file
+    name: "인시던트 티켓 생성"
+    on_failure: abort

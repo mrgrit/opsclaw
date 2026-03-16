@@ -17,6 +17,18 @@ from packages.asset_registry import (
     resolve_target_from_asset,
     update_asset,
 )
+from packages.registry_service import (
+    RegistryNotFoundError,
+    explain_playbook,
+    get_playbook_by_name,
+    get_playbook_steps,
+    get_skill_by_name,
+    get_tool_by_name,
+    list_playbooks,
+    list_skills,
+    list_tools,
+    resolve_playbook,
+)
 from packages.evidence_service import get_evidence_content, get_evidence_summary
 from packages.validation_service import (
     get_validation_runs,
@@ -488,12 +500,86 @@ def create_target_router() -> APIRouter:
     return router
 
 
-def create_playbook_router() -> APIRouter:
-    router = APIRouter(prefix="/playbooks", tags=["playbooks"])
+def create_registry_router() -> APIRouter:
+    router = APIRouter(tags=["registry"])
 
-    @router.get("")
-    def list_playbooks() -> dict[str, Any]:
-        return {"items": get_playbooks()}
+    # ── Tools ────────────────────────────────────────────────────────────────
+
+    @router.get("/tools")
+    def list_tools_endpoint(enabled: bool | None = None) -> dict[str, Any]:
+        return {"items": list_tools(enabled=enabled)}
+
+    @router.get("/tools/{tool_id}")
+    def get_tool_endpoint(tool_id: str) -> dict[str, Any]:
+        try:
+            return {"status": "ok", "tool": get_tool_by_name(tool_id)}
+        except RegistryNotFoundError:
+            pass
+        try:
+            from packages.registry_service import get_tool
+            return {"status": "ok", "tool": get_tool(tool_id)}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    # ── Skills ───────────────────────────────────────────────────────────────
+
+    @router.get("/skills")
+    def list_skills_endpoint(category: str | None = None) -> dict[str, Any]:
+        return {"items": list_skills(category=category)}
+
+    @router.get("/skills/{skill_id}")
+    def get_skill_endpoint(skill_id: str) -> dict[str, Any]:
+        try:
+            return {"status": "ok", "skill": get_skill_by_name(skill_id)}
+        except RegistryNotFoundError:
+            pass
+        try:
+            from packages.registry_service import get_skill
+            return {"status": "ok", "skill": get_skill(skill_id)}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    # ── Playbooks ────────────────────────────────────────────────────────────
+
+    @router.get("/playbooks")
+    def list_playbooks_endpoint(category: str | None = None, enabled: bool | None = None) -> dict[str, Any]:
+        return {"items": list_playbooks(category=category, enabled=enabled)}
+
+    @router.get("/playbooks/{playbook_id}")
+    def get_playbook_endpoint(playbook_id: str) -> dict[str, Any]:
+        try:
+            return {"status": "ok", "playbook": get_playbook_by_name(playbook_id)}
+        except RegistryNotFoundError:
+            pass
+        try:
+            from packages.registry_service import get_playbook
+            return {"status": "ok", "playbook": get_playbook(playbook_id)}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    @router.get("/playbooks/{playbook_id}/steps")
+    def get_playbook_steps_endpoint(playbook_id: str) -> dict[str, Any]:
+        try:
+            steps = get_playbook_steps(playbook_id)
+            return {"status": "ok", "playbook_id": playbook_id, "steps": steps}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    @router.get("/playbooks/{playbook_id}/resolve")
+    def resolve_playbook_endpoint(playbook_id: str) -> dict[str, Any]:
+        try:
+            tree = resolve_playbook(playbook_id)
+            return {"status": "ok", "resolved": tree}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    @router.get("/playbooks/{playbook_id}/explain")
+    def explain_playbook_endpoint(playbook_id: str) -> dict[str, Any]:
+        try:
+            md = explain_playbook(playbook_id)
+            return {"status": "ok", "playbook_id": playbook_id, "explanation": md}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
 
     return router
 
@@ -501,8 +587,8 @@ def create_playbook_router() -> APIRouter:
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
-        version="0.3.0-m3",
-        description="Manager API with minimal lifecycle, evidence, asset, target, and playbook routes.",
+        version="0.6.0-m6",
+        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation.",
     )
 
     app.include_router(create_health_router())
@@ -510,7 +596,7 @@ def create_app() -> FastAPI:
     app.include_router(create_project_router())
     app.include_router(create_asset_router())
     app.include_router(create_target_router())
-    app.include_router(create_playbook_router())
+    app.include_router(create_registry_router())
 
     return app
 

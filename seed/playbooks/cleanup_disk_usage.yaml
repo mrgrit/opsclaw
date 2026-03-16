@@ -1,0 +1,35 @@
+name: cleanup_disk_usage
+version: "1.0"
+category: operations
+description: "디스크 부족 정리: 사용량 분석 → 불필요 파일 정리 → 로그 로테이션 → 검증"
+execution_mode: one_shot
+default_risk_level: medium
+dry_run_supported: true
+explain_supported: true
+enabled: true
+steps:
+  - order: 1
+    type: skill
+    ref: monitor_disk_growth
+    name: "디스크 사용량 현황 분석"
+    on_failure: abort
+  - order: 2
+    type: tool
+    ref: run_command
+    name: "대용량 파일 탐색 (find)"
+    on_failure: continue
+  - order: 3
+    type: tool
+    ref: run_command
+    name: "임시 파일 및 캐시 정리"
+    on_failure: continue
+  - order: 4
+    type: tool
+    ref: run_command
+    name: "로그 로테이션 강제 실행"
+    on_failure: continue
+  - order: 5
+    type: skill
+    ref: monitor_disk_growth
+    name: "정리 후 디스크 사용량 재확인"
+    on_failure: continue

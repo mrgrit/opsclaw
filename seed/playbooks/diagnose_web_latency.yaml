@@ -1,7 +1,35 @@
 name: diagnose_web_latency
 version: "1.0"
-description: Run a series of skills to diagnose web latency issues
-required_skills: ["collect_web_latency_facts"]
-input_schema_ref: "schemas/registry/playbooks/diagnose_web_latency.input.json"
-output_schema_ref: "schemas/registry/playbooks/diagnose_web_latency.output.json"
+category: operations
+description: "웹 서비스 지연 원인 진단 및 복구 (응답시간 측정 → 병목 분석 → 서비스 재시작)"
+execution_mode: one_shot
+default_risk_level: low
+dry_run_supported: true
+explain_supported: true
 enabled: true
+steps:
+  - order: 1
+    type: skill
+    ref: collect_web_latency_facts
+    name: "웹 응답시간 측정"
+    on_failure: abort
+  - order: 2
+    type: tool
+    ref: query_metric
+    name: "CPU/메모리 메트릭 조회"
+    on_failure: continue
+  - order: 3
+    type: tool
+    ref: fetch_log
+    name: "앱 에러 로그 수집"
+    on_failure: continue
+  - order: 4
+    type: tool
+    ref: restart_service
+    name: "서비스 재시작 (지연 임계치 초과 시)"
+    on_failure: abort
+  - order: 5
+    type: skill
+    ref: collect_web_latency_facts
+    name: "복구 후 응답시간 재측정"
+    on_failure: continue
