@@ -56,11 +56,11 @@ OpsClaw의 기본 구조는 아래와 같다.
 | Pre-M7 | LangGraph 상태기계, select_assets/resolve_targets 스테이지, Approval Gate, Policy Engine | ✅ 완료 |
 | M7 | Batch/Continuous Execution — scheduler, watch runner | ✅ 완료 |
 | M8 | History/Experience/Retrieval — 4-layer memory, task_memory, experience promotion, FTS retrieval | ✅ 완료 |
-| M9 | RBAC, UI, Audit, Monitoring | 예정 |
+| M9 | RBAC, Audit, Monitoring, Reporting, Backup | ✅ 완료 |
 
 ---
 
-## 4. 현재 구현 상태 (M8 기준)
+## 4. 현재 구현 상태 (M9 기준)
 
 ### 구현 완료
 
@@ -114,13 +114,33 @@ OpsClaw의 기본 구조는 아래와 같다.
 - Composition engine: playbook → step → skill → tool 전체 트리 resolve
 - Explain mode: 마크다운 사람 가독 설명
 
+**Batch/Continuous Execution (M7)**
+- schedule CRUD + croniter cron next-run 계산
+- get_due_schedules / execute_due_schedule 배치 사이클
+- watch_job / watch_event / incident CRUD
+- run_watch_check: subprocess 실행 → 연속 실패 threshold → incident 자동 생성
+- Scheduler Worker + Watch Worker 폴링 루프
+- `/schedules`, `/watchers`, `/incidents` API 라우터
+
+**History/Experience/Retrieval (M8)**
+- history_service: ingest_event / ingest_stage_event / get_project_history / get_asset_history
+- experience_service: build_task_memory / promote_to_experience / create_experience / list_experiences
+- retrieval_service: index_document / search_documents (FTS + ILIKE fallback) / reindex_project / get_context_for_project
+- Manager API: `/projects/{id}/history`, `/experience`, `/projects/{id}/context`
+
+**RBAC / Audit / Monitoring / Reporting / Backup (M9)**
+- RBAC: roles + actor_roles 테이블, 4개 기본 역할 (admin/operator/viewer/auditor)
+- rbac_service: create_role / assign_role / get_actor_permissions / check_permission (`*` wildcard 지원)
+- audit_service: log_audit_event / query_audit_logs / export_audit_json / export_audit_csv
+- monitoring_service: get_system_health (healthy/degraded) / get_operational_metrics
+- reporting_service: generate_project_report / export_evidence_pack / export_evidence_pack_json
+- backup_service: create_backup (pg_dump) / list_backups / get_backup_info
+- Manager API: `/admin/*` (12개 엔드포인트), `/reports/*` (3개 엔드포인트)
+
 ### 아직 남아 있는 것
 
-- Batch/Continuous Execution (scheduler, watch runner) — M7
-- playbook 기반 실제 명령 실행 자동화
-- History/Experience retrieval — M8
-- RBAC, UI, Audit, Monitoring — M9
 - CI 파이프라인 확대
+- playbook 기반 실제 명령 실행 자동화 (pi runtime 연동)
 
 ---
 

@@ -105,6 +105,37 @@ from packages.retrieval_service import (
     reindex_project,
     get_context_for_project,
 )
+from packages.audit_service import (
+    log_audit_event,
+    query_audit_logs,
+    export_audit_json,
+    export_audit_csv,
+)
+from packages.rbac_service import (
+    create_role,
+    list_roles,
+    get_role,
+    get_role_by_name,
+    assign_role,
+    revoke_role,
+    get_actor_permissions,
+    check_permission,
+    update_role_permissions,
+)
+from packages.monitoring_service import (
+    get_system_health,
+    get_operational_metrics,
+)
+from packages.reporting_service import (
+    generate_project_report,
+    export_evidence_pack,
+    export_evidence_pack_json,
+)
+from packages.backup_service import (
+    create_backup,
+    list_backups,
+    get_backup_info,
+)
 
 
 class ProjectCreateRequest(BaseModel):
@@ -173,6 +204,25 @@ class ExperiencePromoteRequest(BaseModel):
     title: str
     outcome: str | None = None
     asset_id: str | None = None
+
+
+class RoleCreateRequest(BaseModel):
+    name: str
+    permissions: list[str]
+    description: str | None = None
+
+
+class RoleAssignRequest(BaseModel):
+    actor_id: str
+    role_id: str
+    actor_type: str = "user"
+
+
+class AuditExportRequest(BaseModel):
+    format: str = "json"  # "json" | "csv"
+    event_type: str | None = None
+    project_id: str | None = None
+    limit: int = 1000
 
 
 def create_health_router() -> APIRouter:
@@ -966,11 +1016,153 @@ def create_incident_router() -> APIRouter:
     return router
 
 
+def create_admin_router() -> APIRouter:
+    router = APIRouter(prefix="/admin", tags=["admin"])
+
+    @router.get("/health")
+    def admin_health() -> dict[str, Any]:
+        return get_system_health()
+
+    @router.get("/metrics")
+    def admin_metrics() -> dict[str, Any]:
+        return get_operational_metrics()
+
+    # ── Audit ────────────────────────────────────────────────────────────────
+
+    @router.get("/audit")
+    def admin_audit(
+        event_type: str | None = None,
+        actor_id: str | None = None,
+        project_id: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        items = query_audit_logs(
+            event_type=event_type,
+            actor_id=actor_id,
+            project_id=project_id,
+            limit=limit,
+        )
+        return {"items": items, "count": len(items)}
+
+    @router.post("/audit/export")
+    def admin_audit_export(payload: AuditExportRequest) -> dict[str, Any]:
+        fmt = payload.format.lower()
+        if fmt == "csv":
+            content = export_audit_csv(
+                event_type=payload.event_type,
+                project_id=payload.project_id,
+                limit=payload.limit,
+            )
+            return {"format": "csv", "content": content, "rows": len(content.splitlines()) - 1}
+        content = export_audit_json(
+            event_type=payload.event_type,
+            project_id=payload.project_id,
+            limit=payload.limit,
+        )
+        return {"format": "json", "content": content}
+
+    # ── RBAC ─────────────────────────────────────────────────────────────────
+
+    @router.get("/roles")
+    def admin_list_roles() -> dict[str, Any]:
+        return {"items": list_roles()}
+
+    @router.post("/roles")
+    def admin_create_role(payload: RoleCreateRequest) -> dict[str, Any]:
+        role = create_role(
+            name=payload.name,
+            permissions=payload.permissions,
+            description=payload.description,
+        )
+        return {"status": "ok", "role": role}
+
+    @router.get("/roles/{role_id}")
+    def admin_get_role(role_id: str) -> dict[str, Any]:
+        role = get_role(role_id)
+        if role is None:
+            raise HTTPException(status_code=404, detail={"message": f"Role not found: {role_id}"})
+        return {"role": role}
+
+    @router.post("/roles/assign")
+    def admin_assign_role(payload: RoleAssignRequest) -> dict[str, Any]:
+        ar = assign_role(
+            actor_id=payload.actor_id,
+            role_id=payload.role_id,
+            actor_type=payload.actor_type,
+        )
+        return {"status": "ok", "assignment": ar}
+
+    @router.get("/roles/actor/{actor_id}/permissions")
+    def admin_actor_permissions(actor_id: str) -> dict[str, Any]:
+        perms = get_actor_permissions(actor_id)
+        return {"actor_id": actor_id, "permissions": perms}
+
+    @router.get("/roles/actor/{actor_id}/check")
+    def admin_check_permission(actor_id: str, permission: str) -> dict[str, Any]:
+        ok = check_permission(actor_id, permission)
+        return {"actor_id": actor_id, "permission": permission, "allowed": ok}
+
+    # ── Backup ────────────────────────────────────────────────────────────────
+
+    @router.post("/backup")
+    def admin_create_backup() -> dict[str, Any]:
+        result = create_backup()
+        return {"status": "ok" if result["ok"] else "error", **result}
+
+    @router.get("/backups")
+    def admin_list_backups() -> dict[str, Any]:
+        return {"items": list_backups()}
+
+    return router
+
+
+def create_reports_router() -> APIRouter:
+    router = APIRouter(prefix="/reports", tags=["reports"])
+
+    @router.get("/project/{project_id}")
+    def get_full_report(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        try:
+            report = generate_project_report(project_id)
+            return {"status": "ok", "report": report}
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.get("/project/{project_id}/evidence-pack")
+    def get_evidence_pack(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        try:
+            pack = export_evidence_pack(project_id)
+            return {"status": "ok", "pack": pack}
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.get("/project/{project_id}/evidence-pack/json")
+    def export_evidence_pack_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        try:
+            json_str = export_evidence_pack_json(project_id)
+            return {"status": "ok", "project_id": project_id, "json": json_str}
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    return router
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
-        version="0.8.0-m8",
-        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch, history/experience/retrieval.",
+        version="0.9.0-m9",
+        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch, history/experience/retrieval, RBAC/audit/monitoring.",
     )
 
     app.include_router(create_health_router())
@@ -984,6 +1176,8 @@ def create_app() -> FastAPI:
     app.include_router(create_incident_router())
     app.include_router(create_history_router())
     app.include_router(create_experience_router())
+    app.include_router(create_admin_router())
+    app.include_router(create_reports_router())
 
     return app
 
