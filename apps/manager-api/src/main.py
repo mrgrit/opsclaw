@@ -136,6 +136,20 @@ from packages.backup_service import (
     list_backups,
     get_backup_info,
 )
+from packages.notification_service import (
+    create_channel,
+    get_channel,
+    list_channels,
+    update_channel,
+    delete_channel,
+    create_rule,
+    get_rule,
+    list_rules,
+    update_rule,
+    delete_rule,
+    fire_event,
+    list_notification_logs,
+)
 
 
 class ProjectCreateRequest(BaseModel):
@@ -223,6 +237,35 @@ class AuditExportRequest(BaseModel):
     event_type: str | None = None
     project_id: str | None = None
     limit: int = 1000
+
+
+class ChannelCreateRequest(BaseModel):
+    name: str
+    channel_type: str   # 'webhook', 'email', 'log'
+    config: dict = {}
+    enabled: bool = True
+
+
+class ChannelPatchRequest(BaseModel):
+    enabled: bool | None = None
+    config: dict | None = None
+
+
+class RuleCreateRequest(BaseModel):
+    name: str
+    event_type: str
+    channel_id: str
+    filter_conditions: dict = {}
+    enabled: bool = True
+
+
+class RulePatchRequest(BaseModel):
+    enabled: bool | None = None
+
+
+class NotificationTestRequest(BaseModel):
+    event_type: str
+    payload: dict = {}
 
 
 def create_health_router() -> APIRouter:
@@ -1158,11 +1201,104 @@ def create_reports_router() -> APIRouter:
     return router
 
 
+def create_notification_router() -> APIRouter:
+    router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+    # ── Channels ─────────────────────────────────────────────────────────────
+
+    @router.post("/channels")
+    def create_channel_endpoint(payload: ChannelCreateRequest) -> dict[str, Any]:
+        ch = create_channel(
+            name=payload.name,
+            channel_type=payload.channel_type,
+            config=payload.config,
+            enabled=payload.enabled,
+        )
+        return {"channel": ch}
+
+    @router.get("/channels")
+    def list_channels_endpoint(enabled_only: bool = False) -> dict[str, Any]:
+        return {"items": list_channels(enabled_only=enabled_only)}
+
+    @router.get("/channels/{channel_id}")
+    def get_channel_endpoint(channel_id: str) -> dict[str, Any]:
+        ch = get_channel(channel_id)
+        if ch is None:
+            raise HTTPException(status_code=404, detail={"message": f"Channel not found: {channel_id}"})
+        return {"channel": ch}
+
+    @router.patch("/channels/{channel_id}")
+    def patch_channel_endpoint(channel_id: str, payload: ChannelPatchRequest) -> dict[str, Any]:
+        ch = update_channel(channel_id, enabled=payload.enabled, config=payload.config)
+        return {"channel": ch}
+
+    @router.delete("/channels/{channel_id}")
+    def delete_channel_endpoint(channel_id: str) -> dict[str, Any]:
+        delete_channel(channel_id)
+        return {"ok": True}
+
+    # ── Rules ─────────────────────────────────────────────────────────────────
+
+    @router.post("/rules")
+    def create_rule_endpoint(payload: RuleCreateRequest) -> dict[str, Any]:
+        rule = create_rule(
+            name=payload.name,
+            event_type=payload.event_type,
+            channel_id=payload.channel_id,
+            filter_conditions=payload.filter_conditions,
+            enabled=payload.enabled,
+        )
+        return {"rule": rule}
+
+    @router.get("/rules")
+    def list_rules_endpoint(event_type: str | None = None, enabled_only: bool = True) -> dict[str, Any]:
+        return {"items": list_rules(event_type=event_type, enabled_only=enabled_only)}
+
+    @router.get("/rules/{rule_id}")
+    def get_rule_endpoint(rule_id: str) -> dict[str, Any]:
+        rule = get_rule(rule_id)
+        if rule is None:
+            raise HTTPException(status_code=404, detail={"message": f"Rule not found: {rule_id}"})
+        return {"rule": rule}
+
+    @router.patch("/rules/{rule_id}")
+    def patch_rule_endpoint(rule_id: str, payload: RulePatchRequest) -> dict[str, Any]:
+        rule = update_rule(rule_id, enabled=payload.enabled)
+        return {"rule": rule}
+
+    @router.delete("/rules/{rule_id}")
+    def delete_rule_endpoint(rule_id: str) -> dict[str, Any]:
+        delete_rule(rule_id)
+        return {"ok": True}
+
+    # ── Test & Logs ───────────────────────────────────────────────────────────
+
+    @router.post("/test")
+    def test_notification(payload: NotificationTestRequest) -> dict[str, Any]:
+        logs = fire_event(payload.event_type, payload.payload)
+        return {"logs": logs}
+
+    @router.get("/logs")
+    def list_logs_endpoint(
+        event_type: str | None = None,
+        channel_id: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        items = list_notification_logs(
+            channel_id=channel_id,
+            event_type=event_type,
+            limit=limit,
+        )
+        return {"items": items}
+
+    return router
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
-        version="0.9.0-m9",
-        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch, history/experience/retrieval, RBAC/audit/monitoring.",
+        version="0.10.0-m10",
+        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch, history/experience/retrieval, RBAC/audit/monitoring, notifications.",
     )
 
     app.include_router(create_health_router())
@@ -1178,6 +1314,7 @@ def create_app() -> FastAPI:
     app.include_router(create_experience_router())
     app.include_router(create_admin_router())
     app.include_router(create_reports_router())
+    app.include_router(create_notification_router())
 
     return app
 

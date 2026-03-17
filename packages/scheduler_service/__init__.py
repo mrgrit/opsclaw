@@ -201,6 +201,15 @@ def execute_due_schedule(schedule: dict, database_url: str | None = None) -> dic
 
     except (ProjectNotFoundError, ProjectServiceError, Exception) as exc:
         error = str(exc)
+        try:
+            from packages.notification_service import fire_event as _fire
+            _fire(
+                "schedule.failed",
+                {"schedule_id": schedule_id, "project_id": project_id, "error": error},
+                database_url=database_url,
+            )
+        except Exception:
+            pass
 
     mark_schedule_ran(schedule_id, database_url=database_url)
 

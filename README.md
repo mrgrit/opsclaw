@@ -57,10 +57,11 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M7 | Batch/Continuous Execution — scheduler, watch runner | ✅ 완료 |
 | M8 | History/Experience/Retrieval — 4-layer memory, task_memory, experience promotion, FTS retrieval | ✅ 완료 |
 | M9 | RBAC, Audit, Monitoring, Reporting, Backup | ✅ 완료 |
+| M10 | Notification & Alerting — webhook/rule-based event routing | ✅ 완료 |
 
 ---
 
-## 4. 현재 구현 상태 (M9 기준)
+## 4. 현재 구현 상태 (M10 기준)
 
 ### 구현 완료
 
@@ -136,6 +137,13 @@ OpsClaw의 기본 구조는 아래와 같다.
 - reporting_service: generate_project_report / export_evidence_pack / export_evidence_pack_json
 - backup_service: create_backup (pg_dump) / list_backups / get_backup_info
 - Manager API: `/admin/*` (12개 엔드포인트), `/reports/*` (3개 엔드포인트)
+
+**Notification & Alerting (M10)**
+- notification_service: create_channel / create_rule / fire_event / list_notification_logs
+- 채널 타입: webhook (HTTP POST), log (stdout), email (stub)
+- Rule-based 라우팅: event_type 매칭 + wildcard `*` + filter_conditions 지원
+- Integration hooks: watch_service.create_incident() → `incident.created`, scheduler_service.execute_due_schedule() → `schedule.failed`
+- Manager API: `/notifications/*` (12개 엔드포인트), API v0.10.0-m10
 
 ### 아직 남아 있는 것
 

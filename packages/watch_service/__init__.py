@@ -142,7 +142,22 @@ def create_incident(
                 """,
                 (project_id, severity, summary, Json(metadata or {})),
             )
-            return dict(cur.fetchone())
+            row = dict(cur.fetchone())
+    try:
+        from packages.notification_service import fire_event as _fire
+        _fire(
+            "incident.created",
+            {
+                "incident_id": str(row["id"]),
+                "severity": severity,
+                "summary": summary,
+                "project_id": str(project_id) if project_id else None,
+            },
+            database_url=database_url,
+        )
+    except Exception:
+        pass
+    return row
 
 
 def list_incidents(
