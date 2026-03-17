@@ -66,6 +66,25 @@ from packages.project_service import (
 )
 from packages.approval_engine import get_approval_status, ApprovalError
 from packages.graph_runtime import run_project_graph
+from packages.scheduler_service import (
+    create_schedule,
+    get_schedule,
+    list_schedules,
+    update_schedule,
+    delete_schedule,
+    execute_due_schedule,
+)
+from packages.watch_service import (
+    create_watch_job,
+    get_watch_job,
+    list_watch_jobs,
+    update_watch_job_status,
+    delete_watch_job,
+    list_watch_events,
+    run_watch_check,
+    list_incidents,
+    resolve_incident,
+)
 
 
 class ProjectCreateRequest(BaseModel):
@@ -90,6 +109,28 @@ class DispatchRequest(BaseModel):
     command: str
     subagent_url: str | None = None
     timeout_s: int = 30
+
+
+class ScheduleCreateRequest(BaseModel):
+    project_name: str
+    schedule_type: str
+    cron_expr: str | None = None
+    metadata: dict | None = None
+
+
+class SchedulePatchRequest(BaseModel):
+    enabled: bool | None = None
+    cron_expr: str | None = None
+
+
+class WatcherCreateRequest(BaseModel):
+    project_name: str
+    watch_type: str
+    metadata: dict | None = None
+
+
+class WatcherStatusRequest(BaseModel):
+    status: str
 
 
 def create_health_router() -> APIRouter:
@@ -635,11 +676,129 @@ def create_registry_router() -> APIRouter:
     return router
 
 
+def create_schedule_router() -> APIRouter:
+    router = APIRouter(prefix="/schedules", tags=["schedules"])
+
+    @router.post("")
+    def create_schedule_endpoint(payload: ScheduleCreateRequest) -> dict[str, Any]:
+        project = create_project_record(
+            name=payload.project_name,
+            request_text=f"Batch schedule: {payload.project_name}",
+            mode="batch",
+        )
+        schedule = create_schedule(
+            project_id=project["id"],
+            schedule_type=payload.schedule_type,
+            cron_expr=payload.cron_expr,
+            metadata=payload.metadata,
+        )
+        return {"schedule": schedule, "project": project}
+
+    @router.get("")
+    def list_schedules_endpoint() -> dict[str, Any]:
+        return {"items": list_schedules(enabled_only=False)}
+
+    @router.get("/{schedule_id}")
+    def get_schedule_endpoint(schedule_id: str) -> dict[str, Any]:
+        row = get_schedule(schedule_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"message": f"Schedule not found: {schedule_id}"})
+        return {"schedule": row}
+
+    @router.patch("/{schedule_id}")
+    def patch_schedule_endpoint(schedule_id: str, payload: SchedulePatchRequest) -> dict[str, Any]:
+        row = update_schedule(schedule_id, enabled=payload.enabled, cron_expr=payload.cron_expr)
+        return {"schedule": row}
+
+    @router.delete("/{schedule_id}")
+    def delete_schedule_endpoint(schedule_id: str) -> dict[str, Any]:
+        delete_schedule(schedule_id)
+        return {"ok": True}
+
+    @router.post("/{schedule_id}/run")
+    def run_schedule_now(schedule_id: str) -> dict[str, Any]:
+        row = get_schedule(schedule_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"message": f"Schedule not found: {schedule_id}"})
+        result = execute_due_schedule(row)
+        return {"result": result}
+
+    return router
+
+
+def create_watcher_router() -> APIRouter:
+    router = APIRouter(prefix="/watchers", tags=["watchers"])
+
+    @router.post("")
+    def create_watcher_endpoint(payload: WatcherCreateRequest) -> dict[str, Any]:
+        project = create_project_record(
+            name=payload.project_name,
+            request_text=f"Continuous watch: {payload.project_name}",
+            mode="continuous",
+        )
+        watch_job = create_watch_job(
+            project_id=project["id"],
+            watch_type=payload.watch_type,
+            metadata=payload.metadata,
+        )
+        return {"watch_job": watch_job, "project": project}
+
+    @router.get("")
+    def list_watchers_endpoint() -> dict[str, Any]:
+        return {"items": list_watch_jobs()}
+
+    @router.get("/{watch_job_id}")
+    def get_watcher_endpoint(watch_job_id: str) -> dict[str, Any]:
+        row = get_watch_job(watch_job_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"message": f"Watch job not found: {watch_job_id}"})
+        return {"watch_job": row}
+
+    @router.patch("/{watch_job_id}/status")
+    def patch_watcher_status(watch_job_id: str, payload: WatcherStatusRequest) -> dict[str, Any]:
+        row = update_watch_job_status(watch_job_id, payload.status)
+        return {"watch_job": row}
+
+    @router.delete("/{watch_job_id}")
+    def delete_watcher_endpoint(watch_job_id: str) -> dict[str, Any]:
+        delete_watch_job(watch_job_id)
+        return {"ok": True}
+
+    @router.get("/{watch_job_id}/events")
+    def list_watcher_events(watch_job_id: str) -> dict[str, Any]:
+        return {"items": list_watch_events(watch_job_id)}
+
+    @router.post("/{watch_job_id}/check")
+    def check_watcher_now(watch_job_id: str) -> dict[str, Any]:
+        row = get_watch_job(watch_job_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"message": f"Watch job not found: {watch_job_id}"})
+        result = run_watch_check(row)
+        return {"result": result}
+
+    return router
+
+
+def create_incident_router() -> APIRouter:
+    router = APIRouter(prefix="/incidents", tags=["incidents"])
+
+    @router.get("")
+    def list_incidents_endpoint(status: str | None = "open") -> dict[str, Any]:
+        return {"items": list_incidents(status=status)}
+
+    @router.post("/{incident_id}/resolve")
+    def resolve_incident_endpoint(incident_id: str) -> dict[str, Any]:
+        incident = resolve_incident(incident_id)
+        return {"incident": incident}
+
+    return router
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
-        version="0.6.0-m6",
-        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation.",
+        version="0.7.0-m7",
+        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch.",
     )
 
     app.include_router(create_health_router())
@@ -648,6 +807,9 @@ def create_app() -> FastAPI:
     app.include_router(create_asset_router())
     app.include_router(create_target_router())
     app.include_router(create_registry_router())
+    app.include_router(create_schedule_router())
+    app.include_router(create_watcher_router())
+    app.include_router(create_incident_router())
 
     return app
 

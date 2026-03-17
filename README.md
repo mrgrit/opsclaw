@@ -54,13 +54,13 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M5 | Evidence gate 강화, Validation service, Master review workflow | ✅ 완료 |
 | M6 | Skill/Playbook Registry CRUD, Seed loader, 10 playbooks, Composition engine, Explain mode | ✅ 완료 |
 | Pre-M7 | LangGraph 상태기계, select_assets/resolve_targets 스테이지, Approval Gate, Policy Engine | ✅ 완료 |
-| M7 | Batch/Continuous Execution — scheduler, watch runner | 예정 |
+| M7 | Batch/Continuous Execution — scheduler, watch runner | ✅ 완료 |
 | M8 | History/Experience/Retrieval | 예정 |
 | M9 | RBAC, UI, Audit, Monitoring | 예정 |
 
 ---
 
-## 4. 현재 구현 상태 (M6 기준)
+## 4. 현재 구현 상태 (M7 기준)
 
 ### 구현 완료
 

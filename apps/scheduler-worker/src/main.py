@@ -1,42 +1,44 @@
 # OpsClaw Scheduler Worker
 # Periodically checks `schedules` table and enqueues job runs.
 
+import os
+import sys
 import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
+from packages.scheduler_service import get_due_schedules, execute_due_schedule
 from fastapi import FastAPI
 
 app = FastAPI(title="Scheduler Worker")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw")
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "scheduler ok"}
 
-def load_schedules():
-    """Load due schedules from the database.
 
-    Returns a list of schedule dicts. Placeholder raises NotImplementedError in M0.
-    """
-    raise NotImplementedError("load_schedules not implemented in M0 – DB integration pending")
+def load_schedules() -> list[dict]:
+    return get_due_schedules(database_url=DATABASE_URL)
 
-def process_schedule(schedule: dict):
-    """Process a single schedule and enqueue a JobRun.
 
-    Placeholder implementation – real logic added in M1.
-    """
-    raise NotImplementedError("process_schedule not implemented in M0 – job creation pending")
+def process_schedule(schedule: dict) -> dict:
+    return execute_due_schedule(schedule, database_url=DATABASE_URL)
+
 
 def run_loop(poll_interval: int = 60):
-    """Main scheduler loop – loads schedules and processes them.
-    """
     while True:
         try:
             schedules = load_schedules()
             for sch in schedules:
-                process_schedule(sch)
-        except NotImplementedError:
-            print("Scheduler placeholder executed – no DB integration.")
-            break
+                result = process_schedule(sch)
+                print(f"[scheduler] processed {sch['id']}: {result}")
+        except Exception as e:
+            print(f"[scheduler] error: {e}")
         time.sleep(poll_interval)
+
 
 if __name__ == "__main__":
     run_loop()
-
