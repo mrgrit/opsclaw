@@ -125,10 +125,15 @@ def plan_project_record(project_id: str, database_url: str | None = None) -> dic
 
 
 def execute_project_record(project_id: str, database_url: str | None = None) -> dict[str, Any]:
+    from packages.approval_engine import ApprovalNotClearedError, require_approval_cleared
     project = get_project_record(project_id, database_url=database_url)
     try:
         require_transition(project["current_stage"], "execute")
     except GraphRuntimeError as exc:
+        raise ProjectStageError(str(exc)) from exc
+    try:
+        require_approval_cleared(project_id, database_url=database_url)
+    except ApprovalNotClearedError as exc:
         raise ProjectStageError(str(exc)) from exc
 
     job_run_id = f"job_{uuid.uuid4().hex[:12]}"
@@ -811,6 +816,109 @@ def update_asset_subagent_status(
             if row is None:
                 raise ProjectNotFoundError(f"Asset not found: {asset_id}")
             return dict(row)
+
+
+def select_assets_for_project(
+    project_id: str,
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    """Move project to select_assets stage.
+
+    Uses already-linked assets if present, otherwise auto-selects healthy
+    assets ordered by creation time (up to 3).
+    """
+    project = get_project_record(project_id, database_url=database_url)
+    try:
+        require_transition(project["current_stage"], "select_assets")
+    except GraphRuntimeError as exc:
+        raise ProjectStageError(str(exc)) from exc
+
+    existing = get_project_assets(project_id, database_url=database_url)
+    if not existing:
+        with get_connection(database_url) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT id FROM assets
+                    WHERE subagent_status IN ('healthy', 'unknown')
+                    ORDER BY created_at ASC
+                    LIMIT 3
+                    """
+                )
+                auto_ids = [row["id"] for row in cur.fetchall()]
+        for asset_id in auto_ids:
+            link_asset_to_project(project_id, asset_id, database_url=database_url)
+
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE projects
+                SET current_stage = 'select_assets', updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (project_id,),
+            )
+            updated = dict(cur.fetchone())
+
+    return {
+        "project": updated,
+        "selected_assets": get_project_assets(project_id, database_url=database_url),
+    }
+
+
+def resolve_targets_for_project(
+    project_id: str,
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    """Move project to resolve_targets stage.
+
+    Calls resolve_target_from_asset() for each linked asset and links the
+    resulting target to the project. Failures are recorded but do not abort.
+    """
+    from packages.asset_registry import resolve_target_from_asset
+
+    project = get_project_record(project_id, database_url=database_url)
+    try:
+        require_transition(project["current_stage"], "resolve_targets")
+    except GraphRuntimeError as exc:
+        raise ProjectStageError(str(exc)) from exc
+
+    assets = get_project_assets(project_id, database_url=database_url)
+    resolved = []
+    failed = []
+    for pa in assets:
+        asset_id = pa["asset_id"]
+        try:
+            result = resolve_target_from_asset(asset_id, database_url=database_url)
+            target = result.get("target") or result
+            target_id = target.get("id")
+            if target_id:
+                _ensure_project_targets_table(database_url=database_url)
+                link_target_to_project(project_id, target_id, database_url=database_url)
+                resolved.append({"asset_id": asset_id, "target_id": target_id})
+        except Exception as exc:
+            failed.append({"asset_id": asset_id, "error": str(exc)})
+
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE projects
+                SET current_stage = 'resolve_targets', updated_at = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (project_id,),
+            )
+            updated = dict(cur.fetchone())
+
+    return {
+        "project": updated,
+        "resolved": resolved,
+        "failed": failed,
+    }
 
 
 def replan_project(

@@ -59,9 +59,13 @@ from packages.project_service import (
     dispatch_command_to_subagent,
     plan_project_record,
     replan_project,
+    select_assets_for_project,
+    resolve_targets_for_project,
     update_asset_subagent_status,
     validate_project_record,
 )
+from packages.approval_engine import get_approval_status, ApprovalError
+from packages.graph_runtime import run_project_graph
 
 
 class ProjectCreateRequest(BaseModel):
@@ -365,6 +369,53 @@ def create_project_router() -> APIRouter:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
         except (ProjectStageError, ProjectServiceError) as exc:
             raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.post("/{project_id}/select_assets")
+    def select_assets_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            result = select_assets_for_project(project_id)
+            return {"status": "ok", **result}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except (ProjectStageError, ProjectServiceError) as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.post("/{project_id}/resolve_targets")
+    def resolve_targets_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            result = resolve_targets_for_project(project_id)
+            return {"status": "ok", **result}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except (ProjectStageError, ProjectServiceError) as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.get("/{project_id}/approval")
+    def get_project_approval(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        try:
+            return {"status": "ok", **get_approval_status(project_id)}
+        except ApprovalError as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.post("/{project_id}/run")
+    def run_project_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        state = run_project_graph(project_id)
+        return {
+            "status": "ok",
+            "final_stage": state["current_stage"],
+            "stop_reason": state.get("stop_reason"),
+            "approval_required": state.get("approval_required"),
+            "approval_cleared": state.get("approval_cleared"),
+            "error": state.get("error"),
+        }
 
     return router
 

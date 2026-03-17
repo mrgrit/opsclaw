@@ -53,6 +53,7 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M4 | Asset Registry CRUD — create/get/update/delete/list, onboard, target resolve | ✅ 완료 |
 | M5 | Evidence gate 강화, Validation service, Master review workflow | ✅ 완료 |
 | M6 | Skill/Playbook Registry CRUD, Seed loader, 10 playbooks, Composition engine, Explain mode | ✅ 완료 |
+| Pre-M7 | LangGraph 상태기계, select_assets/resolve_targets 스테이지, Approval Gate, Policy Engine | ✅ 완료 |
 | M7 | Batch/Continuous Execution — scheduler, watch runner | 예정 |
 | M8 | History/Experience/Retrieval | 예정 |
 | M9 | RBAC, UI, Audit, Monitoring | 예정 |
@@ -90,6 +91,20 @@ OpsClaw의 기본 구조는 아래와 같다.
 - approve / reject / needs_replan 기록
 - auto_replan 옵션
 - escalate (rejected review 기록)
+
+**LangGraph 상태기계**
+- `build_project_graph()` — StateGraph 컴파일
+- `run_project_graph()` — 자율 실행 (plan → select_assets → resolve_targets → approval_gate → execute → validate → report → close)
+- select_assets / resolve_targets 정식 스테이지 추가 (bypass 경로로 기존 호환성 유지)
+
+**Approval Gate**
+- `check_requires_approval()` — risk_level high/critical은 approved master_review 필요
+- `require_approval_cleared()` — execute 전 자동 검증
+- `GET /projects/{id}/approval` — 승인 상태 조회
+
+**Policy Engine**
+- env별 정책 테이블 (prod / staging / lab / default)
+- `check_policy()`, `enforce_policy()` — 정책 위반 시 PolicyViolation
 
 **Registry (Tool / Skill / Playbook)**
 - Tool CRUD with upsert (ON CONFLICT DO UPDATE)
