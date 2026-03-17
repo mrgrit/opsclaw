@@ -85,6 +85,26 @@ from packages.watch_service import (
     list_incidents,
     resolve_incident,
 )
+from packages.history_service import (
+    ingest_event,
+    get_project_history,
+    get_asset_history,
+)
+from packages.experience_service import (
+    build_task_memory,
+    get_task_memory,
+    list_task_memories,
+    create_experience,
+    promote_to_experience,
+    list_experiences,
+    get_experience,
+)
+from packages.retrieval_service import (
+    index_document,
+    search_documents,
+    reindex_project,
+    get_context_for_project,
+)
 
 
 class ProjectCreateRequest(BaseModel):
@@ -131,6 +151,28 @@ class WatcherCreateRequest(BaseModel):
 
 class WatcherStatusRequest(BaseModel):
     status: str
+
+
+class HistoryIngestRequest(BaseModel):
+    event: str
+    context: dict | None = None
+    job_run_id: str | None = None
+
+
+class ExperienceCreateRequest(BaseModel):
+    category: str
+    title: str
+    summary: str
+    outcome: str | None = None
+    asset_id: str | None = None
+    metadata: dict | None = None
+
+
+class ExperiencePromoteRequest(BaseModel):
+    category: str
+    title: str
+    outcome: str | None = None
+    asset_id: str | None = None
 
 
 def create_health_router() -> APIRouter:
@@ -676,6 +718,136 @@ def create_registry_router() -> APIRouter:
     return router
 
 
+def create_history_router() -> APIRouter:
+    router = APIRouter(tags=["history"])
+
+    @router.post("/projects/{project_id}/history/ingest")
+    def ingest_history(project_id: str, payload: HistoryIngestRequest) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        event = ingest_event(
+            project_id=project_id,
+            event=payload.event,
+            context=payload.context,
+            job_run_id=payload.job_run_id,
+        )
+        return {"status": "ok", "event": event}
+
+    @router.get("/projects/{project_id}/history")
+    def project_history(project_id: str, limit: int = 50) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        return {"items": get_project_history(project_id, limit=limit)}
+
+    @router.get("/assets/{asset_id}/history")
+    def asset_history(asset_id: str, limit: int = 50) -> dict[str, Any]:
+        return {"items": get_asset_history(asset_id, limit=limit)}
+
+    @router.post("/projects/{project_id}/task-memory/build")
+    def build_task_memory_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        try:
+            tm = build_task_memory(project_id)
+            return {"status": "ok", "task_memory": tm}
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.get("/projects/{project_id}/task-memory")
+    def get_task_memory_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        tm = get_task_memory(project_id)
+        if tm is None:
+            raise HTTPException(status_code=404, detail={"message": f"No task_memory for project: {project_id}"})
+        return {"task_memory": tm}
+
+    @router.post("/projects/{project_id}/reindex")
+    def reindex_project_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        result = reindex_project(project_id)
+        return {"status": "ok", **result}
+
+    @router.get("/projects/{project_id}/context")
+    def project_context_endpoint(project_id: str) -> dict[str, Any]:
+        try:
+            get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        ctx = get_context_for_project(project_id)
+        return {"status": "ok", **ctx}
+
+    return router
+
+
+def create_experience_router() -> APIRouter:
+    router = APIRouter(prefix="/experience", tags=["experience"])
+
+    @router.get("")
+    def list_experience_endpoint(category: str | None = None, limit: int = 20) -> dict[str, Any]:
+        return {"items": list_experiences(category=category, limit=limit)}
+
+    @router.get("/search")
+    def search_experience_endpoint(q: str, limit: int = 10) -> dict[str, Any]:
+        docs = search_documents(q, document_type=None, limit=limit)
+        # Also search experiences by category/title/summary match
+        exps = list_experiences(limit=50)
+        q_lower = q.lower()
+        matched_exps = [
+            e for e in exps
+            if q_lower in (e.get("title") or "").lower()
+            or q_lower in (e.get("summary") or "").lower()
+            or q_lower in (e.get("category") or "").lower()
+        ][:limit]
+        return {"items": matched_exps, "documents": docs}
+
+    @router.post("")
+    def create_experience_endpoint(payload: ExperienceCreateRequest) -> dict[str, Any]:
+        exp = create_experience(
+            category=payload.category,
+            title=payload.title,
+            summary=payload.summary,
+            outcome=payload.outcome,
+            asset_id=payload.asset_id,
+            metadata=payload.metadata,
+        )
+        return {"status": "ok", "experience": exp}
+
+    @router.get("/{experience_id}")
+    def get_experience_endpoint(experience_id: str) -> dict[str, Any]:
+        exp = get_experience(experience_id)
+        if exp is None:
+            raise HTTPException(status_code=404, detail={"message": f"Experience not found: {experience_id}"})
+        return {"experience": exp}
+
+    @router.post("/task-memories/{task_memory_id}/promote")
+    def promote_experience_endpoint(task_memory_id: str, payload: ExperiencePromoteRequest) -> dict[str, Any]:
+        try:
+            exp = promote_to_experience(
+                task_memory_id=task_memory_id,
+                category=payload.category,
+                title=payload.title,
+                outcome=payload.outcome,
+                asset_id=payload.asset_id,
+            )
+            return {"status": "ok", "experience": exp}
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    return router
+
+
 def create_schedule_router() -> APIRouter:
     router = APIRouter(prefix="/schedules", tags=["schedules"])
 
@@ -797,8 +969,8 @@ def create_incident_router() -> APIRouter:
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
-        version="0.7.0-m7",
-        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch.",
+        version="0.8.0-m8",
+        description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch, history/experience/retrieval.",
     )
 
     app.include_router(create_health_router())
@@ -810,6 +982,8 @@ def create_app() -> FastAPI:
     app.include_router(create_schedule_router())
     app.include_router(create_watcher_router())
     app.include_router(create_incident_router())
+    app.include_router(create_history_router())
+    app.include_router(create_experience_router())
 
     return app
 
