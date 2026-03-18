@@ -17,6 +17,29 @@ from packages.pi_adapter.tools.tool_bridge import PiToolBridge
 from packages.pi_adapter.translators import build_prompt, normalize_output
 
 
+_ROLE_SYSTEM_PROMPTS: dict[str, str] = {
+    "manager": (
+        "You are the OpsClaw Manager agent. You orchestrate IT operations workflows "
+        "on internal network assets. You follow playbooks precisely — do not improvise. "
+        "Produce structured JSON outputs when asked. Never skip validation or evidence steps."
+    ),
+    "master": (
+        "You are the OpsClaw Master agent. You perform high-level reasoning, planning, "
+        "and review of operations work. Validate evidence, review manager outputs, and "
+        "produce authoritative assessment reports. Be precise and conservative."
+    ),
+    "subagent": (
+        "You are the OpsClaw SubAgent. You execute specific operational commands on "
+        "assigned assets. Follow instructions exactly, report stdout/stderr faithfully, "
+        "and never exceed your assigned scope."
+    ),
+}
+
+
+def _role_system_prompt(role: str) -> str:
+    return _ROLE_SYSTEM_PROMPTS.get(role, _ROLE_SYSTEM_PROMPTS["manager"])
+
+
 class PiAdapterError(Exception):
     def __init__(self, error: PiAdapterErrorInfo) -> None:
         super().__init__(error.message)
@@ -89,12 +112,16 @@ class PiRuntimeClient:
             model = profile.model
 
         compiled_prompt = build_prompt(request.prompt, request.context)
+        system_prompt = request.context.get("system_prompt") or _role_system_prompt(role)
         command = [
             profile.pi_command,
             "--provider",
             provider,
             "--model",
             model,
+            "--system-prompt",
+            system_prompt,
+            "--no-session",
             "-p",
             compiled_prompt,
         ]
@@ -107,6 +134,9 @@ class PiRuntimeClient:
             command.extend(tool_args.cli_args)
 
         env = os.environ.copy()
+        # Ensure nvm-installed pi is findable
+        nvm_bin = os.path.expanduser("~/.nvm/versions/node/v22.22.1/bin")
+        env["PATH"] = nvm_bin + ":" + env.get("PATH", "")
         env["OPSCLAW_PI_PROVIDER"] = provider
         env["OPSCLAW_PI_BASE_URL"] = profile.base_url
         env["OPSCLAW_PI_API_KEY"] = profile.api_key
