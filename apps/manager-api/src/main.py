@@ -178,6 +178,12 @@ class DispatchRequest(BaseModel):
     timeout_s: int = 30
 
 
+class PlaybookRunRequest(BaseModel):
+    subagent_url: str | None = None
+    dry_run: bool = False
+    params: dict | None = None
+
+
 class ScheduleCreateRequest(BaseModel):
     project_name: str
     schedule_type: str
@@ -500,6 +506,30 @@ def create_project_router() -> APIRouter:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
         except (ProjectStageError, ProjectServiceError) as exc:
             raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+
+    @router.post("/{project_id}/playbook/run")
+    def run_playbook(project_id: str, payload: PlaybookRunRequest) -> dict[str, Any]:
+        """
+        프로젝트에 연결된 Playbook을 단계별로 실행한다.
+        Playbook이 결정한 순서대로 각 Step을 A2A로 dispatch하고 evidence를 기록한다.
+        dry_run=true 이면 실행 계획만 반환한다.
+        """
+        from packages.playbook_engine import run_playbook_steps
+
+        try:
+            result = run_playbook_steps(
+                project_id=project_id,
+                subagent_url=payload.subagent_url,
+                dry_run=payload.dry_run,
+                params=payload.params,
+            )
+            return {"status": "ok", "result": result}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except (ProjectStageError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
 
     @router.post("/{project_id}/validate/check")
     def validate_check(project_id: str, payload: dict) -> dict[str, Any]:
