@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# ops — OpsClaw CLI
+#
+# pi를 OpsClaw 설정으로 시작한다.
+# AGENTS.md와 .pi/skills/opsclaw 가 자동 로드된다.
+#
+# 사용법:
+#   ./ops                          # 대화형 모드
+#   ./ops -p "현재 인시던트 확인"    # 비대화형 (-p)
+#   ./ops -c                       # 이전 세션 이어서
+#   ./ops --model "llama3.3:70b"   # 모델 변경
+#
+# 모든 pi 옵션이 그대로 전달된다.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# nvm 로드
+export NVM_DIR="$HOME/.nvm"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+    # shellcheck source=/dev/null
+    \. "$NVM_DIR/nvm.sh"
+elif [ -f "$HOME/.nvm/versions/node/v22.22.1/bin/pi" ]; then
+    export PATH="$HOME/.nvm/versions/node/v22.22.1/bin:$PATH"
+else
+    echo "❌  pi not found. Run: export NVM_DIR=\$HOME/.nvm && . \$NVM_DIR/nvm.sh" >&2
+    exit 1
+fi
+
+if ! command -v pi &>/dev/null; then
+    echo "❌  pi CLI not installed. Run: npm install -g @mariozechner/pi-coding-agent" >&2
+    exit 1
+fi
+
+# OpsClaw 루트로 이동 (AGENTS.md 자동 로드를 위해)
+cd "$SCRIPT_DIR"
+
+# OpsClaw 기본 설정
+OPSCLAW_PROVIDER="${OPSCLAW_PI_PROVIDER:-ollama}"
+OPSCLAW_MODEL="${OPSCLAW_PI_MANAGER_MODEL:-gpt-oss:120b}"
+
+exec pi \
+    --provider "$OPSCLAW_PROVIDER" \
+    --model "$OPSCLAW_MODEL" \
+    "$@"
