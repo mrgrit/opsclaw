@@ -531,6 +531,25 @@ def create_project_router() -> APIRouter:
         except Exception as exc:
             raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
 
+    @router.post("/{project_id}/memory/build")
+    def build_project_memory(project_id: str, promote: bool = False) -> dict[str, Any]:
+        """
+        프로젝트 실행 결과를 Task Memory로 집약한다.
+        promote=true 이면 pi LLM으로 Experience 승격까지 수행한다.
+        """
+        from packages.experience_service import build_task_memory, auto_promote_experience
+        try:
+            tm = build_task_memory(project_id)
+            result: dict[str, Any] = {"status": "ok", "task_memory": tm}
+            if promote:
+                exp = auto_promote_experience(project_id)
+                result["experience"] = exp
+            return result
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
+
     @router.post("/{project_id}/validate/check")
     def validate_check(project_id: str, payload: dict) -> dict[str, Any]:
         try:

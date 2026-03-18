@@ -183,3 +183,48 @@ def get_experience(experience_id: str, database_url: str | None = None) -> dict 
             cur.execute("SELECT * FROM experiences WHERE id = %s", (experience_id,))
             row = cur.fetchone()
             return dict(row) if row else None
+
+
+def auto_promote_experience(
+    project_id: str,
+    database_url: str | None = None,
+) -> dict:
+    """Build task_memory then use pi LLM to generate title/summary/outcome and promote.
+
+    Returns the created experience record, or raises if no task_memory exists.
+    """
+    tm = build_task_memory(project_id, database_url=database_url)
+
+    # Use pi to generate a meaningful experience narrative
+    from packages.pi_adapter.runtime import PiRuntimeClient, PiRuntimeConfig
+    client = PiRuntimeClient(PiRuntimeConfig(default_role="manager"))
+    prompt = (
+        f"다음은 OpsClaw 프로젝트 실행 기록이다:\n\n"
+        f"{tm['summary']}\n\n"
+        f"이 작업에서 배울 수 있는 핵심 교훈을 JSON으로 반환하라. "
+        f"형식: {{\"title\": \"<20자 이내>\", \"category\": \"<operations|security|monitoring>\", "
+        f"\"outcome\": \"<성공/실패/부분성공>\", \"lesson\": \"<2~3문장>\"}}"
+    )
+    try:
+        result = client.invoke_model(prompt, {"role": "manager"})
+        import json, re
+        raw = result.get("stdout", "") or ""
+        m = re.search(r'\{.*\}', raw, re.DOTALL)
+        parsed = json.loads(m.group(0)) if m else {}
+        title = parsed.get("title", f"작업: {tm.get('summary', '')[:30]}")
+        category = parsed.get("category", "operations")
+        outcome = parsed.get("outcome", "")
+        lesson = parsed.get("lesson", tm.get("summary", "")[:300])
+    except Exception:
+        title = f"작업: {tm.get('summary', '')[:30]}"
+        category = "operations"
+        outcome = "unknown"
+        lesson = tm.get("summary", "")[:300]
+
+    return promote_to_experience(
+        task_memory_id=tm["id"],
+        category=category,
+        title=title,
+        outcome=f"{outcome}: {lesson}",
+        database_url=database_url,
+    )

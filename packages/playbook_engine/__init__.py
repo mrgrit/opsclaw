@@ -335,6 +335,19 @@ def run_playbook_steps(
         "params": params or {},
     }
 
+    # ── 4b. 과거 경험 컨텍스트 주입 (retrieval pipeline) ─────────────────────
+    if not dry_run:
+        try:
+            from packages.retrieval_service import get_context_for_project
+            past_ctx = get_context_for_project(project_id, database_url=database_url)
+            project_ctx["past_experiences"] = past_ctx.get("experiences", [])
+            project_ctx["asset_history"] = past_ctx.get("asset_history", [])
+            project_ctx["documents"] = past_ctx.get("documents", [])
+        except Exception:
+            project_ctx["past_experiences"] = []
+            project_ctx["asset_history"] = []
+            project_ctx["documents"] = []
+
     # ── 5. Step별 실행 ──────────────────────────────────────────────────────
     step_results: list[dict[str, Any]] = []
     steps_ok = 0
@@ -454,6 +467,35 @@ def run_playbook_steps(
         overall = "failed"
     else:
         overall = "partial"
+
+    # ── 7. 실행 완료 후 히스토리 기록 + Task Memory 구성 ─────────────────────
+    if not dry_run:
+        import uuid
+        job_run_id = str(uuid.uuid4())
+        try:
+            from packages.history_service import ingest_event
+            ingest_event(
+                project_id=project_id,
+                event="playbook:run",
+                context={
+                    "playbook_id": playbook_id,
+                    "playbook_name": playbook_name,
+                    "status": overall,
+                    "steps_ok": steps_ok,
+                    "steps_failed": steps_failed,
+                    "steps_skipped": steps_skipped,
+                    "subagent_url": subagent_url,
+                },
+                job_run_id=job_run_id,
+                database_url=database_url,
+            )
+        except Exception:
+            pass
+        try:
+            from packages.experience_service import build_task_memory
+            build_task_memory(project_id, database_url=database_url)
+        except Exception:
+            pass
 
     return {
         "project_id": project_id,
