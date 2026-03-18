@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpsClaw Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{display:flex;height:100vh;font-family:system-ui,-apple-system,sans-serif;font-size:14px;background:#f5f6fa;color:#2d3748;overflow:hidden}
+
+/* ── Sidebar ─────────────────────────────────────────────────────── */
+aside{width:220px;min-width:220px;background:#1e2a3a;color:#c8d6e5;display:flex;flex-direction:column;padding:0}
+.logo{padding:20px 18px 16px;border-bottom:1px solid #2d3f55;font-size:18px;font-weight:700;color:#fff;letter-spacing:.5px}
+.logo span{color:#4dabf7}
+nav{flex:1;padding:12px 0}
+nav a{display:flex;align-items:center;gap:10px;padding:10px 18px;color:#c8d6e5;text-decoration:none;border-left:3px solid transparent;transition:background .15s,border-color .15s}
+nav a:hover{background:#2d3f55;color:#fff}
+nav a.active{background:#243447;border-left-color:#4dabf7;color:#fff}
+nav a .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-footer{padding:14px 18px;border-top:1px solid #2d3f55;font-size:12px;color:#6b8299}
+
+/* ── Main ────────────────────────────────────────────────────────── */
+main{flex:1;overflow-y:auto;padding:24px}
+.section{display:none}
+.section.active{display:block}
+
+h2{font-size:20px;font-weight:600;margin-bottom:18px;color:#1a202c}
+h3{font-size:15px;font-weight:600;margin-bottom:12px;color:#2d3748}
+
+/* ── Cards ───────────────────────────────────────────────────────── */
+.card-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.card{background:#fff;border-radius:8px;padding:18px 22px;box-shadow:0 1px 4px rgba(0,0,0,.08);flex:1;min-width:150px}
+.card .label{font-size:12px;color:#718096;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.card .value{font-size:26px;font-weight:700;color:#2d3748}
+.card .sub{font-size:12px;color:#a0aec0;margin-top:4px}
+.card.status-ok .value{color:#38a169}
+.card.status-warn .value{color:#d69e2e}
+.card.status-err .value{color:#e53e3e}
+
+/* ── Tables ──────────────────────────────────────────────────────── */
+.table-wrap{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:auto;margin-bottom:20px}
+table{width:100%;border-collapse:collapse}
+th{background:#f7f8fa;text-align:left;padding:10px 14px;font-size:12px;color:#718096;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid #f0f4f8;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#fafbfc}
+tr:hover td{background:#edf2ff}
+.empty-row td{text-align:center;color:#a0aec0;padding:24px}
+
+/* ── Badges ──────────────────────────────────────────────────────── */
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase}
+.badge-critical{background:#fff5f5;color:#c53030}
+.badge-high{background:#fffaf0;color:#c05621}
+.badge-warning{background:#fffbeb;color:#b7791f}
+.badge-medium{background:#fffbeb;color:#b7791f}
+.badge-info{background:#ebf8ff;color:#2b6cb0}
+.badge-low{background:#ebf8ff;color:#2b6cb0}
+.badge-open{background:#fff5f5;color:#c53030}
+.badge-resolved{background:#f0fff4;color:#276749}
+.badge-ok{background:#f0fff4;color:#276749}
+.badge-success{background:#f0fff4;color:#276749}
+.badge-failed{background:#fff5f5;color:#c53030}
+.badge-error{background:#fff5f5;color:#c53030}
+.badge-running{background:#ebf8ff;color:#2b6cb0}
+.badge-paused{background:#f7f8fa;color:#718096}
+.badge-active{background:#f0fff4;color:#276749}
+.badge-inactive{background:#f7f8fa;color:#718096}
+.badge-webhook{background:#e9d8fd;color:#553c9a}
+.badge-email{background:#fefcbf;color:#744210}
+.badge-log{background:#e2e8f0;color:#4a5568}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.btn{display:inline-block;padding:5px 12px;border-radius:5px;border:none;cursor:pointer;font-size:12px;font-weight:500;transition:background .15s}
+.btn-primary{background:#4dabf7;color:#fff}.btn-primary:hover{background:#339af0}
+.btn-danger{background:#fc8181;color:#fff}.btn-danger:hover{background:#f56565}
+.btn-sm{padding:3px 9px;font-size:11px}
+.btn-ghost{background:#e2e8f0;color:#4a5568}.btn-ghost:hover{background:#cbd5e0}
+.btn-success{background:#68d391;color:#fff}.btn-success:hover{background:#48bb78}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ── Filter bar ──────────────────────────────────────────────────── */
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.filter-bar label{font-size:12px;color:#718096}
+
+/* ── Tabs ────────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:16px}
+.tab{padding:9px 18px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:500;color:#718096;transition:color .15s,border-color .15s}
+.tab.active{color:#4dabf7;border-bottom-color:#4dabf7}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── Forms ───────────────────────────────────────────────────────── */
+.form-box{background:#fff;border-radius:8px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:20px}
+.form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:4px;min-width:140px}
+.form-group label{font-size:11px;color:#718096;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group select,.form-group textarea{border:1px solid #e2e8f0;border-radius:5px;padding:6px 10px;font-size:13px;font-family:inherit;background:#fff;color:#2d3748;transition:border-color .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#4dabf7}
+.form-group textarea{resize:vertical;min-height:60px}
+
+/* ── Toggle ──────────────────────────────────────────────────────── */
+.toggle{position:relative;display:inline-block;width:36px;height:20px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#cbd5e0;border-radius:20px;cursor:pointer;transition:background .2s}
+.toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle input:checked+.toggle-slider{background:#4dabf7}
+.toggle input:checked+.toggle-slider:before{transform:translateX(16px)}
+
+/* ── Toast ───────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:24px;right:24px;background:#1a202c;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;max-width:340px}
+#toast.show{opacity:1}
+
+/* ── Spinner ─────────────────────────────────────────────────────── */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #e2e8f0;border-top-color:#4dabf7;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Section header ──────────────────────────────────────────────── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px}
+.refresh-btn{font-size:12px;color:#4dabf7;cursor:pointer;text-decoration:underline;background:none;border:none;padding:0}
+
+code{font-family:monospace;font-size:12px;background:#f7f8fa;padding:1px 5px;border-radius:3px;color:#4a5568}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="logo">Ops<span>Claw</span></div>
+  <nav id="nav">
+    <a href="#overview" class="nav-link active"><span class="icon">🏠</span> Overview</a>
+    <a href="#incidents" class="nav-link"><span class="icon">🚨</span> Incidents</a>
+    <a href="#notifications" class="nav-link"><span class="icon">🔔</span> Notifications</a>
+    <a href="#schedules" class="nav-link"><span class="icon">🗓️</span> Schedules</a>
+    <a href="#watchers" class="nav-link"><span class="icon">👁️</span> Watchers</a>
+  </nav>
+  <div class="sidebar-footer" id="sidebar-time">–</div>
+</aside>
+
+<main>
+  <!-- ═══════════════════ OVERVIEW ═══════════════════ -->
+  <div id="section-overview" class="section active">
+    <div class="section-header">
+      <h2>Overview</h2>
+      <button class="refresh-btn" onclick="loadOverview()">↻ Refresh</button>
+    </div>
+    <div class="card-row" id="overview-status-cards">
+      <div class="card"><div class="label">API Status</div><div class="value" id="ov-api-status">…</div></div>
+      <div class="card"><div class="label">System Health</div><div class="value" id="ov-sys-health">…</div><div class="sub" id="ov-sys-detail"></div></div>
+    </div>
+    <div class="card-row" id="overview-metric-cards">
+      <div class="card"><div class="label">Open Incidents</div><div class="value" id="ov-incidents">…</div></div>
+      <div class="card"><div class="label">Schedules</div><div class="value" id="ov-schedules">…</div></div>
+      <div class="card"><div class="label">Active Watchers</div><div class="value" id="ov-watchers">…</div></div>
+      <div class="card"><div class="label">Notif Channels</div><div class="value" id="ov-channels">…</div></div>
+    </div>
+    <h3>Recent Notification Logs</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Event Type</th><th>Status</th><th>Channel</th><th>Sent At</th></tr></thead>
+        <tbody id="ov-logs-body"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ INCIDENTS ═══════════════════ -->
+  <div id="section-incidents" class="section">
+    <div class="section-header">
+      <h2>Incidents</h2>
+      <div class="btn-group">
+        <button class="btn btn-ghost btn-sm" id="inc-filter-open" onclick="setIncidentFilter('open')">Open</button>
+        <button class="btn btn-primary btn-sm" id="inc-filter-all" onclick="setIncidentFilter('all')">All</button>
+        <button class="refresh-btn" onclick="loadIncidents()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Severity</th><th>Summary</th><th>Source</th><th>Created</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="inc-body"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ NOTIFICATIONS ═══════════════════ -->
+  <div id="section-notifications" class="section">
+    <div class="section-header">
+      <h2>Notifications</h2>
+      <button class="refresh-btn" onclick="loadNotifications()">↻ Refresh</button>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('notif','channels')">Channels</div>
+      <div class="tab" onclick="switchTab('notif','rules')">Rules</div>
+      <div class="tab" onclick="switchTab('notif','logs')">Logs</div>
+    </div>
+
+    <!-- Channels -->
+    <div id="notif-tab-channels" class="tab-panel active">
+      <div class="form-box">
+        <h3>Add Channel</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Name</label><input id="ch-name" placeholder="my-channel"></div>
+          <div class="form-group"><label>Type</label>
+            <select id="ch-type">
+              <option value="log">log</option>
+              <option value="webhook">webhook</option>
+              <option value="email">email</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Config JSON</label><input id="ch-config" placeholder='{"url":"https://..."}' style="min-width:220px"></div>
+          <div class="form-group" style="justify-content:flex-end"><button class="btn btn-primary" onclick="createChannel()">Add Channel</button></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Enabled</th><th>Action</th></tr></thead>
+          <tbody id="ch-body"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Rules -->
+    <div id="notif-tab-rules" class="tab-panel">
+      <div class="form-box">
+        <h3>Add Rule</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Name</label><input id="rl-name" placeholder="rule-name"></div>
+          <div class="form-group"><label>Event Type</label><input id="rl-event" placeholder="incident.created"></div>
+          <div class="form-group"><label>Channel ID</label><input id="rl-channel" placeholder="channel-uuid"></div>
+          <div class="form-group" style="justify-content:flex-end"><button class="btn btn-primary" onclick="createRule()">Add Rule</button></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Event Type</th><th>Channel</th><th>Enabled</th><th>Action</th></tr></thead>
+          <tbody id="rl-body"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Logs -->
+    <div id="notif-tab-logs" class="tab-panel">
+      <div class="form-box">
+        <h3>Send Test Notification</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Event Type</label><input id="test-event" value="test.ping"></div>
+          <div class="form-group"><label>Payload JSON</label><input id="test-payload" value='{"msg":"hello"}' style="min-width:200px"></div>
+          <div class="form-group" style="justify-content:flex-end"><button class="btn btn-primary" onclick="sendTestNotif()">Send Test</button></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Event Type</th><th>Status</th><th>Channel</th><th>Sent At</th><th>Payload</th></tr></thead>
+          <tbody id="log-body"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ SCHEDULES ═══════════════════ -->
+  <div id="section-schedules" class="section">
+    <div class="section-header">
+      <h2>Schedules</h2>
+      <button class="refresh-btn" onclick="loadSchedules()">↻ Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Project</th><th>Type</th><th>Cron</th><th>Next Run</th><th>Last Run</th><th>Enabled</th><th>Actions</th></tr></thead>
+        <tbody id="sched-body"><tr class="empty-row"><td colspan="7">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ WATCHERS ═══════════════════ -->
+  <div id="section-watchers" class="section">
+    <div class="section-header">
+      <h2>Watchers</h2>
+      <button class="refresh-btn" onclick="loadWatchers()">↻ Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Project</th><th>Type</th><th>Status</th><th>Last Check</th><th>Actions</th></tr></thead>
+        <tbody id="watch-body"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────
+let incidentFilter = 'open';
+let notifCurrentTab = 'channels';
+
+// ── Toast ────────────────────────────────────────────────────────────
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = isError ? '#c53030' : '#1a202c';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── API helper ───────────────────────────────────────────────────────
+async function api(method, path, body) {
+  try {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const r = await fetch(path, opts);
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`HTTP ${r.status}: ${t}`);
+    }
+    return r.status === 204 ? null : await r.json();
+  } catch (e) {
+    toast(e.message, true);
+    throw e;
+  }
+}
+
+function fmtDate(s) {
+  if (!s) return '–';
+  try { return new Date(s).toLocaleString(); } catch { return s; }
+}
+
+function badge(cls, text) {
+  return `<span class="badge badge-${cls}">${text}</span>`;
+}
+
+function severityBadge(s) {
+  const m = { critical:'critical', high:'high', warning:'warning', medium:'medium', info:'info', low:'low' };
+  return badge(m[s] || 'info', s || '–');
+}
+
+function statusBadge(s) {
+  return badge(s === 'open' ? 'open' : s === 'resolved' ? 'resolved' : 'info', s || '–');
+}
+
+// ── Router ───────────────────────────────────────────────────────────
+const sections = ['overview', 'incidents', 'notifications', 'schedules', 'watchers'];
+const loaders = {
+  overview: loadOverview,
+  incidents: loadIncidents,
+  notifications: loadNotifications,
+  schedules: loadSchedules,
+  watchers: loadWatchers,
+};
+
+function navigate(hash) {
+  const page = hash.replace('#', '') || 'overview';
+  if (!sections.includes(page)) return;
+  sections.forEach(s => {
+    document.getElementById('section-' + s).classList.toggle('active', s === page);
+  });
+  document.querySelectorAll('.nav-link').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + page);
+  });
+  loaders[page]();
+}
+
+window.addEventListener('hashchange', () => navigate(location.hash));
+window.addEventListener('DOMContentLoaded', () => {
+  navigate(location.hash || '#overview');
+  setInterval(() => {
+    document.getElementById('sidebar-time').textContent = new Date().toLocaleTimeString();
+  }, 1000);
+});
+
+// ── Tab switcher ──────────────────────────────────────────────────────
+function switchTab(ns, name) {
+  const panels = document.querySelectorAll(`#section-${ns === 'notif' ? 'notifications' : ns} .tab-panel`);
+  const tabs = document.querySelectorAll(`#section-${ns === 'notif' ? 'notifications' : ns} .tab`);
+  const names = ns === 'notif' ? ['channels','rules','logs'] : [];
+  tabs.forEach((t, i) => t.classList.toggle('active', names[i] === name));
+  panels.forEach(p => {
+    const pid = p.id.replace('notif-tab-', '');
+    p.classList.toggle('active', pid === name);
+  });
+  if (ns === 'notif') notifCurrentTab = name;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════════════════════════════
+async function loadOverview() {
+  // API status
+  try {
+    const h = await api('GET', '/health');
+    const el = document.getElementById('ov-api-status');
+    el.textContent = h.status === 'ok' ? 'OK' : h.status;
+    el.closest('.card').className = 'card status-ok';
+  } catch {
+    document.getElementById('ov-api-status').textContent = 'ERROR';
+    document.getElementById('ov-api-status').closest('.card').className = 'card status-err';
+  }
+
+  // System health
+  try {
+    const ah = await api('GET', '/admin/health');
+    const el = document.getElementById('ov-sys-health');
+    const det = document.getElementById('ov-sys-detail');
+    const st = ah.status || 'unknown';
+    el.textContent = st.toUpperCase();
+    const cls = st === 'healthy' ? 'status-ok' : st === 'degraded' ? 'status-warn' : 'status-err';
+    el.closest('.card').className = 'card ' + cls;
+    const checks = ah.checks || {};
+    det.textContent = Object.entries(checks).map(([k,v]) => `${k}: ${v}`).join(' | ');
+  } catch {
+    document.getElementById('ov-sys-health').textContent = 'N/A';
+  }
+
+  // Metrics
+  try {
+    const m = await api('GET', '/admin/metrics');
+    document.getElementById('ov-schedules').textContent = m.schedules?.total ?? '–';
+    document.getElementById('ov-watchers').textContent = m.watch_jobs?.active ?? '–';
+  } catch { /* ignore */ }
+
+  // Incidents count
+  try {
+    const inc = await api('GET', '/incidents?status=open');
+    const items = inc.items || inc || [];
+    document.getElementById('ov-incidents').textContent = Array.isArray(items) ? items.length : '–';
+  } catch { document.getElementById('ov-incidents').textContent = '–'; }
+
+  // Channels count
+  try {
+    const ch = await api('GET', '/notifications/channels');
+    const items = ch.items || [];
+    document.getElementById('ov-channels').textContent = items.length;
+  } catch { document.getElementById('ov-channels').textContent = '–'; }
+
+  // Recent logs
+  try {
+    const lg = await api('GET', '/notifications/logs?limit=5');
+    const items = lg.items || [];
+    const tbody = document.getElementById('ov-logs-body');
+    if (!items.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No logs yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(l => `<tr>
+      <td><code>${l.event_type || '–'}</code></td>
+      <td>${badge(l.status === 'success' ? 'success' : 'failed', l.status || '–')}</td>
+      <td>${l.channel_id ? `<code>${l.channel_id.slice(0,8)}…</code>` : '–'}</td>
+      <td>${fmtDate(l.sent_at)}</td>
+    </tr>`).join('');
+  } catch {
+    document.getElementById('ov-logs-body').innerHTML = '<tr class="empty-row"><td colspan="4">Failed to load</td></tr>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INCIDENTS
+// ═══════════════════════════════════════════════════════════════
+function setIncidentFilter(f) {
+  incidentFilter = f;
+  document.getElementById('inc-filter-open').className = f === 'open' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('inc-filter-all').className = f === 'all' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  loadIncidents();
+}
+
+async function loadIncidents() {
+  const tbody = document.getElementById('inc-body');
+  tbody.innerHTML = '<tr class="empty-row"><td colspan="6"><span class="spinner"></span>Loading…</td></tr>';
+  try {
+    const path = incidentFilter === 'open' ? '/incidents?status=open' : '/incidents';
+    const data = await api('GET', path);
+    const items = data.items || data || [];
+    if (!Array.isArray(items) || !items.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No incidents found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(i => `<tr>
+      <td>${severityBadge(i.severity)}</td>
+      <td>${escHtml(i.summary || i.title || '–')}</td>
+      <td><code>${escHtml(i.source_type || '–')}</code></td>
+      <td>${fmtDate(i.created_at)}</td>
+      <td>${statusBadge(i.status)}</td>
+      <td>
+        ${i.status === 'open'
+          ? `<button class="btn btn-success btn-sm" onclick="resolveIncident('${i.id}')">Resolve</button>`
+          : '<span style="color:#a0aec0">–</span>'}
+      </td>
+    </tr>`).join('');
+  } catch {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Failed to load</td></tr>';
+  }
+}
+
+async function resolveIncident(id) {
+  try {
+    await api('POST', `/incidents/${id}/resolve`, {});
+    toast('Incident resolved');
+    loadIncidents();
+  } catch { /* toast shown by api() */ }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+async function loadNotifications() {
+  await Promise.all([loadChannels(), loadRules(), loadNotifLogs()]);
+}
+
+async function loadChannels() {
+  const tbody = document.getElementById('ch-body');
+  try {
+    const data = await api('GET', '/notifications/channels');
+    const items = data.items || [];
+    if (!items.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No channels yet</td></tr>'; return; }
+    tbody.innerHTML = items.map(c => `<tr>
+      <td>${escHtml(c.name)}</td>
+      <td>${badge('badge-'+c.channel_type, c.channel_type || c.type)}</td>
+      <td>
+        <label class="toggle">
+          <input type="checkbox" ${c.enabled ? 'checked' : ''} onchange="toggleChannel('${c.id}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteChannel('${c.id}')">Delete</button></td>
+    </tr>`).join('');
+  } catch { tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Failed to load</td></tr>'; }
+}
+
+async function createChannel() {
+  const name = document.getElementById('ch-name').value.trim();
+  const type = document.getElementById('ch-type').value;
+  const cfgRaw = document.getElementById('ch-config').value.trim();
+  if (!name) { toast('Name required', true); return; }
+  let config = {};
+  if (cfgRaw) { try { config = JSON.parse(cfgRaw); } catch { toast('Invalid JSON in config', true); return; } }
+  try {
+    await api('POST', '/notifications/channels', { name, channel_type: type, config, enabled: true });
+    toast('Channel created');
+    document.getElementById('ch-name').value = '';
+    document.getElementById('ch-config').value = '';
+    loadChannels();
+  } catch { /* toast shown */ }
+}
+
+async function toggleChannel(id, enabled) {
+  try { await api('PATCH', `/notifications/channels/${id}`, { enabled }); toast(`Channel ${enabled ? 'enabled' : 'disabled'}`); }
+  catch { loadChannels(); }
+}
+
+async function deleteChannel(id) {
+  if (!confirm('Delete this channel?')) return;
+  try { await api('DELETE', `/notifications/channels/${id}`); toast('Deleted'); loadChannels(); } catch { /* toast shown */ }
+}
+
+async function loadRules() {
+  const tbody = document.getElementById('rl-body');
+  try {
+    const data = await api('GET', '/notifications/rules?enabled_only=false');
+    const items = data.items || [];
+    if (!items.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No rules yet</td></tr>'; return; }
+    tbody.innerHTML = items.map(r => `<tr>
+      <td>${escHtml(r.name)}</td>
+      <td><code>${escHtml(r.event_type)}</code></td>
+      <td><code>${r.channel_id ? r.channel_id.slice(0,8)+'…' : '–'}</code></td>
+      <td>
+        <label class="toggle">
+          <input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleRule('${r.id}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteRule('${r.id}')">Delete</button></td>
+    </tr>`).join('');
+  } catch { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Failed to load</td></tr>'; }
+}
+
+async function createRule() {
+  const name = document.getElementById('rl-name').value.trim();
+  const event_type = document.getElementById('rl-event').value.trim();
+  const channel_id = document.getElementById('rl-channel').value.trim();
+  if (!name || !event_type || !channel_id) { toast('Name, Event Type, Channel ID required', true); return; }
+  try {
+    await api('POST', '/notifications/rules', { name, event_type, channel_id, enabled: true });
+    toast('Rule created');
+    document.getElementById('rl-name').value = '';
+    document.getElementById('rl-event').value = '';
+    document.getElementById('rl-channel').value = '';
+    loadRules();
+  } catch { /* toast shown */ }
+}
+
+async function toggleRule(id, enabled) {
+  try { await api('PATCH', `/notifications/rules/${id}`, { enabled }); toast(`Rule ${enabled ? 'enabled' : 'disabled'}`); }
+  catch { loadRules(); }
+}
+
+async function deleteRule(id) {
+  if (!confirm('Delete this rule?')) return;
+  try { await api('DELETE', `/notifications/rules/${id}`); toast('Deleted'); loadRules(); } catch { /* toast shown */ }
+}
+
+async function loadNotifLogs() {
+  const tbody = document.getElementById('log-body');
+  try {
+    const data = await api('GET', '/notifications/logs?limit=50');
+    const items = data.items || [];
+    if (!items.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No logs yet</td></tr>'; return; }
+    tbody.innerHTML = items.map(l => `<tr>
+      <td><code>${escHtml(l.event_type || '–')}</code></td>
+      <td>${badge(l.status === 'success' ? 'success' : 'failed', l.status || '–')}</td>
+      <td><code>${l.channel_id ? l.channel_id.slice(0,8)+'…' : '–'}</code></td>
+      <td>${fmtDate(l.sent_at)}</td>
+      <td><code style="font-size:11px">${escHtml(JSON.stringify(l.payload || {}).slice(0,60))}</code></td>
+    </tr>`).join('');
+  } catch { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Failed to load</td></tr>'; }
+}
+
+async function sendTestNotif() {
+  const event_type = document.getElementById('test-event').value.trim();
+  const payloadRaw = document.getElementById('test-payload').value.trim();
+  if (!event_type) { toast('Event type required', true); return; }
+  let payload = {};
+  if (payloadRaw) { try { payload = JSON.parse(payloadRaw); } catch { toast('Invalid JSON payload', true); return; } }
+  try {
+    const r = await api('POST', '/notifications/test', { event_type, payload });
+    toast(`Test sent — ${(r.logs || []).length} log(s)`);
+    loadNotifLogs();
+  } catch { /* toast shown */ }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCHEDULES
+// ═══════════════════════════════════════════════════════════════
+async function loadSchedules() {
+  const tbody = document.getElementById('sched-body');
+  tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><span class="spinner"></span>Loading…</td></tr>';
+  try {
+    const data = await api('GET', '/schedules');
+    const items = data.items || data || [];
+    if (!Array.isArray(items) || !items.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No schedules found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(s => `<tr>
+      <td><code>${escHtml(s.project_id ? s.project_id.slice(0,8)+'…' : '–')}</code></td>
+      <td>${escHtml(s.schedule_type || s.type || '–')}</td>
+      <td><code>${escHtml(s.cron_expr || s.cron || '–')}</code></td>
+      <td>${fmtDate(s.next_run)}</td>
+      <td>${fmtDate(s.last_run)}</td>
+      <td>
+        <label class="toggle">
+          <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleSchedule('${s.id}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="runScheduleNow('${s.id}')">Run Now</button>
+      </td>
+    </tr>`).join('');
+  } catch {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Failed to load</td></tr>';
+  }
+}
+
+async function toggleSchedule(id, enabled) {
+  try { await api('PATCH', `/schedules/${id}`, { enabled }); toast(`Schedule ${enabled ? 'enabled' : 'disabled'}`); }
+  catch { loadSchedules(); }
+}
+
+async function runScheduleNow(id) {
+  try { await api('POST', `/schedules/${id}/run`, {}); toast('Schedule triggered'); loadSchedules(); }
+  catch { /* toast shown */ }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WATCHERS
+// ═══════════════════════════════════════════════════════════════
+async function loadWatchers() {
+  const tbody = document.getElementById('watch-body');
+  tbody.innerHTML = '<tr class="empty-row"><td colspan="5"><span class="spinner"></span>Loading…</td></tr>';
+  try {
+    const data = await api('GET', '/watchers');
+    const items = data.items || data || [];
+    if (!Array.isArray(items) || !items.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No watchers found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(w => {
+      const st = w.status || 'inactive';
+      const isActive = st === 'active' || st === 'running';
+      return `<tr>
+        <td><code>${escHtml(w.project_id ? w.project_id.slice(0,8)+'…' : '–')}</code></td>
+        <td>${escHtml(w.watch_type || w.type || '–')}</td>
+        <td>${badge(isActive ? 'active' : 'inactive', st)}</td>
+        <td>${fmtDate(w.last_check)}</td>
+        <td class="btn-group">
+          <button class="btn btn-ghost btn-sm" onclick="checkWatcher('${w.id}')">Check Now</button>
+          ${isActive
+            ? `<button class="btn btn-danger btn-sm" onclick="setWatcherStatus('${w.id}','paused')">Stop</button>`
+            : `<button class="btn btn-success btn-sm" onclick="setWatcherStatus('${w.id}','active')">Resume</button>`
+          }
+        </td>
+      </tr>`;
+    }).join('');
+  } catch {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Failed to load</td></tr>';
+  }
+}
+
+async function checkWatcher(id) {
+  try { await api('POST', `/watchers/${id}/check`, {}); toast('Check triggered'); loadWatchers(); }
+  catch { /* toast shown */ }
+}
+
+async function setWatcherStatus(id, status) {
+  try { await api('PATCH', `/watchers/${id}/status`, { status }); toast(`Watcher ${status}`); loadWatchers(); }
+  catch { /* toast shown */ }
+}
+
+// ── XSS guard ────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (s == null) return '–';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

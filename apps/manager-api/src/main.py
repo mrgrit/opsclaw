@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, FastAPI, HTTPException, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 
 from packages.pi_adapter.runtime import PiRuntimeClient, PiRuntimeConfig
@@ -1315,6 +1317,16 @@ def create_app() -> FastAPI:
     app.include_router(create_admin_router())
     app.include_router(create_reports_router())
     app.include_router(create_notification_router())
+
+    _DASHBOARD = Path(__file__).parent.parent / "templates" / "dashboard.html"
+
+    @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)
+    def dashboard_ui():
+        return HTMLResponse(content=_DASHBOARD.read_text(encoding="utf-8"))
+
+    @app.get("/", include_in_schema=False)
+    def root_redirect():
+        return RedirectResponse(url="/ui")
 
     return app
 
