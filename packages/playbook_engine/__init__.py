@@ -184,6 +184,15 @@ _TOOL_BUILDERS: dict[str, Any] = {
 }
 
 
+# ── 분석형 Skill (bash 실행 후 LLM 해석이 필요한 종류) ──────────────────────
+# 이 Skill들은 run_script + analyze 두 단계로 실행된다.
+# bash로 원시 데이터를 수집 → SubAgent LLM이 해석 → analysis 반환
+_ANALYSIS_SKILLS: dict[str, str] = {
+    "analyze_wazuh_alert_burst": "Wazuh 알림 로그에서 비정상적인 알림 급증 패턴을 탐지하고, 주요 위협 유형과 대응 권고를 요약하라.",
+    "summarize_incident_timeline": "시스템 오류 로그를 분석하여 인시던트 타임라인을 재구성하고, 근본 원인 가설과 영향 범위를 요약하라.",
+}
+
+
 # ── 스크립트 해석기 ─────────────────────────────────────────────────────────
 
 def resolve_step_script(
@@ -352,18 +361,23 @@ def run_playbook_steps(
 
         # 스크립트 결정 — LLM이 아니라 Playbook 기반
         script = resolve_step_script(step, project_ctx)
+        # 분석형 Skill 여부 판단 (bash 수집 + LLM 해석 두 단계)
+        analysis_question = _ANALYSIS_SKILLS.get(ref) if step_type == "skill" else None
 
         if dry_run:
+            mode = "dry_run+analyze" if analysis_question else "dry_run"
             step_results.append({
                 "order": order, "name": name, "type": step_type, "ref": ref,
-                "script": script, "status": "dry_run", "exit_code": None,
-                "stdout": "", "stderr": "", "evidence_id": None, "duration_s": 0.0,
+                "script": script, "status": "dry_run", "mode": mode,
+                "exit_code": None, "stdout": "", "stderr": "",
+                "evidence_id": None, "duration_s": 0.0,
             })
             continue
 
         # ── 실행 ────────────────────────────────────────────────────────────
         t0 = time.monotonic()
         evidence_id = None
+        analysis = None
         try:
             result = dispatch_command_to_subagent(
                 project_id=project_id,
@@ -378,13 +392,27 @@ def run_playbook_steps(
             stderr = result.get("stderr", "")
             evidence_id = result.get("evidence_id")
             status = "ok" if exit_code == 0 else "failed"
+
+            # ── 분석형 Skill: bash 결과를 SubAgent LLM이 해석 ──────────────
+            if analysis_question and stdout and subagent_url:
+                from packages.a2a_protocol import A2AClient, A2AClientConfig
+                try:
+                    a2a = A2AClient(A2AClientConfig(base_url=subagent_url, timeout_s=150))
+                    ar = a2a.analyze(
+                        project_id=project_id,
+                        command_output=stdout,
+                        question=analysis_question,
+                    )
+                    analysis = ar.get("analysis", "")
+                except Exception as ae:
+                    analysis = f"[분석 실패: {ae}]"
+
         except Exception as exc:
             duration = time.monotonic() - t0
             exit_code = -1
             stdout = ""
             stderr = str(exc)
             status = "failed"
-            # 실패한 경우에도 evidence 기록
             try:
                 ev = create_minimal_evidence_record(
                     project_id=project_id,
@@ -398,14 +426,17 @@ def run_playbook_steps(
             except Exception:
                 pass
 
-        step_results.append({
+        step_result: dict[str, Any] = {
             "order": order, "name": name, "type": step_type, "ref": ref,
             "script": script, "status": status, "exit_code": exit_code,
             "stdout": stdout[:2000],  # 스냅샷 (full은 evidence에)
             "stderr": stderr[:500],
             "evidence_id": evidence_id,
             "duration_s": round(duration, 2),
-        })
+        }
+        if analysis is not None:
+            step_result["analysis"] = analysis
+        step_results.append(step_result)
 
         if status == "ok":
             steps_ok += 1

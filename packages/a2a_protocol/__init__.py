@@ -1,4 +1,5 @@
 import os
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -89,3 +90,87 @@ class A2AClient:
             raise
         except httpx.HTTPError as exc:
             raise A2AError(f"A2A run_script call failed: {exc}") from exc
+
+    def invoke_llm(
+        self,
+        project_id: str,
+        task: str,
+        context: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
+        timeout_s: int = 120,
+    ) -> dict[str, Any]:
+        """SubAgent LLM에 고수준 작업 지시를 보낸다."""
+        job_run_id = f"llm_{uuid.uuid4().hex[:12]}"
+        try:
+            resp = httpx.post(
+                f"{self.config.base_url}/a2a/invoke_llm",
+                json={
+                    "project_id": project_id,
+                    "job_run_id": job_run_id,
+                    "task": task,
+                    "context": context or {},
+                    "system_prompt": system_prompt,
+                    "timeout_s": timeout_s,
+                },
+                timeout=float(timeout_s + 15),
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPError as exc:
+            raise A2AError(f"A2A invoke_llm call failed: {exc}") from exc
+
+    def install_tool(
+        self,
+        project_id: str,
+        tool_name: str,
+        method: str = "apt",
+        package: str | None = None,
+        timeout_s: int = 120,
+    ) -> dict[str, Any]:
+        """SubAgent에게 도구 설치를 지시한다."""
+        job_run_id = f"install_{uuid.uuid4().hex[:12]}"
+        try:
+            resp = httpx.post(
+                f"{self.config.base_url}/a2a/install_tool",
+                json={
+                    "project_id": project_id,
+                    "job_run_id": job_run_id,
+                    "tool_name": tool_name,
+                    "method": method,
+                    "package": package,
+                    "timeout_s": timeout_s,
+                },
+                timeout=float(timeout_s + 15),
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPError as exc:
+            raise A2AError(f"A2A install_tool call failed: {exc}") from exc
+
+    def analyze(
+        self,
+        project_id: str,
+        command_output: str,
+        question: str,
+        context: dict[str, Any] | None = None,
+        timeout_s: int = 120,
+    ) -> dict[str, Any]:
+        """bash 출력을 SubAgent LLM이 분석하게 한다."""
+        job_run_id = f"analyze_{uuid.uuid4().hex[:12]}"
+        try:
+            resp = httpx.post(
+                f"{self.config.base_url}/a2a/analyze",
+                json={
+                    "project_id": project_id,
+                    "job_run_id": job_run_id,
+                    "command_output": command_output,
+                    "question": question,
+                    "context": context or {},
+                    "timeout_s": timeout_s,
+                },
+                timeout=float(timeout_s + 15),
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPError as exc:
+            raise A2AError(f"A2A analyze call failed: {exc}") from exc
