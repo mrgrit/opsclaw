@@ -229,9 +229,84 @@ def _send_to_channel(channel: dict, event_type: str, payload: dict) -> tuple[boo
             return False, str(exc)
 
     elif channel_type == "email":
-        # stub
-        print(f"[notification_service] EMAIL stub: event={event_type} payload={payload}")
-        return True, None
+        import smtplib
+        import json as _json
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+
+        smtp_host = config.get("smtp_host", "")
+        smtp_port = int(config.get("smtp_port", 587))
+        username = config.get("username", "")
+        password = config.get("password", "")
+        from_addr = config.get("from_addr", username)
+        to_addrs = config.get("to_addrs", [])
+        use_tls = config.get("use_tls", True)
+        subject_prefix = config.get("subject_prefix", "[OpsClaw]")
+
+        if not smtp_host:
+            return False, "email config missing 'smtp_host'"
+        if not to_addrs:
+            return False, "email config missing 'to_addrs'"
+
+        subject = f"{subject_prefix} {event_type}"
+        body = _json.dumps({"event_type": event_type, "payload": payload}, indent=2, ensure_ascii=False)
+
+        msg = MIMEMultipart()
+        msg["From"] = from_addr
+        msg["To"] = ", ".join(to_addrs)
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+
+        try:
+            if use_tls:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as smtp:
+                    smtp.starttls()
+                    if username:
+                        smtp.login(username, password)
+                    smtp.sendmail(from_addr, to_addrs, msg.as_string())
+            else:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as smtp:
+                    if username:
+                        smtp.login(username, password)
+                    smtp.sendmail(from_addr, to_addrs, msg.as_string())
+            return True, None
+        except smtplib.SMTPException as exc:
+            return False, str(exc)
+        except OSError as exc:
+            return False, str(exc)
+
+    elif channel_type == "slack":
+        import urllib.request
+        import urllib.error
+        import json as _json
+
+        bot_token = config.get("bot_token", "")
+        channel = config.get("channel", "")
+
+        if not bot_token:
+            return False, "slack config missing 'bot_token'"
+        if not channel:
+            return False, "slack config missing 'channel'"
+
+        text = f"*[OpsClaw] {event_type}*\n```{_json.dumps(payload, indent=2, ensure_ascii=False)}```"
+        body = _json.dumps({"channel": channel, "text": text}).encode("utf-8")
+        req = urllib.request.Request(
+            "https://slack.com/api/chat.postMessage",
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {bot_token}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = _json.loads(resp.read().decode("utf-8"))
+                if result.get("ok"):
+                    return True, None
+                return False, result.get("error", "slack api error")
+        except (urllib.error.URLError, OSError) as exc:
+            return False, str(exc)
 
     else:  # 'log' or unknown
         print(f"[notification_service] LOG: event={event_type} channel={channel.get('name')} payload={payload}")
