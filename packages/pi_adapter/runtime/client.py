@@ -134,12 +134,10 @@ class PiRuntimeClient:
             command.extend(tool_args.cli_args)
 
         env = os.environ.copy()
-        # Ensure nvm-installed pi is findable
+        # Ensure pi is findable regardless of install location (nvm or npm-global)
         nvm_bin = os.path.expanduser("~/.nvm/versions/node/v22.22.1/bin")
-        env["PATH"] = nvm_bin + ":" + env.get("PATH", "")
-        env["OPSCLAW_PI_PROVIDER"] = provider
-        env["OPSCLAW_PI_BASE_URL"] = profile.base_url
-        env["OPSCLAW_PI_API_KEY"] = profile.api_key
+        npm_global_bin = os.path.expanduser("~/.npm-global/bin")
+        env["PATH"] = nvm_bin + ":" + npm_global_bin + ":" + env.get("PATH", "")
 
         working_dir = profile.working_dir or None
 

@@ -30,7 +30,7 @@ def _int_env(name: str, default: int) -> int:
 
 
 DEFAULT_PROVIDER = _env("OPSCLAW_PI_PROVIDER", "ollama")
-DEFAULT_BASE_URL = _env("OPSCLAW_PI_BASE_URL", "http://211.170.162.139:10534/v1")
+DEFAULT_BASE_URL = _env("OPSCLAW_PI_BASE_URL", "")
 DEFAULT_API_KEY = _env("OPSCLAW_PI_API_KEY", "ollama")
 DEFAULT_TIMEOUT_S = _int_env("OPSCLAW_PI_DEFAULT_TIMEOUT_S", 120)
 _NVM_PI = os.path.expanduser("~/.nvm/versions/node/v22.22.1/bin/pi")
