@@ -4,7 +4,7 @@ services:
     image: postgres:15
     environment:
       POSTGRES_USER: opsclaw
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: opsclaw
       POSTGRES_DB: opsclaw
     ports:
       - "5432:5432"
