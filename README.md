@@ -64,11 +64,11 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M10 | Notification & Alerting — webhook/rule-based event routing | ✅ 완료 |
 | M11 | Integration Fixes — pi adapter, ToolBridge, A2A LLM 호출 수정, subagent 실 배포 | ✅ 완료 |
 | M12 | Real-System Operation Test — secu/web/siem 연결, nftables 설정, 실운영 문제 발굴 | ✅ 완료 |
-| M13 | Operational Hardening — Bootstrap, Playbook API, dispatch LLM 변환, pi wake-up 자동화 | 🔲 예정 |
+| M13 | Operational Hardening — Bootstrap, Playbook API, dispatch LLM 변환, pi wake-up 자동화 | ✅ 완료 |
 
 ---
 
-## 4. 현재 구현 상태 (M12 기준)
+## 4. 현재 구현 상태 (M13 기준)
 
 ### 구현 완료
 
@@ -166,17 +166,20 @@ OpsClaw의 기본 구조는 아래와 같다.
 - a2a/run_script 직접 dispatch 정상 동작 확인
 - 실운영 테스트 통해 M13 개발 대상 7개 문제 발굴
 
-### 아직 남아 있는 것 (M13 예정)
+**Operational Hardening (M13)**
+- Playbook CRUD API: `POST /playbooks`, `PUT /playbooks/{id}`, `DELETE /playbooks/{id}`, `POST /playbooks/{id}/steps`
+- Bootstrap 재작성: `deploy/bootstrap/install.sh` — git clone 기반 실제 subagent-runtime 설치, health check 자동 수행, `/var/log/opsclaw-bootstrap.log` 기록
+- Bootstrap SSH 인증: sshpass 제거 → paramiko 기반 패스워드/키 인증 (`POST /assets/{id}/bootstrap` body에 `ssh_pass` 지원)
+- dispatch LLM 변환: `mode` 필드 (auto/shell/adhoc). auto 모드에서 한글/자연어 자동 감지 → LLM으로 bash script 변환 후 실행
+- pi wake-up 자동화: timeout/빈응답 시 최대 2회 재시도, `wake up!` 자동 전송
+- pi 기본 timeout: 120초 → 300초 (환경변수 `OPSCLAW_PI_DEFAULT_TIMEOUT_S` 으로 조절)
+- asset history 자동 기록: dispatch 완료 시 `history_service.ingest_event()` 자동 호출, `GET /assets/{id}/history` 조회 가능
+- asset `expected_subagent_port` 기본값: 8001 → 8002
 
-- Playbook 생성/수정/삭제 API (`POST /playbooks` 등)
-- Bootstrap SSH 인증 수정 (paramiko 교체)
-- Bootstrap script 표준화 (`deploy/bootstrap/install.sh`)
-- dispatch LLM 변환 파이프라인 (자연어 → shell script)
-- runtime/invoke 병렬 처리 및 timeout 개선
-- pi wake-up 자동화
-- asset history 자동 기록
-- master-service 기동 문제 해결
+### 아직 남아 있는 것
+
 - CI 파이프라인 확대
+- 인프라 구축 재개 (web/siem enp4s0 케이블 확인 후): Docker+JuiceShop+BunkerWeb(web), Wazuh(siem), Suricata IPS(secu)
 
 ---
 
