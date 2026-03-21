@@ -65,6 +65,13 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M11 | Integration Fixes — pi adapter, ToolBridge, A2A LLM 호출 수정, subagent 실 배포 | ✅ 완료 |
 | M12 | Real-System Operation Test — secu/web/siem 연결, nftables 설정, 실운영 문제 발굴 | ✅ 완료 |
 | M13 | Operational Hardening — Bootstrap, Playbook API, dispatch LLM 변환, pi wake-up 자동화 | ✅ 완료 |
+| M14 | Agent Role Clarity & Workflow — Master/Manager/SubAgent 역할 명확화, 완료보고서 자동 생성 | 🔲 예정 |
+| M15 | Platform Modes — 직접구동/Claude Code/Codex 모드 최적화, Master 역할 분리 | 🔲 예정 |
+| M16 | Web UI/Dashboard — 설정·에이전트 등록·메신저 연동 웹 UI | 🔲 예정 |
+| M17 | Pi Freeze Bug Fix — pi 멈춤 현상 근본 원인 분석 및 패치 | 🔲 예정 |
+| M18 | Proof of Work & Blockchain Reward — 작업증명, 블록체인 보상, Audit DB, 작업 Replay | 🔲 예정 |
+| M19 | Skill/Tool/Experience 실동작 검증 — 실질적 기능 검증 및 보완 구현 | 🔲 예정 |
+| M20 | User & Agent Manual — 사용자/에이전트용 운용 매뉴얼 완성 | 🔲 예정 |
 
 ---
 
@@ -262,4 +269,155 @@ PYTHONPATH=. python3 tools/dev/seed_loader.py --dry-run # 확인만
 
 README는 현재 구현 상태를 반영하는 대표 문서다.
 없는 기능을 완성된 것처럼 적지 않는다.
-M7(Batch/Continuous Execution) 이후는 **계획 범위**이지 현재 완료 기능이 아니다.
+M14 이후는 **계획 범위**이지 현재 완료 기능이 아니다.
+
+---
+
+## 9. 향후 개선 방향 (M14~M20)
+
+세부 수행 계획: [`docs/roadmap.md`](docs/roadmap.md)
+
+### M14 — Agent Role Clarity & Workflow
+
+에이전트 계층의 역할과 책임을 코드 수준에서 명확히 분리하고 end-to-end 검증한다.
+
+**핵심 흐름:**
+```
+사용자 요구사항
+  → Master: 요구사항 이해 → 전체 계획 수립 → Playbook 단위 분해 → 지시 프롬프트 생성
+  → Manager: Playbook 순서에 따라 도구 설치/코드 작성/설정 등 작업 계획 수행
+  → SubAgent: 각 시스템에서 명령 실행 → 결과 Manager에게 반환
+  → Manager: 결과 확인 → 다음 작업 전달 또는 오류 처리
+  → Master: Playbook 단위 작업 검수 → 완료보고서(메타데이터, 작업내역, 이슈, 다음작업 참고사항) 생성
+  → 다음 유사 Playbook 생성 시 완료보고서 참조하여 동일 방식 적용
+```
+
+**주요 TODO:**
+- Master 지시 프롬프트 생성 엔진 구현
+- Manager 작업 계획 실행 루프 정형화 (tool install → code → config → validate)
+- Playbook 완료보고서 자동 생성 (`POST /projects/{id}/completion-report`)
+- 완료보고서 DB 저장 및 다음 Playbook 생성 시 RAG 참조 연동
+- end-to-end 시나리오 테스트 (신규 시스템 온보딩 ~ 작업 완료 ~ 보고서)
+
+---
+
+### M15 — Platform Modes
+
+OpsClaw를 구동하는 방식에 따라 Master 역할이 달라진다. 두 모드를 명시적으로 지원한다.
+
+**Mode A — 직접구동 (Native Master):**
+- 사용자가 Web UI 또는 API로 작업 요청
+- OpsClaw 내장 Master Agent(LLM)가 계획 수립 및 Manager 지시
+
+**Mode B — AI-Driven (External Master):**
+- Claude Code, Codex, Claude Co-work 등 외부 AI가 Master 역할 수행
+- 사용자가 대략적인 요청을 외부 AI에게 전달
+- 외부 AI가 OpsClaw Manager API를 직접 호출하여 작업 오케스트레이션
+- OpsClaw는 실행 control-plane 역할에 집중
+
+**주요 TODO:**
+- Manager API에 `master_mode` 컨텍스트 필드 추가 (native / external)
+- External Master용 OpenAPI spec 정리 및 LLM-friendly 설명 추가
+- Claude Code용 CLAUDE.md 오케스트레이션 가이드 작성
+- Mode B용 system prompt 템플릿 제공
+
+---
+
+### M16 — Web UI/Dashboard
+
+현재 API 전용인 OpsClaw에 웹 기반 UI를 추가한다.
+
+**주요 기능:**
+- 에이전트(SubAgent) 등록/상태 모니터링
+- 프로젝트 생성, 상태 추적, evidence 조회
+- Playbook 목록/생성/편집
+- 알림 채널(Slack/Email/Webhook) 설정
+- RBAC 사용자/역할 관리
+- 작업 실행 이력 및 Replay 뷰어
+- 실시간 SubAgent 상태 대시보드
+
+**기술 스택 후보:** React + Vite / FastAPI 정적 서빙, WebSocket 실시간 업데이트
+
+---
+
+### M17 — Pi Freeze Bug Fix
+
+실운영에서 반복적으로 발생하는 pi 멈춤 현상의 근본 원인을 코드에서 찾아 패치한다.
+
+**조사 대상:**
+- `packages/pi_adapter/runtime/client.py` — httpx 스트리밍 응답 처리 로직
+- Ollama API 응답 지연/빈 청크 처리
+- 동시 요청 시 GPU 메모리 포화로 인한 응답 중단
+- 스트림 종료 신호 누락 시 무한 대기
+
+**주요 TODO:**
+- pi_adapter 응답 수신 로직 분석 및 재현 시나리오 작성
+- 스트림 chunk 타임아웃 세분화 (연결/첫응답/청크간격 분리)
+- Ollama keep-alive 및 연결 재사용 설정 검토
+- 패치 후 장시간 부하 테스트
+
+---
+
+### M18 — Proof of Work & Blockchain Reward
+
+에이전트가 수행한 작업에 대한 증명과 보상 체계를 도입한다.
+
+**개념:**
+- 각 SubAgent의 작업 수행 결과(evidence)를 블록체인에 기록 → 위변조 불가 작업증명
+- 작업량/품질 기반 보상 토큰 지급 (on-chain 또는 내부 포인트)
+- 작업 전체 내역 DB 저장: Audit 강화 및 책임 추적성
+- 웹 UI에서 작업 중계/Replay 기능
+
+**주요 TODO:**
+- 작업증명 데이터 구조 설계 (task_id, agent_id, evidence_hash, timestamp, signature)
+- 경량 블록체인 또는 분산 원장 연동 검토 (Hyperledger Fabric / 자체 Merkle chain)
+- `proof_of_work` 테이블 및 마이그레이션 추가
+- 보상 토큰 회계 서비스 구현
+- 작업 Replay API: `GET /projects/{id}/replay`
+- 웹 UI Replay 뷰어
+
+---
+
+### M19 — Skill/Tool/Experience 실동작 검증
+
+현재 DB에 등록된 Skill, Tool, Experience 레코드가 실제 코드에서 올바르게 동작하는지 검증하고 미동작 부분을 보완한다.
+
+> ※ OpsClaw의 Skill/Tool은 Claude의 skill과 다르다: OpsClaw의 Tool은 실행 가능한 shell 명령/스크립트 단위이고, Skill은 Tool 조합으로 특정 목적을 달성하는 절차 단위이다. Experience는 과거 작업 결과에서 추출한 패턴/교훈이다.
+
+**주요 TODO:**
+- `registry_service` composition engine end-to-end 실행 테스트
+- Skill 실행 시 required_tools 실제 tool 실행 여부 검증
+- Experience 생성 → 검색 → Playbook 생성 참조 전체 흐름 테스트
+- 미구현/미연결 부분 보완 구현
+- `GET /skills/{id}/execute` dry-run 모드 구현
+
+---
+
+### M20 — User & Agent Manual
+
+**사용자 매뉴얼:**
+- OpsClaw 설치 및 초기 설정 가이드
+- 작업 요청 방법 (Web UI / API / Claude Code를 통한 방법)
+- Playbook 작성 가이드
+- 알림/연동 설정 가이드
+- 트러블슈팅 FAQ
+
+**에이전트 운용 매뉴얼:**
+- SubAgent 신규 시스템 설치 가이드 (install.sh)
+- Master/Manager/SubAgent 프롬프트 작성 가이드
+- 커스텀 Skill/Tool/Playbook 추가 방법
+- A2A 프로토콜 연동 가이드
+
+---
+
+## 10. 개발 우선순위 요약
+
+| 우선순위 | 마일스톤 | 이유 |
+|---------|---------|------|
+| 1순위 | M17 (Pi Freeze) | 현재 실운영 가장 큰 장애 요인 |
+| 2순위 | M14 (Agent Workflow) | 핵심 기능 완성도, 나머지 모든 마일스톤의 기반 |
+| 3순위 | M19 (Skill/Tool 검증) | 이미 구현된 기능 실동작 확인, 기술 부채 해소 |
+| 4순위 | M15 (Platform Modes) | 외부 AI 연동 실용성 향상 |
+| 5순위 | M16 (Web UI) | 사용성 대폭 향상, 非개발자 접근성 |
+| 6순위 | M18 (Blockchain PoW) | 혁신적이나 구현 복잡도 높음 |
+| 7순위 | M20 (Manual) | M14~M19 완료 후 작성이 의미 있음 |
