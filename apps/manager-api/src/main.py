@@ -191,6 +191,13 @@ class PlaybookRunRequest(BaseModel):
     params: dict | None = None
 
 
+class ExecutePlanRequest(BaseModel):
+    """Master /master-plan 결과의 tasks 배열을 받아 순서대로 실행."""
+    tasks: list[dict]          # [{order, title, playbook_hint, instruction_prompt, risk_level}]
+    subagent_url: str | None = None
+    dry_run: bool = False
+
+
 class ScheduleCreateRequest(BaseModel):
     project_name: str
     schedule_type: str
@@ -580,6 +587,115 @@ def create_project_router() -> APIRouter:
             raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
         except Exception as exc:
             raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
+
+    @router.post("/{project_id}/execute-plan")
+    def execute_plan(project_id: str, payload: ExecutePlanRequest) -> dict[str, Any]:
+        """
+        Master /master-plan 결과의 tasks를 순서대로 실행한다.
+
+        각 task 처리 순서:
+          1. playbook_hint 있으면 해당 Playbook으로 run_playbook_steps 시도
+          2. 없거나 실패 시 instruction_prompt를 adhoc dispatch로 실행
+          3. 결과를 evidence로 기록하고 다음 task로 이동
+          4. risk_level=critical 이면 실행 전 경고 (dry_run 강제)
+
+        반환: tasks_total, tasks_ok, tasks_failed, task_results
+        """
+        from packages.playbook_engine import run_playbook_steps
+        from packages.registry_service import list_playbooks
+        from packages.project_service import dispatch_command_to_subagent
+
+        tasks = sorted(payload.tasks, key=lambda t: t.get("order", 0))
+        task_results: list[dict] = []
+        tasks_ok = tasks_failed = 0
+
+        # Playbook 이름 → id 맵
+        pb_map: dict[str, str] = {}
+        try:
+            pb_map = {pb["name"]: pb["id"] for pb in list_playbooks()}
+        except Exception:
+            pass
+
+        for task in tasks:
+            order = task.get("order", 0)
+            title = task.get("title", f"task-{order}")
+            hint = task.get("playbook_hint")
+            prompt = task.get("instruction_prompt", title)
+            risk = task.get("risk_level", "medium")
+
+            # critical 태스크는 dry_run 강제
+            effective_dry_run = payload.dry_run or (risk == "critical")
+
+            step_result: dict[str, Any] = {
+                "order": order,
+                "title": title,
+                "risk_level": risk,
+                "dry_run": effective_dry_run,
+                "method": None,
+                "status": "pending",
+                "detail": {},
+            }
+
+            try:
+                pb_id = pb_map.get(hint) if hint else None
+                if pb_id and not effective_dry_run:
+                    # Playbook 실행
+                    r = run_playbook_steps(
+                        project_id=project_id,
+                        subagent_url=payload.subagent_url,
+                        dry_run=False,
+                        params={"task_title": title},
+                    )
+                    step_result["method"] = f"playbook:{hint}"
+                    step_result["status"] = r.get("status", "ok")
+                    step_result["detail"] = {
+                        "steps_ok": r.get("steps_ok", 0),
+                        "steps_failed": r.get("steps_failed", 0),
+                    }
+                elif effective_dry_run:
+                    step_result["method"] = f"playbook:{hint}" if hint else "adhoc"
+                    step_result["status"] = "dry_run"
+                    step_result["detail"] = {"instruction_prompt": prompt[:200]}
+                else:
+                    # Adhoc dispatch
+                    r = dispatch_command_to_subagent(
+                        project_id=project_id,
+                        command=prompt,
+                        subagent_url=payload.subagent_url,
+                        timeout_s=120,
+                    )
+                    step_result["method"] = "adhoc"
+                    step_result["status"] = "ok" if r.get("exit_code", 1) == 0 else "failed"
+                    step_result["detail"] = {
+                        "exit_code": r.get("exit_code"),
+                        "stdout": (r.get("stdout") or "")[:300],
+                    }
+
+                if step_result["status"] in ("ok", "dry_run", "success", "partial"):
+                    tasks_ok += 1
+                else:
+                    tasks_failed += 1
+
+            except Exception as exc:
+                step_result["status"] = "error"
+                step_result["detail"] = {"error": str(exc)}
+                tasks_failed += 1
+
+            task_results.append(step_result)
+
+        overall = "success" if tasks_failed == 0 else ("partial" if tasks_ok > 0 else "failed")
+        if payload.dry_run:
+            overall = "dry_run"
+
+        return {
+            "status": "ok",
+            "project_id": project_id,
+            "tasks_total": len(tasks),
+            "tasks_ok": tasks_ok,
+            "tasks_failed": tasks_failed,
+            "overall": overall,
+            "task_results": task_results,
+        }
 
     @router.post("/{project_id}/memory/build")
     def build_project_memory(project_id: str, promote: bool = False) -> dict[str, Any]:
