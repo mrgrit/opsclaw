@@ -32,7 +32,7 @@ def _int_env(name: str, default: int) -> int:
 DEFAULT_PROVIDER = _env("OPSCLAW_PI_PROVIDER", "ollama")
 DEFAULT_BASE_URL = _env("OPSCLAW_PI_BASE_URL", "")
 DEFAULT_API_KEY = _env("OPSCLAW_PI_API_KEY", "ollama")
-DEFAULT_TIMEOUT_S = _int_env("OPSCLAW_PI_DEFAULT_TIMEOUT_S", 120)
+DEFAULT_TIMEOUT_S = _int_env("OPSCLAW_PI_DEFAULT_TIMEOUT_S", 300)
 _NVM_PI = os.path.expanduser("~/.nvm/versions/node/v22.22.1/bin/pi")
 DEFAULT_COMMAND = _env("OPSCLAW_PI_COMMAND", _NVM_PI if os.path.isfile(_NVM_PI) else "pi")
 DEFAULT_WORKING_DIR = _env("OPSCLAW_PI_WORKING_DIR", "")

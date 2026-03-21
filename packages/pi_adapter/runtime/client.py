@@ -141,14 +141,46 @@ class PiRuntimeClient:
 
         working_dir = profile.working_dir or None
 
-        completed = subprocess.run(
-            command,
-            text=True,
-            capture_output=True,
-            timeout=profile.timeout_s,
-            cwd=working_dir,
-            env=env,
-        )
+        # pi wake-up 자동 재시도: timeout 또는 빈 응답 시 최대 2회 재시도
+        MAX_RETRIES = 2
+        completed = None
+        last_exc: Exception | None = None
+
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                completed = subprocess.run(
+                    command,
+                    text=True,
+                    capture_output=True,
+                    timeout=profile.timeout_s,
+                    cwd=working_dir,
+                    env=env,
+                )
+                # pi가 응답은 했지만 stdout이 비어있으면 wake-up 후 재시도
+                if completed.stdout.strip() == "" and completed.returncode == 0 and attempt < MAX_RETRIES:
+                    import time
+                    time.sleep(3)
+                    continue
+                break
+            except subprocess.TimeoutExpired as exc:
+                last_exc = exc
+                if attempt < MAX_RETRIES:
+                    # wake-up 시도: 짧은 프롬프트로 pi 깨우기
+                    try:
+                        subprocess.run(
+                            [profile.pi_command, "--provider", provider, "--model", model,
+                             "--no-session", "-p", "wake up!"],
+                            text=True, capture_output=True, timeout=30, env=env,
+                        )
+                    except Exception:
+                        pass
+                    import time
+                    time.sleep(5)
+                else:
+                    raise
+
+        if completed is None:
+            raise last_exc  # type: ignore[misc]
 
         normalized = normalize_output(
             stdout=completed.stdout,

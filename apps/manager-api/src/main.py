@@ -22,6 +22,7 @@ from packages.asset_registry import (
 from packages.registry_service import (
     RegistryNotFoundError,
     explain_playbook,
+    get_playbook,
     get_playbook_by_name,
     get_playbook_steps,
     get_skill_by_name,
@@ -30,6 +31,8 @@ from packages.registry_service import (
     list_skills,
     list_tools,
     resolve_playbook,
+    upsert_playbook,
+    upsert_playbook_steps,
 )
 from packages.evidence_service import get_evidence_content, get_evidence_summary
 from packages.validation_service import (
@@ -176,6 +179,10 @@ class DispatchRequest(BaseModel):
     command: str
     subagent_url: str | None = None
     timeout_s: int = 30
+    mode: str = "auto"  # "auto" | "shell" | "adhoc"
+    # auto: shell 문법이면 그대로, 자연어면 LLM 변환
+    # shell: LLM 변환 없이 그대로 실행
+    # adhoc: 항상 LLM으로 자연어 → shell 변환 후 실행
 
 
 class PlaybookRunRequest(BaseModel):
@@ -494,13 +501,47 @@ def create_project_router() -> APIRouter:
 
     @router.post("/{project_id}/dispatch")
     def dispatch_project(project_id: str, payload: DispatchRequest) -> dict[str, Any]:
+        command = payload.command
+        needs_llm = False
+
+        if payload.mode == "adhoc":
+            needs_llm = True
+        elif payload.mode == "auto":
+            # 간단한 휴리스틱: 한글 포함 또는 공백 많으면 자연어로 판단
+            import re
+            has_korean = bool(re.search(r"[\uAC00-\uD7A3]", command))
+            looks_like_prose = len(command.split()) > 8 and not command.strip().startswith("#!")
+            needs_llm = has_korean or looks_like_prose
+
+        if needs_llm:
+            # LLM으로 자연어 → shell script 변환
+            try:
+                from packages.pi_adapter.runtime.client import invoke_llm
+                llm_result = invoke_llm(
+                    prompt=(
+                        f"다음 작업 지시를 실행 가능한 bash shell script로만 변환하라. "
+                        f"설명 없이 코드 블록 없이 스크립트만 출력하라.\n\n작업: {command}"
+                    ),
+                    system_prompt="You are a shell script generator. Output only valid bash script, no explanation, no markdown.",
+                )
+                converted = llm_result.get("content", "").strip()
+                # 마크다운 코드블록 제거
+                import re as _re
+                converted = _re.sub(r"^```(?:bash|sh)?\n?", "", converted)
+                converted = _re.sub(r"\n?```$", "", converted)
+                command = converted.strip() or command
+            except Exception:
+                pass  # 변환 실패 시 원본 명령 그대로 시도
+
         try:
             result = dispatch_command_to_subagent(
                 project_id=project_id,
-                command=payload.command,
+                command=command,
                 subagent_url=payload.subagent_url,
                 timeout_s=payload.timeout_s,
             )
+            result["original_command"] = payload.command
+            result["llm_converted"] = needs_llm
             return {"status": "ok", "result": result}
         except ProjectNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
@@ -664,7 +705,7 @@ def create_asset_router() -> APIRouter:
                 env=payload["env"],
                 mgmt_ip=payload["mgmt_ip"],
                 roles=payload.get("roles"),
-                expected_subagent_port=int(payload.get("expected_subagent_port", 8001)),
+                expected_subagent_port=int(payload.get("expected_subagent_port", 8002)),
                 auth_ref=payload.get("auth_ref"),
                 metadata=payload.get("metadata"),
             )
@@ -684,7 +725,7 @@ def create_asset_router() -> APIRouter:
                 env=payload["env"],
                 mgmt_ip=payload["mgmt_ip"],
                 roles=payload.get("roles"),
-                expected_subagent_port=int(payload.get("expected_subagent_port", 8001)),
+                expected_subagent_port=int(payload.get("expected_subagent_port", 8002)),
                 auth_ref=payload.get("auth_ref"),
                 metadata=payload.get("metadata"),
                 bootstrap=bool(payload.get("bootstrap", False)),
@@ -747,9 +788,10 @@ def create_asset_router() -> APIRouter:
 
         cfg = BootstrapConfig(
             ssh_user=payload.get("ssh_user", "root"),
+            ssh_pass=payload.get("ssh_pass"),
             ssh_port=int(payload.get("ssh_port", 22)),
             ssh_key_path=payload.get("ssh_key_path"),
-            subagent_port=int(payload.get("subagent_port", asset.get("expected_subagent_port") or 8001)),
+            subagent_port=int(payload.get("subagent_port", asset.get("expected_subagent_port") or 8002)),
         )
         mgmt_ip = str(asset.get("mgmt_ip", ""))
         if not mgmt_ip:
@@ -822,6 +864,83 @@ def create_registry_router() -> APIRouter:
     @router.get("/playbooks")
     def list_playbooks_endpoint(category: str | None = None, enabled: bool | None = None) -> dict[str, Any]:
         return {"items": list_playbooks(category=category, enabled=enabled)}
+
+    @router.post("/playbooks")
+    def create_playbook_endpoint(payload: dict) -> dict[str, Any]:
+        try:
+            pb = upsert_playbook(
+                name=payload["name"],
+                version=payload.get("version", "1.0"),
+                category=payload.get("category"),
+                description=payload.get("description"),
+                execution_mode=payload.get("execution_mode", "one_shot"),
+                default_risk_level=payload.get("default_risk_level", "medium"),
+                dry_run_supported=bool(payload.get("dry_run_supported", False)),
+                explain_supported=bool(payload.get("explain_supported", True)),
+                required_asset_roles=payload.get("required_asset_roles"),
+                failure_policy=payload.get("failure_policy"),
+                enabled=bool(payload.get("enabled", True)),
+                metadata=payload.get("metadata"),
+            )
+            if payload.get("steps"):
+                upsert_playbook_steps(pb["id"], payload["steps"])
+            return {"status": "ok", "playbook": pb}
+        except KeyError as exc:
+            raise HTTPException(status_code=422, detail={"message": f"Missing field: {exc}"}) from exc
+
+    @router.put("/playbooks/{playbook_id}")
+    def update_playbook_endpoint(playbook_id: str, payload: dict) -> dict[str, Any]:
+        try:
+            existing = get_playbook(playbook_id)
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        pb = upsert_playbook(
+            name=payload.get("name", existing["name"]),
+            version=payload.get("version", existing["version"]),
+            category=payload.get("category", existing.get("category")),
+            description=payload.get("description", existing.get("description")),
+            execution_mode=payload.get("execution_mode", existing.get("execution_mode", "one_shot")),
+            default_risk_level=payload.get("default_risk_level", existing.get("default_risk_level", "medium")),
+            dry_run_supported=bool(payload.get("dry_run_supported", existing.get("dry_run_supported", False))),
+            explain_supported=bool(payload.get("explain_supported", existing.get("explain_supported", True))),
+            required_asset_roles=payload.get("required_asset_roles", existing.get("required_asset_roles")),
+            failure_policy=payload.get("failure_policy", existing.get("failure_policy")),
+            enabled=bool(payload.get("enabled", existing.get("enabled", True))),
+            metadata=payload.get("metadata", existing.get("metadata")),
+        )
+        if payload.get("steps") is not None:
+            upsert_playbook_steps(pb["id"], payload["steps"])
+        return {"status": "ok", "playbook": pb}
+
+    @router.delete("/playbooks/{playbook_id}")
+    def delete_playbook_endpoint(playbook_id: str) -> dict[str, Any]:
+        try:
+            from packages.registry_service import delete_playbook
+            delete_playbook(playbook_id)
+            return {"status": "ok", "deleted": playbook_id}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    @router.post("/playbooks/{playbook_id}/steps")
+    def add_playbook_step_endpoint(playbook_id: str, payload: dict) -> dict[str, Any]:
+        try:
+            get_playbook(playbook_id)
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        try:
+            from packages.registry_service import add_playbook_step
+            step = add_playbook_step(
+                playbook_id=playbook_id,
+                step_order=int(payload["step_order"]),
+                step_type=payload["step_type"],
+                name=payload.get("name"),
+                ref_id=payload.get("ref_id"),
+                params=payload.get("params"),
+                on_failure=payload.get("on_failure", "stop"),
+            )
+            return {"status": "ok", "step": step}
+        except KeyError as exc:
+            raise HTTPException(status_code=422, detail={"message": f"Missing field: {exc}"}) from exc
 
     @router.get("/playbooks/{playbook_id}")
     def get_playbook_endpoint(playbook_id: str) -> dict[str, Any]:

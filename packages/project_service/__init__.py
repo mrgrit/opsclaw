@@ -777,6 +777,38 @@ def dispatch_command_to_subagent(
         database_url=database_url,
     )
 
+    # asset history 자동 기록 — subagent_url에서 asset 찾아서 기록
+    try:
+        from packages.history_service import ingest_event as _ingest_event
+        # project에 연결된 asset 조회
+        _asset_id: str | None = None
+        with get_connection(database_url) as _conn:
+            with _conn.cursor() as _cur:
+                _cur.execute(
+                    "SELECT asset_id FROM project_assets WHERE project_id=%s LIMIT 1",
+                    (project_id,),
+                )
+                row = _cur.fetchone()
+                if row:
+                    _asset_id = row[0]
+        if _asset_id:
+            _ingest_event(
+                project_id=project_id,
+                event={
+                    "type": "dispatch",
+                    "asset_id": _asset_id,
+                    "subagent_url": target_url,
+                    "command": command[:500],
+                    "exit_code": result.exit_code,
+                    "status": result.status,
+                    "job_run_id": job_run_id,
+                    "evidence_id": evidence["id"],
+                },
+                database_url=database_url,
+            )
+    except Exception:
+        pass  # history 기록 실패가 dispatch를 막으면 안 됨
+
     return {
         "project_id": project_id,
         "job_run_id": job_run_id,

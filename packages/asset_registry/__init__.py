@@ -40,7 +40,7 @@ def create_asset(
     env: str,
     mgmt_ip: str,
     roles: list | None = None,
-    expected_subagent_port: int = 8001,
+    expected_subagent_port: int = 8002,
     auth_ref: str | None = None,
     metadata: dict | None = None,
     database_url: str | None = None,
@@ -168,7 +168,7 @@ def resolve_target_from_asset(
 ) -> dict[str, Any]:
     """Ping subagent endpoint, upsert target record, update asset status."""
     asset = get_asset(asset_id, database_url)
-    port = asset.get("expected_subagent_port") or 8001
+    port = asset.get("expected_subagent_port") or 8002
     mgmt_ip = str(asset["mgmt_ip"])
     base_url = f"http://{mgmt_ip}:{port}"
 
@@ -230,7 +230,7 @@ def check_asset_health(
 ) -> dict[str, Any]:
     """Ping subagent /health, update asset status, return result."""
     asset = get_asset(asset_id, database_url)
-    port = asset.get("expected_subagent_port") or 8001
+    port = asset.get("expected_subagent_port") or 8002
     mgmt_ip = str(asset["mgmt_ip"])
     base_url = f"http://{mgmt_ip}:{port}"
 
@@ -264,7 +264,7 @@ def onboard_asset(
     env: str,
     mgmt_ip: str,
     roles: list | None = None,
-    expected_subagent_port: int = 8001,
+    expected_subagent_port: int = 8002,
     auth_ref: str | None = None,
     metadata: dict | None = None,
     bootstrap: bool = False,
