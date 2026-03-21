@@ -1,7 +1,10 @@
 # OpsClaw
 
 OpsClaw는 **pi runtime 기반 정보시스템 운영/보안 작업 오케스트레이션 플랫폼**이다.
-pi를 단순히 호출하는 보조 도구가 아니라, **pi를 실행 런타임으로 사용하고 OpsClaw가 control‑plane을 담당하는 구조**를 목표로 한다.
+Claude Code로 OpsClaw를 실행시키고 작업을 시킬 수 있다. 
+User가 대충 쓴 작업요청도 Mater Agent인 Claude Code가 명석하게 계획을 짜고 작업을 성공시킬 수 있는 프롬프트로 작업을 시킨다.
+내부망 전용으로 활요하고자 한다면 Claude Code만 오픈모델로 바꾸면 된다. 
+현재 완전히 폐쇄망 작업을 고려하여 Manager Agent, Sub Agent는 gpt-oss:120b, qwen3:32b, gtp-oss:20b, qwen3:8b 등 GPU에 맞는 모델을 사용할 수 있다. 
 
 프로젝트의 핵심 목적은 자연어 요청을 내부망 운영 작업으로 바로 흘려보내는 것이 아니라,
 그 요청을 **프로젝트 단위로 접수하고**, **단계별 상태 전이(plan → execute → validate → report → close)** 로 관리하며,
@@ -18,6 +21,7 @@ OpsClaw는 다음 상황을 해결하기 위해 설계되었다.
 - 실행 결과를 stdout/stderr 감상이 아니라 evidence/report 로 남기고 싶다.
 - 신규 업무를 코어 수정이 아니라 asset / skill / playbook 추가 중심으로 수용하고 싶다.
 - 장기적으로 approval, policy, history‑aware retrieval, continuous watch 모드까지 확장하고 싶다.
+- 반복/정기적인 정보시스템 작업은 Playbook 기반으로 LLM이 함부로 창의적인 작업을 통제한다.
 
 OpsClaw는 이 목표를 위해 다음 철학을 따른다.
 
@@ -58,10 +62,13 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M8 | History/Experience/Retrieval — 4-layer memory, task_memory, experience promotion, FTS retrieval | ✅ 완료 |
 | M9 | RBAC, Audit, Monitoring, Reporting, Backup | ✅ 완료 |
 | M10 | Notification & Alerting — webhook/rule-based event routing | ✅ 완료 |
+| M11 | Integration Fixes — pi adapter, ToolBridge, A2A LLM 호출 수정, subagent 실 배포 | ✅ 완료 |
+| M12 | Real-System Operation Test — secu/web/siem 연결, nftables 설정, 실운영 문제 발굴 | ✅ 완료 |
+| M13 | Operational Hardening — Bootstrap, Playbook API, dispatch LLM 변환, pi wake-up 자동화 | 🔲 예정 |
 
 ---
 
-## 4. 현재 구현 상태 (M10 기준)
+## 4. 현재 구현 상태 (M12 기준)
 
 ### 구현 완료
 
@@ -140,15 +147,36 @@ OpsClaw의 기본 구조는 아래와 같다.
 
 **Notification & Alerting (M10)**
 - notification_service: create_channel / create_rule / fire_event / list_notification_logs
-- 채널 타입: webhook (HTTP POST), log (stdout), email (stub)
+- 채널 타입: webhook (HTTP POST), log (stdout), email (smtplib STARTTLS/SSL), Slack (Bot Token + chat.postMessage)
 - Rule-based 라우팅: event_type 매칭 + wildcard `*` + filter_conditions 지원
 - Integration hooks: watch_service.create_incident() → `incident.created`, scheduler_service.execute_due_schedule() → `schedule.failed`
 - Manager API: `/notifications/*` (12개 엔드포인트), API v0.10.0-m10
 
-### 아직 남아 있는 것
+**Integration Fixes & Real Deployment (M11)**
+- pi_adapter: subprocess 제거, httpx로 Ollama 직접 호출 (`http://192.168.0.105:11434/v1`)
+- ToolBridge.run_tool: subprocess 실행 구현, exit_code 127/124 처리
+- A2A invoke_llm / analyze 500 에러 수정
+- Email/Slack 알림 실 구현 (OldClaw 봇, #bot-cc 채널)
+- secu/web/siem 3개 시스템에 subagent-runtime 수동 배포 완료 (systemd, port 8002)
 
+**Real-System Operation Test (M12)**
+- opsclaw → secu/web/siem subagent 연결 검증
+- secu: nftables 설치/설정 완료 (내부망 게이트웨이 10.20.30.1, NAT, forward 룰)
+- runtime/invoke LLM 호출 → GPU 서버 정상 동작 확인
+- a2a/run_script 직접 dispatch 정상 동작 확인
+- 실운영 테스트 통해 M13 개발 대상 7개 문제 발굴
+
+### 아직 남아 있는 것 (M13 예정)
+
+- Playbook 생성/수정/삭제 API (`POST /playbooks` 등)
+- Bootstrap SSH 인증 수정 (paramiko 교체)
+- Bootstrap script 표준화 (`deploy/bootstrap/install.sh`)
+- dispatch LLM 변환 파이프라인 (자연어 → shell script)
+- runtime/invoke 병렬 처리 및 timeout 개선
+- pi wake-up 자동화
+- asset history 자동 기록
+- master-service 기동 문제 해결
 - CI 파이프라인 확대
-- playbook 기반 실제 명령 실행 자동화 (pi runtime 연동)
 
 ---
 
