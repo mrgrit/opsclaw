@@ -516,19 +516,28 @@ def create_project_router() -> APIRouter:
         if needs_llm:
             # LLM으로 자연어 → shell script 변환
             try:
-                from packages.pi_adapter.runtime.client import invoke_llm
-                llm_result = invoke_llm(
+                from packages.pi_adapter.runtime.client import PiRuntimeClient, PiRuntimeConfig
+                _pi = PiRuntimeClient(PiRuntimeConfig(default_role="manager"))
+                llm_result = _pi.invoke_model(
                     prompt=(
-                        f"다음 작업 지시를 실행 가능한 bash shell script로만 변환하라. "
-                        f"설명 없이 코드 블록 없이 스크립트만 출력하라.\n\n작업: {command}"
+                        f"Convert the following task instruction into a bash shell script that runs directly on the target Linux server.\n"
+                        f"Rules: Output ONLY the bash script. No explanation. No markdown. No API calls. Use standard Linux commands (df, free, ps, systemctl, apt, etc.).\n\n"
+                        f"Task: {command}"
                     ),
-                    system_prompt="You are a shell script generator. Output only valid bash script, no explanation, no markdown.",
+                    context={
+                        "system_prompt": (
+                            "You are a bash script generator for Linux servers. "
+                            "Given a task description, output ONLY the bash script to execute on the server. "
+                            "Use standard Linux CLI tools. Never call external APIs. No markdown fences. No explanation."
+                        ),
+                        "role": "manager",
+                    },
                 )
-                converted = llm_result.get("content", "").strip()
+                converted = llm_result.get("stdout", "").strip()
                 # 마크다운 코드블록 제거
                 import re as _re
-                converted = _re.sub(r"^```(?:bash|sh)?\n?", "", converted)
-                converted = _re.sub(r"\n?```$", "", converted)
+                converted = _re.sub(r"^```(?:bash|sh)?\n?", "", converted, flags=_re.MULTILINE)
+                converted = _re.sub(r"\n?```\s*$", "", converted, flags=_re.MULTILINE)
                 command = converted.strip() or command
             except Exception:
                 pass  # 변환 실패 시 원본 명령 그대로 시도

@@ -335,28 +335,41 @@ def add_playbook_step(
     name: str | None = None,
     ref_id: str | None = None,
     params: dict | None = None,
-    on_failure: str = "stop",
+    on_failure: str = "abort",
     database_url: str | None = None,
 ) -> dict[str, Any]:
-    step_id = f"ps_{uuid.uuid4().hex[:12]}"
     with _conn(database_url) as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # 기존 step_order 있으면 업데이트, 없으면 삽입
             cur.execute(
-                """
-                INSERT INTO playbook_steps
-                    (id, playbook_id, step_order, step_type, name, ref_id, params, on_failure)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (playbook_id, step_order) DO UPDATE SET
-                    step_type=EXCLUDED.step_type,
-                    name=EXCLUDED.name,
-                    ref_id=EXCLUDED.ref_id,
-                    params=EXCLUDED.params,
-                    on_failure=EXCLUDED.on_failure
-                RETURNING *
-                """,
-                (step_id, playbook_id, step_order, step_type, name,
-                 ref_id, _j(params or {}), on_failure),
+                "SELECT id FROM playbook_steps WHERE playbook_id=%s AND step_order=%s",
+                (playbook_id, step_order),
             )
+            existing = cur.fetchone()
+            if existing:
+                cur.execute(
+                    """
+                    UPDATE playbook_steps SET
+                        step_type=%s, name=%s, ref_id=%s,
+                        on_failure_action=%s, metadata=%s
+                    WHERE playbook_id=%s AND step_order=%s
+                    RETURNING *
+                    """,
+                    (step_type, name, ref_id, on_failure, _j(params or {}),
+                     playbook_id, step_order),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO playbook_steps
+                        (playbook_id, step_order, step_type, name, ref_id,
+                         on_failure_action, metadata)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s)
+                    RETURNING *
+                    """,
+                    (playbook_id, step_order, step_type, name,
+                     ref_id, on_failure, _j(params or {})),
+                )
             return dict(cur.fetchone())
 
 

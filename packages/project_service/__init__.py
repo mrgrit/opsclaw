@@ -794,16 +794,16 @@ def dispatch_command_to_subagent(
         if _asset_id:
             _ingest_event(
                 project_id=project_id,
-                event={
-                    "type": "dispatch",
+                event="dispatch",  # TEXT 컬럼 — 간단한 이벤트 타입 문자열
+                context={
                     "asset_id": _asset_id,
                     "subagent_url": target_url,
                     "command": command[:500],
                     "exit_code": result.exit_code,
                     "status": result.status,
-                    "job_run_id": job_run_id,
                     "evidence_id": evidence["id"],
                 },
+                # job_run_id는 job_runs FK라서 넘기지 않음
                 database_url=database_url,
             )
     except Exception:
