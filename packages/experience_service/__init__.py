@@ -142,7 +142,25 @@ def promote_to_experience(
                           "source_project_id": tm.get("project_id")}),
                 ),
             )
-            return dict(cur.fetchone())
+            exp = dict(cur.fetchone())
+
+    # retrieval 인덱스에 자동 등록
+    try:
+        from packages.retrieval_service import index_document
+        body = f"{tm.get('summary', '')}\noutcome: {outcome or ''}\ncategory: {category}"
+        index_document(
+            document_type="experience",
+            ref_id=exp["id"],
+            title=title,
+            body=body,
+            metadata={"category": category, "outcome": outcome,
+                      "source_project_id": tm.get("project_id")},
+            database_url=database_url,
+        )
+    except Exception:
+        pass
+
+    return exp
 
 
 def create_experience(
@@ -161,7 +179,24 @@ def create_experience(
                 "INSERT INTO experiences (category, title, summary, outcome, asset_id, metadata) VALUES (%s, %s, %s, %s, %s, %s) RETURNING *",
                 (category, title, summary, outcome, asset_id, Json(metadata or {})),
             )
-            return dict(cur.fetchone())
+            exp = dict(cur.fetchone())
+
+    # retrieval 인덱스에 자동 등록 — search_documents()로 검색 가능하게
+    try:
+        from packages.retrieval_service import index_document
+        body = f"{summary or ''}\noutcome: {outcome or ''}\ncategory: {category}"
+        index_document(
+            document_type="experience",
+            ref_id=exp["id"],
+            title=title,
+            body=body,
+            metadata={"category": category, "outcome": outcome},
+            database_url=database_url,
+        )
+    except Exception:
+        pass  # 인덱싱 실패가 experience 생성을 막지 않도록
+
+    return exp
 
 
 def list_experiences(category: str | None = None, limit: int = 20, database_url: str | None = None) -> list[dict]:
