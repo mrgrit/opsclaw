@@ -1,3 +1,5 @@
+import json
+import re
 from typing import Any
 
 from fastapi import APIRouter, FastAPI, HTTPException, status
@@ -79,6 +81,105 @@ def create_runtime_router() -> APIRouter:
 
 def create_review_router() -> APIRouter:
     router = APIRouter(prefix="/projects", tags=["review"])
+
+    @router.post("/{project_id}/master-plan")
+    def master_plan(project_id: str) -> dict[str, Any]:
+        """
+        Master가 프로젝트 요구사항을 분석하여 Playbook 단위 작업 계획을 생성한다.
+
+        반환:
+          - tasks: [{order, title, playbook_hint, instruction_prompt, risk_level}]
+          - summary: 전체 계획 요약
+          - similar_playbooks: DB에서 찾은 유사 Playbook 목록
+        """
+        try:
+            project = get_project_record(project_id)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+        request_text = project.get("request_text") or project.get("name") or ""
+
+        # 유사 Playbook 검색 (RAG — completion_reports 및 playbooks 참조)
+        similar_playbooks: list[dict] = []
+        try:
+            from packages.registry_service import list_playbooks
+            from packages.retrieval_service import search_documents
+            pb_docs = search_documents(request_text[:200], document_type=None, limit=5)
+            all_pbs = {pb["name"]: pb for pb in list_playbooks()}
+            similar_playbooks = [
+                {"name": d["title"], "id": d.get("ref_id"), "relevance": "retrieval"}
+                for d in pb_docs if d.get("document_type") == "playbook"
+            ]
+            # 키워드 직접 매칭 보완
+            kw = request_text.lower()
+            for pb_name, pb in all_pbs.items():
+                if any(w in kw for w in pb_name.replace("_", " ").split()):
+                    if not any(s["name"] == pb_name for s in similar_playbooks):
+                        similar_playbooks.append({"name": pb_name, "id": pb["id"], "relevance": "keyword"})
+        except Exception:
+            pass
+
+        # 유사 완료보고서 검색
+        past_reports: list[dict] = []
+        try:
+            from packages.retrieval_service import search_documents
+            report_docs = search_documents(request_text[:200], document_type="completion_report", limit=3)
+            past_reports = [{"title": d["title"], "body": (d.get("body") or "")[:300]} for d in report_docs]
+        except Exception:
+            pass
+
+        # LLM으로 작업 계획 생성
+        _pi = PiRuntimeClient(PiRuntimeConfig(default_role="master"))
+
+        similar_pb_text = "\n".join(f"- {p['name']}" for p in similar_playbooks) or "없음"
+        past_report_text = "\n".join(f"- {r['title']}: {r['body']}" for r in past_reports) or "없음"
+
+        prompt = (
+            f"당신은 IT 운영 자동화 시스템 OpsClaw의 Master Agent다.\n\n"
+            f"사용자 요구사항:\n{request_text}\n\n"
+            f"참고할 수 있는 기존 Playbook:\n{similar_pb_text}\n\n"
+            f"과거 유사 작업 보고서:\n{past_report_text}\n\n"
+            f"위 요구사항을 달성하기 위한 작업 계획을 JSON 배열로 반환하라.\n"
+            f"형식: {{\"summary\": \"<전체계획 1~2문장>\", \"tasks\": ["
+            f"{{\"order\": 1, \"title\": \"<작업제목>\", \"playbook_hint\": \"<기존플레이북명 또는 null>\", "
+            f"\"instruction_prompt\": \"<Manager에게 줄 지시문>\", \"risk_level\": \"<low|medium|high|critical>\"}}]}}\n"
+            f"JSON만 출력하라. 설명 불필요."
+        )
+
+        plan_tasks: list[dict] = []
+        plan_summary = ""
+        raw_output = ""
+        try:
+            result = _pi.invoke_model(prompt, {"role": "master"})
+            raw_output = result.get("stdout", "").strip()
+            # 마크다운 코드블록 제거
+            raw_output = re.sub(r"^```(?:json)?\n?", "", raw_output, flags=re.MULTILINE)
+            raw_output = re.sub(r"\n?```\s*$", "", raw_output, flags=re.MULTILINE)
+            m = re.search(r'\{.*\}', raw_output, re.DOTALL)
+            if m:
+                parsed = json.loads(m.group(0))
+                plan_tasks = parsed.get("tasks", [])
+                plan_summary = parsed.get("summary", "")
+        except (PiAdapterError, json.JSONDecodeError, Exception):
+            # LLM 실패 시 단순 단일 태스크 플랜 반환
+            plan_tasks = [{
+                "order": 1,
+                "title": request_text[:60],
+                "playbook_hint": similar_playbooks[0]["name"] if similar_playbooks else None,
+                "instruction_prompt": f"다음 작업을 수행하라: {request_text}",
+                "risk_level": "medium",
+            }]
+            plan_summary = f"요구사항 '{request_text[:60]}' 을 단일 태스크로 처리."
+
+        return {
+            "status": "ok",
+            "project_id": project_id,
+            "request_text": request_text,
+            "summary": plan_summary,
+            "tasks": plan_tasks,
+            "similar_playbooks": similar_playbooks,
+            "past_reports_referenced": len(past_reports),
+        }
 
     @router.post("/{project_id}/review")
     def review_project(project_id: str, req: ReviewRequest) -> dict[str, Any]:
