@@ -155,6 +155,12 @@ from packages.notification_service import (
     fire_event,
     list_notification_logs,
 )
+from packages.completion_report_service import (
+    create_completion_report,
+    get_completion_report,
+    list_completion_reports,
+    auto_generate_report,
+)
 
 
 class ProjectCreateRequest(BaseModel):
@@ -189,6 +195,16 @@ class PlaybookRunRequest(BaseModel):
     subagent_url: str | None = None
     dry_run: bool = False
     params: dict | None = None
+
+
+class CompletionReportRequest(BaseModel):
+    summary: str
+    outcome: str = "unknown"          # success|partial|failed|unknown
+    work_details: list | None = None
+    issues: list | None = None
+    next_steps: list | None = None
+    reviewer_id: str | None = None
+    auto: bool = False                # True면 evidence/report 자동 집계
 
 
 class ExecutePlanRequest(BaseModel):
@@ -696,6 +712,47 @@ def create_project_router() -> APIRouter:
             "overall": overall,
             "task_results": task_results,
         }
+
+    @router.post("/{project_id}/completion-report")
+    def create_completion_report_endpoint(project_id: str, payload: CompletionReportRequest) -> dict[str, Any]:
+        """
+        Playbook 작업 완료 후 완료보고서를 생성한다.
+        auto=True 이면 evidence/report를 자동 집계하여 생성한다.
+        생성 즉시 retrieval index에 등록되어 다음 유사 Playbook 생성 시 RAG 참조된다.
+        """
+        try:
+            if payload.auto:
+                report = auto_generate_report(project_id)
+            else:
+                project = get_project_record(project_id)
+                pb_rows = []
+                try:
+                    from packages.project_service import get_project_playbooks
+                    pb_rows = get_project_playbooks(project_id)
+                except Exception:
+                    pass
+                pb = pb_rows[0].get("playbook") if pb_rows else {}
+                report = create_completion_report(
+                    project_id=project_id,
+                    summary=payload.summary,
+                    outcome=payload.outcome,
+                    playbook_id=(pb or {}).get("id"),
+                    playbook_name=(pb or {}).get("name"),
+                    request_text=project.get("request_text"),
+                    work_details=payload.work_details,
+                    issues=payload.issues,
+                    next_steps=payload.next_steps,
+                    reviewer_id=payload.reviewer_id,
+                )
+            return {"status": "ok", "report": report}
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
+
+    @router.get("/{project_id}/completion-reports")
+    def list_project_completion_reports(project_id: str) -> dict[str, Any]:
+        return {"status": "ok", "reports": list_completion_reports(project_id=project_id)}
 
     @router.post("/{project_id}/memory/build")
     def build_project_memory(project_id: str, promote: bool = False) -> dict[str, Any]:
