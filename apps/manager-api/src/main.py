@@ -1646,6 +1646,40 @@ def create_notification_router() -> APIRouter:
     return router
 
 
+def create_completion_report_router() -> APIRouter:
+    """전역 완료보고서 조회 및 유사 보고서 검색 (RAG 참조용)."""
+    router = APIRouter(prefix="/completion-reports", tags=["completion-reports"])
+
+    @router.get("")
+    def list_reports(
+        playbook_name: str | None = None,
+        outcome: str | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        return {
+            "status": "ok",
+            "reports": list_completion_reports(
+                playbook_name=playbook_name, outcome=outcome, limit=limit
+            ),
+        }
+
+    @router.get("/search")
+    def search_reports(q: str, limit: int = 10) -> dict[str, Any]:
+        """완료보고서 FTS 검색 — master-plan RAG 참조에 활용."""
+        from packages.retrieval_service import search_documents
+        docs = search_documents(q, document_type="completion_report", limit=limit)
+        return {"status": "ok", "documents": docs}
+
+    @router.get("/{report_id}")
+    def get_report(report_id: str) -> dict[str, Any]:
+        report = get_completion_report(report_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail={"message": f"Report not found: {report_id}"})
+        return {"status": "ok", "report": report}
+
+    return router
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
@@ -1667,6 +1701,7 @@ def create_app() -> FastAPI:
     app.include_router(create_admin_router())
     app.include_router(create_reports_router())
     app.include_router(create_notification_router())
+    app.include_router(create_completion_report_router())
 
     _DASHBOARD = Path(__file__).parent.parent / "templates" / "dashboard.html"
 
