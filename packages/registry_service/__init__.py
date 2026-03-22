@@ -393,6 +393,7 @@ def resolve_playbook(playbook_id: str, database_url: str | None = None) -> dict[
             "name": step["name"] or ref,
             "ref": ref,
             "on_failure": step.get("on_failure_action", "abort"),
+            "metadata": step.get("metadata") or {},  # WORK-63: params/metadata 전달
         }
 
         if step_type == "skill" and ref:

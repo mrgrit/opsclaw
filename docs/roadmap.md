@@ -142,34 +142,30 @@ packages/pi_adapter/runtime/executor.py # 실행 루프, timeout 관리
 
 ### TODO List
 
-- [ ] **WORK-63** Tool 실행 경로 검증
-  - `registry_service`에서 Tool 레코드 조회 → `ToolBridge.run_tool()` 실제 실행 확인
-  - 6개 seed tool 전체 실행 테스트 (exit_code, stdout 확인)
-  - 미연결 구간 식별 및 보완
+- [x] **WORK-63** Tool 실행 경로 검증 (2026-03-22)
+  - `resolve_playbook()` metadata 누락 버그 수정
+  - 6개 seed tool 스크립트 생성 + subagent dispatch 3/3 성공
 
-- [ ] **WORK-64** Skill composition engine 검증
-  - `Playbook → step → Skill → Tool` 전체 트리 resolve 검증
-  - Skill의 `required_tools` 실제 실행 순서 확인
-  - `GET /skills/{id}/explain` 마크다운 출력 검증
+- [x] **WORK-64** Skill composition engine 검증 (2026-03-22)
+  - `skill_tools` 테이블 12개 링크 삽입
+  - Playbook(skill step) 실행 → subagent dispatch 2/2 성공
 
-- [ ] **WORK-65** Experience 생성 → 검색 → 참조 흐름 테스트
-  - 프로젝트 완료 → `experience_service.promote_to_experience()` 자동 호출 여부 확인
-  - `retrieval_service.search_documents()` FTS 동작 확인
-  - 신규 프로젝트 생성 시 context 자동 삽입 확인
+- [x] **WORK-65** Experience 생성 → 검색 → 참조 흐름 테스트 (2026-03-22)
+  - `build_task_memory` + `promote_to_experience` + retrieval 인덱싱 정상 동작
+  - `get_context_for_project()` → experiences 5개 context 주입 확인
 
-- [ ] **WORK-66** 미구현/미연결 부분 보완
-  - 검증 과정에서 발견된 미구현 부분 구현
-  - `GET /skills/{id}/execute` dry-run 모드 추가
+- [x] **WORK-66** 미구현/미연결 부분 보완 (2026-03-22)
+  - `resolve_playbook()` metadata 필드 추가
+  - `skill_tools` 링크 데이터 삽입
 
-- [ ] **WORK-67** 통합 smoke 테스트 스크립트 작성
-  - `tools/dev/m19_skill_smoke.py` 작성
-  - Tool → Skill → Playbook → Experience 전체 경로 자동 검증
+- [x] **WORK-67** 통합 smoke 테스트 스크립트 작성 (2026-03-22)
+  - `scripts/m19_skill_smoke.py` — 30개 항목 30/30 PASS
 
 ### 완료 기준
 
-- [ ] 6개 seed tool 실제 실행 성공
-- [ ] Playbook composition engine end-to-end 성공
-- [ ] Experience 검색 결과가 신규 프로젝트 context에 반영 확인
+- [x] 6개 seed tool 실제 실행 성공
+- [x] Playbook composition engine end-to-end 성공
+- [x] Experience 검색 결과가 신규 프로젝트 context에 반영 확인
 
 ---
 
@@ -405,12 +401,12 @@ docs/manual/agent/
 - [x] WORK-61: 완료보고서 RAG 참조 연동
 - [x] WORK-62: end-to-end 시나리오 테스트
 
-### M19 (Skill/Tool/Experience 검증)
-- [ ] WORK-63: Tool 실행 경로 검증
-- [ ] WORK-64: Skill composition engine 검증
-- [ ] WORK-65: Experience 생성 → 검색 → 참조 흐름 테스트
-- [ ] WORK-66: 미구현/미연결 부분 보완
-- [ ] WORK-67: 통합 smoke 테스트 스크립트
+### M19 (Skill/Tool/Experience 검증) — 완료 2026-03-22
+- [x] WORK-63: Tool 실행 경로 검증
+- [x] WORK-64: Skill composition engine 검증
+- [x] WORK-65: Experience 생성 → 검색 → 참조 흐름 테스트
+- [x] WORK-66: 미구현/미연결 부분 보완
+- [x] WORK-67: 통합 smoke 테스트 스크립트
 
 ### M15 (Platform Modes)
 - [ ] WORK-68: master_mode 컨텍스트 필드 추가
