@@ -161,6 +161,14 @@ from packages.completion_report_service import (
     list_completion_reports,
     auto_generate_report,
 )
+from packages.pow_service import (
+    generate_proof,
+    verify_chain,
+    get_agent_stats,
+    get_leaderboard,
+    get_project_pow,
+    get_project_replay,
+)
 
 
 class ProjectCreateRequest(BaseModel):
@@ -705,6 +713,28 @@ def create_project_router() -> APIRouter:
         if payload.dry_run:
             overall = "dry_run"
 
+        # ── M18: Task 완료 시 PoW 블록 자동 생성 (dry_run 제외) ─────────
+        if not payload.dry_run:
+            agent_id = payload.subagent_url or "local"
+            for sr in task_results:
+                if sr["status"] not in ("ok", "failed"):
+                    continue
+                detail = sr.get("detail") or {}
+                try:
+                    generate_proof(
+                        project_id=project_id,
+                        agent_id=agent_id,
+                        task_order=sr.get("order", 0),
+                        task_title=sr.get("title", ""),
+                        exit_code=detail.get("exit_code", 0 if sr["status"] == "ok" else 1),
+                        stdout=detail.get("stdout", ""),
+                        stderr=detail.get("stderr", ""),
+                        duration_s=sr.get("duration_s", 0.0),
+                        risk_level=sr.get("risk_level", "low"),
+                    )
+                except Exception:
+                    pass  # PoW 실패가 작업 결과에 영향 주지 않음
+
         return {
             "status": "ok",
             "project_id": project_id,
@@ -755,6 +785,17 @@ def create_project_router() -> APIRouter:
     @router.get("/{project_id}/completion-reports")
     def list_project_completion_reports(project_id: str) -> dict[str, Any]:
         return {"status": "ok", "reports": list_completion_reports(project_id=project_id)}
+
+    @router.get("/{project_id}/pow")
+    def project_pow_blocks(project_id: str) -> dict[str, Any]:
+        """프로젝트의 모든 PoW 블록 (M18)."""
+        blocks = get_project_pow(project_id)
+        return {"status": "ok", "total": len(blocks), "blocks": blocks}
+
+    @router.get("/{project_id}/replay")
+    def project_replay(project_id: str) -> dict[str, Any]:
+        """프로젝트 작업 타임라인 Replay (M18)."""
+        return {"status": "ok", **get_project_replay(project_id)}
 
     @router.post("/{project_id}/memory/build")
     def build_project_memory(project_id: str, promote: bool = False) -> dict[str, Any]:
@@ -1682,6 +1723,68 @@ def create_completion_report_router() -> APIRouter:
     return router
 
 
+def create_pow_router() -> APIRouter:
+    """M18 Proof of Work & Blockchain Reward 라우터."""
+    router = APIRouter(prefix="/pow", tags=["pow"])
+
+    @router.get("/blocks")
+    def list_pow_blocks(agent_id: str | None = None, limit: int = 50) -> dict[str, Any]:
+        """PoW 블록 목록. agent_id 필터 가능."""
+        from packages.project_service import get_connection
+        from psycopg2.extras import RealDictCursor
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                if agent_id:
+                    cur.execute(
+                        "SELECT * FROM proof_of_work WHERE agent_id=%s ORDER BY ts DESC LIMIT %s",
+                        (agent_id, limit),
+                    )
+                else:
+                    cur.execute(
+                        "SELECT * FROM proof_of_work ORDER BY ts DESC LIMIT %s",
+                        (limit,),
+                    )
+                blocks = [dict(r) for r in cur.fetchall()]
+        return {"status": "ok", "total": len(blocks), "blocks": blocks}
+
+    @router.get("/blocks/{pow_id}")
+    def get_pow_block(pow_id: str) -> dict[str, Any]:
+        from packages.project_service import get_connection
+        from psycopg2.extras import RealDictCursor
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM proof_of_work WHERE id=%s", (pow_id,))
+                row = cur.fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail={"message": f"PoW block not found: {pow_id}"})
+        return {"status": "ok", "block": dict(row)}
+
+    @router.get("/verify")
+    def verify_agent_chain(agent_id: str) -> dict[str, Any]:
+        """에이전트의 블록 체인 무결성 검증. ?agent_id=<url>"""
+        result = verify_chain(agent_id)
+        return {"status": "ok", "result": result}
+
+    @router.get("/leaderboard")
+    def pow_leaderboard(limit: int = 10) -> dict[str, Any]:
+        """보상 잔액 상위 에이전트 랭킹."""
+        return {"status": "ok", "leaderboard": get_leaderboard(limit)}
+
+    return router
+
+
+def create_rewards_router() -> APIRouter:
+    """M18 보상 조회 라우터."""
+    router = APIRouter(prefix="/rewards", tags=["rewards"])
+
+    @router.get("/agents")
+    def agent_rewards(agent_id: str) -> dict[str, Any]:
+        """에이전트 잔액 + 최근 보상 이력. ?agent_id=<url>"""
+        return {"status": "ok", **get_agent_stats(agent_id)}
+
+    return router
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
@@ -1704,6 +1807,8 @@ def create_app() -> FastAPI:
     app.include_router(create_reports_router())
     app.include_router(create_notification_router())
     app.include_router(create_completion_report_router())
+    app.include_router(create_pow_router())
+    app.include_router(create_rewards_router())
 
     _DASHBOARD = Path(__file__).parent.parent / "templates" / "dashboard.html"
 
