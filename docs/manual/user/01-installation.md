@@ -1,5 +1,71 @@
 # OpsClaw 설치 가이드
 
+## 방법 A — Claude Code 자동 설치 (권장)
+
+Linux + Claude Code만 있는 신규 시스템에서 가장 빠른 방법이다.
+
+### 사전 조건 (수동)
+
+Claude Code가 sudo 없이 처리할 수 없는 항목은 직접 설치해야 한다.
+
+```bash
+# 1. Docker 설치 (없으면)
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+# → 로그아웃 후 재로그인 (docker 그룹 반영)
+
+# 2. Python 3.11 설치 (없으면)
+sudo apt install -y python3.11 python3.11-venv
+
+# 3. 저장소 클론
+git clone https://github.com/mrgrit/opsclaw.git
+cd opsclaw
+```
+
+### Claude Code 실행 및 지시
+
+```bash
+claude   # opsclaw/ 디렉토리에서 실행
+```
+
+Claude Code 프롬프트에 아래 한 줄 입력:
+
+```
+CLAUDE.md를 읽고 이 시스템에 OpsClaw를 처음부터 구동해줘.
+Python venv 생성, 의존성 설치, PostgreSQL 기동, 마이그레이션 적용,
+서비스 실행, health check까지 완료해줘.
+```
+
+Claude Code가 자동으로 처리하는 항목:
+1. `.venv` 생성 및 pip 의존성 설치
+2. `.env.example` → `.env` 복사
+3. `docker compose -f docker/postgres-compose.yaml up -d`
+4. 마이그레이션 0001~0009 순서 적용
+5. `./dev.sh all` 로 3개 서비스 기동
+6. `/health` 엔드포인트 확인
+
+### Web UI 빌드 (선택)
+
+`dist/`는 gitignore 대상이므로 clone 후 별도 빌드 필요:
+
+```
+apps/web-ui/ 에서 npm install && npm run build 실행해줘
+```
+
+빌드 완료 후 `http://localhost:8000/app/` 에서 Web UI 접근 가능.
+
+### 주의사항
+
+| 항목 | 내용 |
+|------|------|
+| Ollama (LLM) | `.env`의 `OPSCLAW_PI_BASE_URL`을 GPU 서버 주소로 수정 필요 |
+| sudo 비밀번호 | docker compose 실행 시 필요 — Claude Code가 요청하면 입력 |
+| 방화벽 | 8000/8001/8002 포트 열려 있어야 함 |
+
+---
+
+## 방법 B — 수동 설치
+
 ## 요구사항
 
 | 항목 | 최소 사양 |
@@ -69,10 +135,11 @@ for f in migrations/00*.sql; do
 done
 ```
 
-마이그레이션 목록 (`0001` ~ `0008`):
+마이그레이션 목록 (`0001` ~ `0009`):
 - 0001: 기본 스키마 (projects, assets, evidence, ...)
 - 0002~0007: 기능별 테이블 추가
 - 0008: `projects.master_mode` 컬럼 (M15)
+- 0009: `proof_of_work`, `reward_ledger` 테이블 (M18)
 
 ---
 
