@@ -306,42 +306,40 @@ packages/pi_adapter/runtime/executor.py # 실행 루프, timeout 관리
 
 ### TODO List
 
-- [ ] **WORK-79** 작업증명 DB 설계 및 마이그레이션
+- [x] **WORK-79** 작업증명 DB 설계 및 마이그레이션
   - `proof_of_work` 테이블 추가
   - `reward_ledger` 테이블 추가 (에이전트별 토큰 잔액)
   - `migrations/0007_proof_of_work.sql` 작성
 
-- [ ] **WORK-80** 작업증명 서비스 구현
+- [x] **WORK-80** 작업증명 서비스 구현
   - `packages/pow_service/__init__.py`
   - `generate_proof(evidence)` — evidence → hash → block 생성
   - `verify_proof(pow_id)` — 블록 체인 검증
   - `get_agent_rewards(agent_id)` — 에이전트 보상 조회
 
-- [ ] **WORK-81** 블록체인 연동 검토 및 구현
-  - Option A: 자체 경량 Merkle Chain (외부 의존성 없음, 내부망 적합)
-  - Option B: Hyperledger Fabric 연동
-  - 결정 후 구현
+- [x] **WORK-81** 블록체인 연동 검토 및 구현
+  - Option A 선택: 자체 경량 Merkle Chain (외부 의존성 없음, 내부망 적합)
 
-- [ ] **WORK-82** 보상 토큰 회계 서비스
+- [x] **WORK-82** 보상 토큰 회계 서비스
   - 작업 완료 시 자동 보상 계산 (기본 10 + 품질 보너스)
   - 품질 기준: validation all_passed(+5), 재시도 없음(+3), 시간 내 완료(+2)
   - `GET /agents/{id}/rewards` API
 
-- [ ] **WORK-83** 작업 Replay API
+- [x] **WORK-83** 작업 Replay API
   - `GET /projects/{id}/replay` — 단계별 실행 타임라인 반환
   - 각 단계: timestamp, command, stdout, stderr, exit_code, evidence_hash
 
-- [ ] **WORK-84** 웹 UI 블록체인 뷰어
-  - 에이전트별 작업증명 목록
-  - 블록 체인 시각화
+- [x] **WORK-84** 웹 UI 블록체인 뷰어
+  - 에이전트별 작업증명 목록 (PoW Blocks 페이지)
+  - 블록 해시 + prev_hash 체인 표시
   - 보상 토큰 잔액 표시
 
 ### 완료 기준
 
-- [ ] SubAgent 작업 완료 시 자동 작업증명 생성 및 DB 저장
-- [ ] 블록 해시 검증으로 위변조 탐지 동작 확인
-- [ ] 에이전트 보상 토큰 자동 지급 및 잔액 조회 동작
-- [ ] 작업 Replay API에서 전체 단계 타임라인 반환
+- [x] SubAgent 작업 완료 시 자동 작업증명 생성 및 DB 저장
+- [x] 블록 해시 검증으로 위변조 탐지 동작 확인
+- [x] 에이전트 보상 토큰 자동 지급 및 잔액 조회 동작
+- [x] 작업 Replay API에서 전체 단계 타임라인 반환
 
 ---
 
@@ -375,14 +373,14 @@ docs/manual/agent/
 
 ### TODO List
 
-- [ ] **WORK-85** 사용자 매뉴얼 작성 (7개 파일)
-- [ ] **WORK-86** 에이전트 운용 매뉴얼 작성 (5개 파일)
-- [ ] **WORK-87** README.md 최종 정리 (M14~M19 완료 반영)
+- [x] **WORK-85** 사용자 매뉴얼 작성 (7개 파일)
+- [x] **WORK-86** 에이전트 운용 매뉴얼 작성 (5개 파일)
+- [x] **WORK-87** README.md 최종 정리 (M14~M19 완료 반영)
 
 ### 완료 기준
 
-- [ ] OpsClaw를 처음 접하는 운영자가 매뉴얼만으로 설치 및 첫 작업 실행 가능
-- [ ] 에이전트 운영자가 매뉴얼만으로 SubAgent 설치 및 커스텀 Playbook 추가 가능
+- [x] OpsClaw를 처음 접하는 운영자가 매뉴얼만으로 설치 및 첫 작업 실행 가능
+- [x] 에이전트 운영자가 매뉴얼만으로 SubAgent 설치 및 커스텀 Playbook 추가 가능
 
 ---
 
@@ -425,17 +423,17 @@ docs/manual/agent/
 - [x] WORK-78: WebSocket 실시간 업데이트
 
 ### M18 (Blockchain PoW)
-- [ ] WORK-79: 작업증명 DB 설계 및 마이그레이션
-- [ ] WORK-80: 작업증명 서비스 구현
-- [ ] WORK-81: 블록체인 연동 구현
-- [ ] WORK-82: 보상 토큰 회계 서비스
-- [ ] WORK-83: 작업 Replay API
-- [ ] WORK-84: 웹 UI 블록체인 뷰어
+- [x] WORK-79: 작업증명 DB 설계 및 마이그레이션
+- [x] WORK-80: 작업증명 서비스 구현
+- [x] WORK-81: 블록체인 연동 구현
+- [x] WORK-82: 보상 토큰 회계 서비스
+- [x] WORK-83: 작업 Replay API
+- [x] WORK-84: 웹 UI 블록체인 뷰어
 
 ### M20 (Manual)
-- [ ] WORK-85: 사용자 매뉴얼 (7개 파일)
-- [ ] WORK-86: 에이전트 운용 매뉴얼 (5개 파일)
-- [ ] WORK-87: README.md 최종 정리
+- [x] WORK-85: 사용자 매뉴얼 (7개 파일)
+- [x] WORK-86: 에이전트 운용 매뉴얼 (5개 파일)
+- [x] WORK-87: README.md 최종 정리
 
 ---
 

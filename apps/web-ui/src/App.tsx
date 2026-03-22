@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
 import Playbooks from './pages/Playbooks'
 import Replay from './pages/Replay'
+import PoW from './pages/PoW'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="projects" element={<Projects />} />
           <Route path="playbooks" element={<Playbooks />} />
           <Route path="replay" element={<Replay />} />
+          <Route path="pow" element={<PoW />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

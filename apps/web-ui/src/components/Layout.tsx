@@ -5,6 +5,7 @@ const nav = [
   { to: '/projects', label: 'Projects' },
   { to: '/playbooks', label: 'Playbooks' },
   { to: '/replay', label: 'PoW Replay' },
+  { to: '/pow', label: 'PoW Blocks' },
   { to: '/settings', label: 'Settings' },
 ]
 
