@@ -65,17 +65,17 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M11 | Integration Fixes — pi adapter, ToolBridge, A2A LLM 호출 수정, subagent 실 배포 | ✅ 완료 |
 | M12 | Real-System Operation Test — secu/web/siem 연결, nftables 설정, 실운영 문제 발굴 | ✅ 완료 |
 | M13 | Operational Hardening — Bootstrap, Playbook API, dispatch LLM 변환, pi wake-up 자동화 | ✅ 완료 |
-| M14 | Agent Role Clarity & Workflow — Master/Manager/SubAgent 역할 명확화, 완료보고서 자동 생성 | 🔲 예정 |
-| M15 | Platform Modes — 직접구동/Claude Code/Codex 모드 최적화, Master 역할 분리 | 🔲 예정 |
+| M14 | Agent Role Clarity & Workflow — Master/Manager/SubAgent 역할 명확화, 완료보고서 자동 생성 | ✅ 완료 |
+| M15 | Platform Modes — master_mode(native/external), External Master 가이드, Mode B 통합 테스트 | ✅ 완료 |
 | M16 | Web UI/Dashboard — 설정·에이전트 등록·메신저 연동 웹 UI | 🔲 예정 |
-| M17 | Pi Freeze Bug Fix — pi 멈춤 현상 근본 원인 분석 및 패치 | 🔲 예정 |
+| M17 | Pi Freeze Bug Fix — pi 멈춤 현상 근본 원인 분석 및 패치 | ✅ 완료 |
 | M18 | Proof of Work & Blockchain Reward — 작업증명, 블록체인 보상, Audit DB, 작업 Replay | 🔲 예정 |
-| M19 | Skill/Tool/Experience 실동작 검증 — 실질적 기능 검증 및 보완 구현 | 🔲 예정 |
-| M20 | User & Agent Manual — 사용자/에이전트용 운용 매뉴얼 완성 | 🔲 예정 |
+| M19 | Skill/Tool/Experience 실동작 검증 — 실질적 기능 검증 및 보완 구현 | ✅ 완료 |
+| M20 | User & Agent Manual — 사용자/에이전트용 운용 매뉴얼 완성 | ✅ 완료 |
 
 ---
 
-## 4. 현재 구현 상태 (M13 기준)
+## 4. 현재 구현 상태 (M20 기준)
 
 ### 구현 완료
 
@@ -183,8 +183,40 @@ OpsClaw의 기본 구조는 아래와 같다.
 - asset history 자동 기록: dispatch 완료 시 `history_service.ingest_event()` 자동 호출, `GET /assets/{id}/history` 조회 가능
 - asset `expected_subagent_port` 기본값: 8001 → 8002
 
+**Agent Role & Workflow (M14)**
+- Master 지시 프롬프트 생성 엔진 (`POST /master/generate-instruction`)
+- Manager execute-plan 엔드포인트 (`POST /projects/{id}/execute-plan`)
+- Playbook 완료보고서 자동 생성 (`POST /projects/{id}/completion-report`)
+- 완료보고서 RAG 참조 연동 (동일 요청 반복 시 과거 보고서 자동 참조)
+
+**Platform Modes (M15)**
+- `projects.master_mode` 컬럼 추가 (native | external)
+- External Master 가이드 (`docs/api/external-master-guide.md`)
+- Claude Code 오케스트레이션 가이드 (`CLAUDE.md`)
+- AI 에이전트 시스템 프롬프트 (`docs/agent-system-prompt.md`)
+- Mode B 통합 테스트 16/16 PASS
+
+**Pi Freeze Fix (M17)**
+- chunk timeout 세분화 (connect 10s / read 30s / write 10s)
+- Ollama keep_alive "10m" 적용
+- httpx connection pool (max_connections=5)
+- 부하 테스트 6/6 성공
+
+**Skill/Tool/Experience 검증 (M19)**
+- Tool/Skill/Playbook 실행 경로 end-to-end 검증
+- skill_tools 연결 테이블 12개 행 적재
+- Experience 생성 → FTS 검색 → 참조 흐름 정상 동작
+- 통합 smoke 테스트 30/30 PASS
+
+**User & Agent Manual (M20)**
+- 사용자 매뉴얼: `docs/manual/user/` (설치~트러블슈팅 7개 파일)
+- 에이전트 매뉴얼: `docs/manual/agent/` (SubAgent 설치~A2A 프로토콜 5개 파일)
+- AI 에이전트 시스템 프롬프트: `docs/agent-system-prompt.md`
+
 ### 아직 남아 있는 것
 
+- M16: Web UI/Dashboard (React + FastAPI)
+- M18: Proof of Work & Blockchain Reward
 - CI 파이프라인 확대
 - 인프라 구축 재개 (web/siem enp4s0 케이블 확인 후): Docker+JuiceShop+BunkerWeb(web), Wazuh(siem), Suricata IPS(secu)
 
@@ -194,27 +226,35 @@ OpsClaw의 기본 구조는 아래와 같다.
 
 ```
 apps/
-  manager-api/src/main.py   # FastAPI Manager control-plane API
-  master-service/src/main.py # Master review/replan/escalate API
-  subagent-runtime/src/main.py # SubAgent A2A 실행 런타임
+  manager-api/src/main.py      # FastAPI Manager control-plane API (:8000)
+  master-service/src/main.py   # Master review/replan/escalate API (:8001)
+  subagent-runtime/src/main.py # SubAgent A2A 실행 런타임 (:8002)
 
 packages/
-  project_service/           # project lifecycle, evidence, dispatch
-  asset_registry/            # asset CRUD, target resolve, onboard
-  evidence_service/          # evidence 조회/요약/gate
-  validation_service/        # validation check, run, status
-  master_review/             # review CRUD
-  registry_service/          # tool/skill/playbook CRUD, composition, explain
-  graph_runtime/             # 상태 전이, replan 허용 범위
-  a2a_protocol/              # A2AClient, A2ARunRequest/Result
-  bootstrap_service/         # SSH bootstrap
-  pi_adapter/                # pi runtime 연동 계층
+  project_service/             # project lifecycle, evidence, dispatch, execute-plan
+  asset_registry/              # asset CRUD, target resolve, onboard
+  evidence_service/            # evidence 조회/요약/gate
+  validation_service/          # validation check, run, status
+  master_review/               # review CRUD, instruction prompt 생성
+  registry_service/            # tool/skill/playbook CRUD, composition, explain
+  graph_runtime/               # 상태 전이, replan 허용 범위
+  a2a_protocol/                # A2AClient, A2ARunRequest/Result
+  bootstrap_service/           # SSH bootstrap
+  pi_adapter/                  # pi runtime 연동 계층 (Ollama httpx streaming)
+  completion_report_service/   # 완료보고서 생성/조회/RAG 참조
 
-migrations/                  # PostgreSQL 스키마 (4개 마이그레이션)
-seed/playbooks/              # 10개 playbook YAML 정의
-tools/dev/                   # 개발용 smoke / seed 스크립트
-deploy/bootstrap/            # install.sh (원격 SubAgent 설치)
-docs/                        # 마일스톤별 계획/완료 보고서
+migrations/                    # PostgreSQL 스키마 (0001~0008)
+seed/playbooks/                # 10개 playbook YAML 정의
+tools/dev/                     # 개발용 smoke / seed 스크립트
+scripts/                       # 통합 테스트 스크립트
+deploy/bootstrap/              # install.sh (원격 SubAgent 설치)
+docs/
+  api/                         # external-master-guide.md
+  manual/user/                 # 사용자 매뉴얼 (01~07)
+  manual/agent/                # 에이전트 매뉴얼 (01~05)
+  agent-system-prompt.md       # AI 에이전트 주입용 시스템 프롬프트
+  mX/                          # 마일스톤별 완료보고서
+CLAUDE.md                      # Claude Code 오케스트레이션 가이드
 ```
 
 ---
