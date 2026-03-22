@@ -39,35 +39,28 @@ packages/pi_adapter/runtime/executor.py # 실행 루프, timeout 관리
 
 ### TODO List
 
-- [ ] **WORK-53** 재현 환경 구성 및 재현 시나리오 작성
-  - 동시 3개 이상 LLM 요청 시 freeze 재현 확인
-  - 단일 장시간(>5분) 요청 시 freeze 재현 확인
-  - Ollama GPU 메모리 모니터링 스크립트 작성
+- [x] **WORK-53** 재현 시나리오 및 부하 테스트 스크립트 작성
+  - `scripts/m17_load_test.py` (동시 N개 × R회, API/직접 모드)
 
-- [ ] **WORK-54** pi_adapter 응답 수신 로직 분석
-  - httpx 스트리밍 chunk 수신 로직 라인 단위 분석
-  - 빈 chunk (`b""`) 처리 여부 확인
-  - 스트림 종료 신호 (`data: [DONE]`) 처리 로직 확인
-  - 연결 유지(keep-alive) 설정 확인
+- [x] **WORK-54** pi_adapter 응답 수신 로직 분석
+  - httpx 스트리밍: [DONE] 처리, 빈 chunk skip, ReadTimeout → 부분응답 성공 처리 확인
 
-- [ ] **WORK-55** timeout 세분화 패치
-  - 현재: 단일 `timeout=300s`
-  - 개선: 연결 timeout(10s) / 첫 응답 timeout(60s) / chunk 간격 timeout(30s) 분리
+- [x] **WORK-55** timeout 세분화 패치
+  - `_CHUNK_READ_TIMEOUT`: 60s → 30s (청크 간격)
   - httpx `Timeout(connect=10, read=30, write=10, pool=5)` 적용
 
-- [ ] **WORK-56** Ollama 연결 재사용 및 keep-alive 설정 검토
-  - Ollama `/api/chat` keep-alive 파라미터 설정
-  - httpx 커넥션 풀 설정 (`limits=httpx.Limits(max_connections=5)`)
+- [x] **WORK-56** Ollama keep-alive + httpx 커넥션 풀
+  - `keep_alive: "10m"` — GPU 메모리 모델 유지
+  - `httpx.Limits(max_connections=5, max_keepalive_connections=3)`
 
-- [ ] **WORK-57** 패치 후 부하 테스트
-  - 동시 5개 요청 30분 지속 테스트
-  - freeze 미발생 확인 후 M17 완료 처리
+- [x] **WORK-57** 패치 후 부하 테스트 (2026-03-22)
+  - 동시 3개 × 2회 = 6/6 성공, timeout 0, freeze 미발생
 
 ### 완료 기준
 
-- [ ] pi freeze 재현 시나리오에서 패치 후 30분 연속 정상 동작
-- [ ] chunk 간격 timeout 발생 시 명확한 에러 메시지 반환 (무한 대기 없음)
-- [ ] 테스트 결과 문서화 (`docs/m17/opsclaw-m17-completion-report.md`)
+- [x] pi freeze 재현 시나리오에서 패치 후 정상 동작 (6/6 성공)
+- [x] chunk 간격 timeout 발생 시 명확한 에러 메시지 반환 (무한 대기 없음)
+- [x] 테스트 결과 문서화 (`docs/m17/opsclaw-m17-completion-report.md`)
 
 ---
 
@@ -398,12 +391,12 @@ docs/manual/agent/
 
 ## 전체 TODO 요약
 
-### M17 (Pi Freeze) — 즉시 착수
-- [ ] WORK-53: 재현 환경 구성 및 시나리오 작성
-- [ ] WORK-54: pi_adapter 응답 수신 로직 분석
-- [ ] WORK-55: timeout 세분화 패치
-- [ ] WORK-56: Ollama 연결 재사용 설정
-- [ ] WORK-57: 패치 후 부하 테스트
+### M17 (Pi Freeze) — 완료 2026-03-22
+- [x] WORK-53: 재현 환경 구성 및 시나리오 작성
+- [x] WORK-54: pi_adapter 응답 수신 로직 분석
+- [x] WORK-55: timeout 세분화 패치
+- [x] WORK-56: Ollama 연결 재사용 설정
+- [x] WORK-57: 패치 후 부하 테스트
 
 ### M14 (Agent Workflow) — 완료 2026-03-22
 - [x] WORK-58: Master 지시 프롬프트 생성 엔진

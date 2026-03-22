@@ -21,9 +21,15 @@ from packages.pi_adapter.translators import build_prompt, normalize_output
 
 _FALLBACK_OLLAMA_URL = "http://192.168.0.105:11434/v1"
 
-# connect: TCP 연결 시간 / read: 스트리밍 청크 간격 최대 대기 (Ollama 멈춤 감지)
+# Timeout 세분화 (WORK-55)
+# connect: TCP 연결 시간
+# read: 스트리밍 청크 간격 — Ollama가 이 시간 동안 무응답이면 즉시 에러
+#   첫 청크: 모델 cold-start 포함 최대 60s
+#   이후 청크: 응답 중이면 30s 내 도착 (GPU 정상 동작 가정)
+#   → httpx read timeout은 청크별로 독립 적용되므로 30s로 설정해도
+#     첫 청크 이전 구간(모델 로딩)은 별도 wake-up 핑으로 보완
 _CONNECT_TIMEOUT = 10.0
-_CHUNK_READ_TIMEOUT = 60.0  # 첫 토큰 생성(모델 로딩 포함)까지 최대 60s
+_CHUNK_READ_TIMEOUT = 30.0  # 청크 간격 timeout (WORK-55: 60s → 30s)
 
 
 def _ollama_chat(
@@ -51,6 +57,7 @@ def _ollama_chat(
             {"role": "user", "content": user_prompt},
         ],
         "stream": True,
+        "keep_alive": "10m",  # WORK-56: 모델을 메모리에 10분 유지 (연속 호출 cold-start 방지)
     }
     headers = {"Authorization": f"Bearer {api_key or 'ollama'}"}
     timeout = httpx.Timeout(
@@ -59,23 +66,25 @@ def _ollama_chat(
         write=10.0,
         pool=5.0,
     )
+    limits = httpx.Limits(max_connections=5, max_keepalive_connections=3)  # WORK-56
 
     collected: list[str] = []
     try:
-        with httpx.stream("POST", url, json=payload, headers=headers, timeout=timeout) as resp:
-            resp.raise_for_status()
-            for line in resp.iter_lines():
-                if not line or line.strip() == "data: [DONE]":
-                    continue
-                if line.startswith("data: "):
-                    line = line[6:]
-                try:
-                    chunk = json.loads(line)
-                    delta = chunk["choices"][0]["delta"].get("content", "")
-                    if delta:
-                        collected.append(delta)
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
+        with httpx.Client(limits=limits, timeout=timeout) as client:
+            with client.stream("POST", url, json=payload, headers=headers) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if not line or line.strip() == "data: [DONE]":
+                        continue
+                    if line.startswith("data: "):
+                        line = line[6:]
+                    try:
+                        chunk = json.loads(line)
+                        delta = chunk["choices"][0]["delta"].get("content", "")
+                        if delta:
+                            collected.append(delta)
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
         result = "".join(collected)
         return result, "", 0
     except httpx.ReadTimeout:

@@ -1,0 +1,55 @@
+{
+  "test_mode": "api",
+  "concurrency": 3,
+  "rounds": 2,
+  "total": 6,
+  "ok": 6,
+  "timeout": 0,
+  "error": 0,
+  "avg_elapsed": 24.03,
+  "max_elapsed": 58.11,
+  "results": [
+    {
+      "idx": 2,
+      "status": "ok",
+      "exit_code": 0,
+      "elapsed": 10.65,
+      "preview": "Nginx와 Apache의 주요 차이는 다음과 같습니다:   1. **Concurrency Model**: Apache는 프로세스 기반(동시 요"
+    },
+    {
+      "idx": 1,
+      "status": "ok",
+      "exit_code": 0,
+      "elapsed": 15.55,
+      "preview": "The `top` command in Linux provides a real-time dynamic view of system processes"
+    },
+    {
+      "idx": 0,
+      "status": "ok",
+      "exit_code": 0,
+      "elapsed": 30.37,
+      "preview": "서버의 현재 시간은 2026. 03. 22. (일) 09:35:58 KST입니다."
+    },
+    {
+      "idx": 4,
+      "status": "ok",
+      "exit_code": 0,
+      "elapsed": 9.8,
+      "preview": "The `top` command in Linux provides a real-time dynamic view of system resource "
+    },
+    {
+      "idx": 5,
+      "status": "ok",
+      "exit_code": 0,
+      "elapsed": 19.71,
+      "preview": "Nginx와 Apache의 주요 차이는 Nginx가 이벤트 기반으로 설계되어 고로드 처리에 효율적이며, Apache는 프로세스 기반으로 동작하여"
+    },
+    {
+      "idx": 3,
+      "status": "ok",
+      "exit_code": 0,
+      "elapsed": 58.11,
+      "preview": "2026-03-22 14:30:45"
+    }
+  ]
+}
