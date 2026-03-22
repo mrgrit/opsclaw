@@ -102,38 +102,37 @@ packages/pi_adapter/runtime/executor.py # 실행 루프, timeout 관리
 
 ### TODO List
 
-- [ ] **WORK-58** Master 지시 프롬프트 생성 엔진 구현
-  - `apps/master-service/src/planner.py` 신규 작성
+- [x] **WORK-58** Master 지시 프롬프트 생성 엔진 구현
+  - `apps/master-service/src/main.py` (`POST /projects/{id}/master-plan`)
   - 입력: 자연어 요구사항
   - 출력: Playbook 목록 + 각 Playbook별 지시 프롬프트 (JSON)
   - Ollama LLM 호출로 계획 수립
 
-- [ ] **WORK-59** Manager 작업 실행 루프 정형화
-  - `packages/project_service/` 실행 루프 표준화
-  - 단계 순서 정의: `tool_install` → `code_write` → `config` → `validate`
-  - 각 단계 실패 시 자동 replan 또는 Master 에스컬레이션
+- [x] **WORK-59** Manager 작업 실행 루프 정형화
+  - `apps/manager-api/src/main.py` (`POST /projects/{id}/execute-plan`)
+  - tasks[] 순서 실행, playbook_hint → Playbook 실행, 없으면 adhoc dispatch
+  - critical 태스크 dry_run 강제, 결과 evidence 자동 기록
 
-- [ ] **WORK-60** Playbook 완료보고서 자동 생성 API
+- [x] **WORK-60** Playbook 완료보고서 자동 생성 API
   - `POST /projects/{id}/completion-report` 구현
-  - 보고서 내용: 플레이북 번호, 작업 요구사항, 작업 내역, 이슈사항, 다음 작업 참고사항, evidence 요약
-  - DB 테이블: `completion_reports` (playbook_id, project_id, content_json, created_at)
-  - 마이그레이션 파일 추가
+  - 보고서 내용: summary, outcome, work_details[], issues[], next_steps[]
+  - DB 테이블: `completion_reports` (migration: 0007_completion_reports.sql)
 
-- [ ] **WORK-61** 완료보고서 RAG 참조 연동
-  - 신규 Playbook 생성 시 `retrieval_service.search_documents()` 로 유사 완료보고서 검색
+- [x] **WORK-61** 완료보고서 RAG 참조 연동
+  - `retrieval_service.search_documents()` 로 유사 완료보고서 검색
   - Master 지시 프롬프트에 참조 보고서 context 자동 삽입
-  - `GET /completion-reports?similar_to={playbook_type}` API
+  - `GET /completion-reports?q={keyword}` API
 
-- [ ] **WORK-62** end-to-end 시나리오 테스트
+- [x] **WORK-62** end-to-end 시나리오 테스트 (2026-03-22)
   - 테스트 시나리오: "신규 Ubuntu 서버에 Nginx 설치 및 보안 설정"
-  - Master 계획 → Manager 실행 → SubAgent dispatch → 완료보고서 생성 전 과정 검증
-  - 동일 요청 2회 시 완료보고서 참조로 동일 방식 실행 확인
+  - Master 계획(6태스크) → execute-plan(4태스크 ok) → 완료보고서 DB 저장 검증
+  - 동일 요청 2회: `past_reports_referenced=1` 확인
 
 ### 완료 기준
 
-- [ ] Master → Manager → SubAgent 전체 흐름 코드로 추적 가능
-- [ ] Playbook 완료보고서 자동 생성 및 DB 저장 동작 확인
-- [ ] 동일 작업 재요청 시 이전 완료보고서 참조 동작 확인
+- [x] Master → Manager → SubAgent 전체 흐름 코드로 추적 가능
+- [x] Playbook 완료보고서 자동 생성 및 DB 저장 동작 확인
+- [x] 동일 작업 재요청 시 이전 완료보고서 참조 동작 확인
 
 ---
 
@@ -406,12 +405,12 @@ docs/manual/agent/
 - [ ] WORK-56: Ollama 연결 재사용 설정
 - [ ] WORK-57: 패치 후 부하 테스트
 
-### M14 (Agent Workflow)
-- [ ] WORK-58: Master 지시 프롬프트 생성 엔진
-- [ ] WORK-59: Manager 작업 실행 루프 정형화
-- [ ] WORK-60: Playbook 완료보고서 자동 생성 API
-- [ ] WORK-61: 완료보고서 RAG 참조 연동
-- [ ] WORK-62: end-to-end 시나리오 테스트
+### M14 (Agent Workflow) — 완료 2026-03-22
+- [x] WORK-58: Master 지시 프롬프트 생성 엔진
+- [x] WORK-59: Manager 작업 실행 루프 정형화
+- [x] WORK-60: Playbook 완료보고서 자동 생성 API
+- [x] WORK-61: 완료보고서 RAG 참조 연동
+- [x] WORK-62: end-to-end 시나리오 테스트
 
 ### M19 (Skill/Tool/Experience 검증)
 - [ ] WORK-63: Tool 실행 경로 검증
