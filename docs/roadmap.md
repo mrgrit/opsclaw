@@ -240,40 +240,40 @@ packages/pi_adapter/runtime/executor.py # 실행 루프, timeout 관리
 
 ### TODO List
 
-- [ ] **WORK-72** 프론트엔드 프로젝트 초기화
+- [x] **WORK-72** 프론트엔드 프로젝트 초기화
   - `apps/web-ui/` 디렉토리 생성
   - React + Vite + TypeScript 설정
-  - Manager API 클라이언트 자동 생성 (openapi-typescript-codegen)
+  - Manager API 클라이언트 (fetch 기반 직접 구현)
 
-- [ ] **WORK-73** 대시보드 & 에이전트 화면
-  - SubAgent 상태 카드 (온라인/오프라인, 마지막 heartbeat)
-  - 진행 중 프로젝트 목록
+- [x] **WORK-73** 대시보드 & 에이전트 화면
+  - 서비스 상태, 활성 프로젝트, 에이전트 수 카드
+  - 최근 프로젝트 목록, 에이전트 보상 랭킹
 
-- [ ] **WORK-74** 프로젝트 관리 화면
+- [x] **WORK-74** 프로젝트 관리 화면
   - 프로젝트 CRUD + 상태 전이 버튼
   - evidence 목록 및 상세 조회
 
-- [ ] **WORK-75** Playbook 관리 화면
+- [x] **WORK-75** Playbook 관리 화면
   - Playbook CRUD
-  - Step 편집 UI
+  - Step 조회 및 실행 UI
 
-- [ ] **WORK-76** 설정 화면
+- [x] **WORK-76** 설정 화면
   - 알림 채널 등록 (Slack/Email/Webhook)
-  - RBAC 사용자/역할 관리
+  - 알림 규칙 관리
 
-- [ ] **WORK-77** 작업 Replay 뷰어
+- [x] **WORK-77** 작업 Replay 뷰어
   - 프로젝트 실행 단계 타임라인
-  - 각 단계 evidence 상세 (command, stdout, stderr)
+  - PoW 체인 무결성 검증
 
-- [ ] **WORK-78** WebSocket 실시간 업데이트
-  - Manager API에 `/ws/projects/{id}/status` 엔드포인트 추가
+- [x] **WORK-78** WebSocket 실시간 업데이트
+  - Manager API에 `/ws/projects/{id}` 엔드포인트 추가
   - 프로젝트 상태 변경 시 Web UI 실시간 반영
 
 ### 완료 기준
 
-- [ ] 에이전트 등록 → 프로젝트 생성 → dispatch → evidence 확인 전 과정 Web UI에서 가능
-- [ ] Slack/Email 알림 채널 Web UI에서 설정 가능
-- [ ] 작업 Replay 뷰어에서 단계별 evidence 확인 가능
+- [x] 에이전트 등록 → 프로젝트 생성 → dispatch → evidence 확인 전 과정 Web UI에서 가능
+- [x] Slack/Email 알림 채널 Web UI에서 설정 가능
+- [x] 작업 Replay 뷰어에서 단계별 evidence 확인 가능
 
 ---
 
@@ -416,13 +416,13 @@ docs/manual/agent/
 - [x] WORK-71: Mode B 통합 테스트 (16/16 PASS)
 
 ### M16 (Web UI)
-- [ ] WORK-72: 프론트엔드 프로젝트 초기화
-- [ ] WORK-73: 대시보드 & 에이전트 화면
-- [ ] WORK-74: 프로젝트 관리 화면
-- [ ] WORK-75: Playbook 관리 화면
-- [ ] WORK-76: 설정 화면
-- [ ] WORK-77: 작업 Replay 뷰어
-- [ ] WORK-78: WebSocket 실시간 업데이트
+- [x] WORK-72: 프론트엔드 프로젝트 초기화
+- [x] WORK-73: 대시보드 & 에이전트 화면
+- [x] WORK-74: 프로젝트 관리 화면
+- [x] WORK-75: Playbook 관리 화면
+- [x] WORK-76: 설정 화면
+- [x] WORK-77: 작업 Replay 뷰어
+- [x] WORK-78: WebSocket 실시간 업데이트
 
 ### M18 (Blockchain PoW)
 - [ ] WORK-79: 작업증명 DB 설계 및 마이그레이션

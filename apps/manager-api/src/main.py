@@ -1,8 +1,11 @@
+import asyncio
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, HTTPException, status
+from fastapi import APIRouter, FastAPI, HTTPException, WebSocket, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from packages.pi_adapter.runtime import PiRuntimeClient, PiRuntimeConfig
@@ -1792,6 +1795,13 @@ def create_app() -> FastAPI:
         description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch, history/experience/retrieval, RBAC/audit/monitoring, notifications.",
     )
 
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://localhost:8000"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.include_router(create_health_router())
     app.include_router(create_runtime_router())
     app.include_router(create_project_router())
@@ -1810,6 +1820,24 @@ def create_app() -> FastAPI:
     app.include_router(create_pow_router())
     app.include_router(create_rewards_router())
 
+    @app.websocket("/ws/projects/{project_id}")
+    async def ws_project_status(websocket: WebSocket, project_id: str):
+        await websocket.accept()
+        last_stage = None
+        try:
+            while True:
+                try:
+                    project = get_project_record(project_id)
+                    stage = project.get("current_stage")
+                    if stage != last_stage:
+                        last_stage = stage
+                        await websocket.send_json({"stage": stage})
+                except Exception:
+                    break
+                await asyncio.sleep(2)
+        except Exception:
+            pass
+
     _DASHBOARD = Path(__file__).parent.parent / "templates" / "dashboard.html"
 
     @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)
@@ -1818,7 +1846,11 @@ def create_app() -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def root_redirect():
-        return RedirectResponse(url="/ui")
+        return RedirectResponse(url="/app/")
+
+    _WEB_UI_DIST = Path(__file__).parent.parent.parent.parent / "apps" / "web-ui" / "dist"
+    if _WEB_UI_DIST.exists():
+        app.mount("/app", StaticFiles(directory=str(_WEB_UI_DIST), html=True), name="web-ui")
 
     return app
 
