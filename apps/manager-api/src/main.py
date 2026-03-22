@@ -167,6 +167,7 @@ class ProjectCreateRequest(BaseModel):
     name: str
     request_text: str
     mode: str = "one_shot"
+    master_mode: str = "native"   # "native" | "external" (M15 Platform Modes)
 
 
 class RuntimePromptRequest(BaseModel):
@@ -357,6 +358,7 @@ def create_project_router() -> APIRouter:
                 name=payload.name,
                 request_text=payload.request_text,
                 mode=payload.mode,
+                master_mode=payload.master_mode,
             )
             return {"status": "ok", "project": project}
         except ProjectServiceError as exc:

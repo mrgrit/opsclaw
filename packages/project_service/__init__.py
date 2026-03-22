@@ -39,16 +39,17 @@ def create_project_record(
     name: str,
     request_text: str,
     mode: str = "one_shot",
+    master_mode: str = "native",
     database_url: str | None = None,
 ) -> dict[str, Any]:
     project_id = f"prj_{uuid.uuid4().hex[:12]}"
     sql = """
     INSERT INTO projects (
         id, name, request_text, requester_type, status, current_stage,
-        mode, priority, risk_level, summary
+        mode, master_mode, priority, risk_level, summary
     ) VALUES (
         %(id)s, %(name)s, %(request_text)s, %(requester_type)s, %(status)s,
-        %(current_stage)s, %(mode)s, %(priority)s, %(risk_level)s, %(summary)s
+        %(current_stage)s, %(mode)s, %(master_mode)s, %(priority)s, %(risk_level)s, %(summary)s
     )
     RETURNING *
     """
@@ -60,6 +61,7 @@ def create_project_record(
         "status": "created",
         "current_stage": "intake",
         "mode": mode,
+        "master_mode": master_mode,
         "priority": "normal",
         "risk_level": "medium",
         "summary": None,

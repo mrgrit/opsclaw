@@ -192,26 +192,27 @@ packages/pi_adapter/runtime/executor.py # 실행 루프, timeout 관리
 
 ### TODO List
 
-- [ ] **WORK-68** Manager API `master_mode` 컨텍스트 필드 추가
+- [x] **WORK-68** Manager API `master_mode` 컨텍스트 필드 추가
   - 프로젝트 생성 시 `master_mode: "native" | "external"` 필드
   - native 모드: OpsClaw 내장 LLM으로 계획 수립
   - external 모드: LLM 계획 없이 API 호출 그대로 실행
 
-- [ ] **WORK-69** External Master용 OpenAPI spec 정리
+- [x] **WORK-69** External Master용 OpenAPI spec 정리
   - 주요 API endpoint에 LLM-friendly 설명 추가 (한국어)
   - `docs/api/external-master-guide.md` 작성
 
-- [ ] **WORK-70** Claude Code용 오케스트레이션 가이드 작성
+- [x] **WORK-70** Claude Code용 오케스트레이션 가이드 작성
   - `CLAUDE.md` 업데이트: OpsClaw API 호출 방법
   - 예시 프롬프트 작성: "신규 서버 온보딩", "패키지 설치", "보안 점검"
 
-- [ ] **WORK-71** Mode B 통합 테스트
+- [x] **WORK-71** Mode B 통합 테스트
   - Claude Code가 Manager API를 직접 호출하여 작업 완료하는 시나리오 검증
+  - 결과: 16/16 PASS (2026-03-22)
 
 ### 완료 기준
 
-- [ ] Mode A (Native): Web UI에서 작업 요청 → LLM 계획 → 실행 동작
-- [ ] Mode B (AI-Driven): Claude Code가 API 직접 호출로 작업 완료
+- [x] Mode A (Native): Web UI에서 작업 요청 → LLM 계획 → 실행 동작
+- [x] Mode B (AI-Driven): Claude Code가 API 직접 호출로 작업 완료
 
 ---
 
@@ -409,10 +410,10 @@ docs/manual/agent/
 - [x] WORK-67: 통합 smoke 테스트 스크립트
 
 ### M15 (Platform Modes)
-- [ ] WORK-68: master_mode 컨텍스트 필드 추가
-- [ ] WORK-69: External Master용 API 가이드
-- [ ] WORK-70: Claude Code용 오케스트레이션 가이드 (CLAUDE.md)
-- [ ] WORK-71: Mode B 통합 테스트
+- [x] WORK-68: master_mode 컨텍스트 필드 추가
+- [x] WORK-69: External Master용 API 가이드
+- [x] WORK-70: Claude Code용 오케스트레이션 가이드 (CLAUDE.md)
+- [x] WORK-71: Mode B 통합 테스트 (16/16 PASS)
 
 ### M16 (Web UI)
 - [ ] WORK-72: 프론트엔드 프로젝트 초기화
