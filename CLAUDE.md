@@ -1,7 +1,20 @@
 # OpsClaw — Claude Code 오케스트레이션 가이드 (Mode B)
 
+> **AI 에이전트 필독**: 작업 시작 전 `docs/agent-system-prompt.md`를 읽어라.
+> 역할 분담, 실행 방법 선택 기준, 안전 규칙이 모두 포함되어 있다.
+
 OpsClaw는 IT 운영/보안 자동화 control-plane 플랫폼이다.
 Claude Code가 External Master로서 Manager API를 직접 호출하여 작업을 오케스트레이션할 수 있다.
+
+## 역할 분담 (한 줄 요약)
+
+| 주체 | 역할 |
+|------|------|
+| **Claude Code (당신)** | 계획 수립, API 호출, 결과 해석, 완료보고 |
+| **Manager API :8000** | 상태 관리, evidence 기록, 실행 control-plane |
+| **SubAgent :8002** | 실제 명령 실행 — **직접 호출 금지, Manager 통해서만** |
+
+
 
 ## 서비스 주소
 
@@ -49,9 +62,17 @@ curl -X POST http://localhost:8000/projects/{id}/completion-report \
 ## 중요 규칙
 
 - `execute-plan` 호출 전 반드시 `/plan` → `/execute` stage 전환 필요
-- `risk_level=critical` 태스크는 dry_run 자동 강제
+- `risk_level=critical` 태스크는 dry_run 자동 강제 → 사용자 확인 후 실행
 - SubAgent URL이 없으면 adhoc dispatch 불가 (local 실행은 `http://localhost:8002`)
 - Playbook step params는 `params` 키로 전달 (e.g. `{"command": "apt-get install nginx"}`)
+- SubAgent에 직접 POST 금지 — 반드시 Manager API 통해서만 호출
+- 파괴적 명령(rm -rf, DROP TABLE 등)은 사용자 명시적 승인 후에만 실행
+
+## 상세 문서
+
+- **시스템 프롬프트 (에이전트용)**: `docs/agent-system-prompt.md`
+- **API 전체 가이드**: `docs/api/external-master-guide.md`
+- **에이전트 운용 매뉴얼**: `docs/manual/agent/05-ai-driven-mode.md`
 
 ## 개발 명령
 
