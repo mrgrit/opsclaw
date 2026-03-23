@@ -252,8 +252,11 @@ apps/web-ui/ 에서 npm install && npm run build 실행해줘
 
 **Proof of Work & Blockchain Reward (M18)**
 - PoW 블록 생성: SHA-256 nonce 채굴, target difficulty 제어
-- 작업 완료 시 reward 블록 자동 생성 (completion-report 연동)
-- Blockchain Audit DB: `pow_blocks` 테이블, chain 무결성 검증
+  - `sha256(prev_hash + evidence_hash + ts + nonce)`가 difficulty개 leading zero hex 만족할 때까지 nonce 반복
+  - 기본 difficulty=4 (환경변수 `OPSCLAW_POW_DIFFICULTY`로 조정 가능)
+- 작업 완료 시 reward 블록 자동 생성 (execute-plan 연동)
+- RL 보상 신호: base_score(성공/실패) + speed_bonus + risk_penalty → reward_ledger 누적
+- Blockchain Audit DB: `proof_of_work` 테이블, chain 무결성 검증 (위변조/난이도 미충족 감지)
 - Replay API: 과거 프로젝트 실행 흐름 재현 (`/projects/{id}/replay`)
 - RL 연결 기반: PoW reward → 강화학습 보상 신호 설계 기반 마련
 

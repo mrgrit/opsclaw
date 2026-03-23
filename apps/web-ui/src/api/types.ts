@@ -46,6 +46,8 @@ export interface PoWBlock {
   evidence_hash: string
   prev_hash: string
   block_hash: string
+  nonce?: number
+  difficulty?: number
   ts: string
   total_reward?: number
   base_score?: number

@@ -117,7 +117,7 @@ export default function PoW() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '32px 1fr 80px 70px 90px 100px',
+                  gridTemplateColumns: '32px 1fr 80px 70px 70px 50px 90px 100px',
                   gap: 8,
                   padding: '4px 12px',
                   fontSize: '0.7rem',
@@ -125,7 +125,7 @@ export default function PoW() {
                   fontWeight: 700,
                   textTransform: 'uppercase',
                 }}>
-                  <div>#</div><div>작업</div><div>보상</div><div>Exit</div><div>블록 해시</div><div>시간</div>
+                  <div>#</div><div>작업</div><div>보상</div><div>Exit</div><div>Nonce</div><div>Diff</div><div>블록 해시</div><div>시간</div>
                 </div>
                 {blocks.map((b, i) => (
                   <div key={b.id} style={{
@@ -134,7 +134,7 @@ export default function PoW() {
                     borderRadius: 8,
                     padding: '10px 12px',
                     display: 'grid',
-                    gridTemplateColumns: '32px 1fr 80px 70px 90px 100px',
+                    gridTemplateColumns: '32px 1fr 80px 70px 70px 50px 90px 100px',
                     gap: 8,
                     alignItems: 'center',
                   }}>
@@ -154,6 +154,12 @@ export default function PoW() {
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                       task #{b.task_order}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6b7280' }}>
+                      {(b.nonce ?? 0).toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6b7280' }}>
+                      {b.difficulty ?? 0}
                     </div>
                     <div style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#6b7280' }}>
                       {b.block_hash.slice(0, 10)}...

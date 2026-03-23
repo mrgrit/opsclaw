@@ -140,6 +140,7 @@ done
 - 0002~0007: 기능별 테이블 추가
 - 0008: `projects.master_mode` 컬럼 (M15)
 - 0009: `proof_of_work`, `reward_ledger` 테이블 (M18)
+- 0010: PoW `nonce`, `difficulty` 컬럼 추가 (M18 nonce 채굴)
 
 ---
 
