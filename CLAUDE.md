@@ -107,6 +107,18 @@ curl http://localhost:8000/rl/policy
 - **API 전체 가이드**: `docs/api/external-master-guide.md`
 - **에이전트 운용 매뉴얼**: `docs/manual/agent/05-ai-driven-mode.md`
 
+## 알려진 버그 (M21에서 수정 예정)
+
+| ID | 증상 | 회피 방법 |
+|----|------|---------|
+| B-01 | Playbook `/run` 실행 시 PoW 블록 미생성 | execute-plan 사용 (PoW 정상 생성됨) |
+| B-02 | `verify_chain()` — nonce 포함 신규 블록에서 False 반환 | `/pow/blocks` 로 블록 직접 확인 |
+| B-03 | Playbook step `metadata` vs `params` 혼용 | params 키로 전달 (seed 데이터 기준) |
+| B-04 | 큰 stdout(>4KB) evidence에서 절단 | 출력 분할 또는 파일 저장 후 읽기 |
+| B-05 | `risk_level=critical` 항상 dry_run 강제 | medium/high로 낮추거나 dry_run 결과 수동 확인 |
+
+세부 수정 계획: `docs/roadmap.md` M21 섹션
+
 ## 개발 명령
 
 ```bash

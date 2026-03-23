@@ -1,4 +1,4 @@
-# OpsClaw Future Roadmap — M14~M20
+# OpsClaw Future Roadmap — M14~M24
 
 **작성일:** 2026-03-21
 **현재 상태:** M13 완료 기준
@@ -438,3 +438,218 @@ docs/manual/agent/
 ---
 
 *문서 갱신: M17~M20 각 마일스톤 완료 시 해당 completion-report 작성 후 이 파일 업데이트*
+
+---
+
+# OpsClaw Roadmap — M21~M24
+
+**작성일:** 2026-03-24
+**현재 상태:** M20 완료 기준
+**출처:** future_opsclaw.md (버그 B-01~B-05, 아키텍처 개선 A-01~A-08)
+
+---
+
+## 개요
+
+M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아키텍처 개선 사항을 다룬다.
+
+| 마일스톤 | 핵심 주제 | 포함 항목 | 우선순위 |
+|---------|---------|---------|---------|
+| M21 | Bug Fix Sprint | B-01~B-05 | **1순위** (즉시) |
+| M22 | Playbook Engine v2 | A-01, A-02, A-03, A-06 | 2순위 |
+| M23 | Async & Multi-Agent | A-04, A-05 | 3순위 |
+| M24 | Advanced RL & Experience | A-07, A-08 | 4순위 |
+
+---
+
+## M21 — Bug Fix Sprint (1순위, 즉시)
+
+**목표:** 실운영 중 발견된 버그 5건 수정
+
+### 버그 목록
+
+| ID | 증상 | 영향 |
+|----|------|------|
+| B-01 | Playbook `/run` 실행 시 PoW 블록 미생성 | 감사 추적 불완전 |
+| B-02 | `verify_chain()` 오검출 — nonce 포함 블록에서 False 반환 | 체인 무결성 검증 불가 |
+| B-03 | `metadata` vs `params` 키 혼용 — SubAgent 파라미터 전달 오류 | Playbook 실행 실패 |
+| B-04 | stdout 절단 — 큰 출력(>4KB)에서 evidence 불완전 | 감사 추적 불완전 |
+| B-05 | `risk_level=critical` 항상 dry_run 강제 — 명시적 confirmed=true 무시 | 운영 작업 불가 |
+
+### 세부 작업 (TODO List)
+
+- [ ] **WORK-88** B-01: Playbook run PoW 연동
+  - `apps/manager-api/src/main.py` — `/playbooks/{id}/run` 엔드포인트에 `generate_proof()` 호출 추가
+  - 기존 `execute-plan`과 동일한 증명 생성 패턴 적용
+  - 대상 파일: `apps/manager-api/src/main.py`, `packages/pow_service/__init__.py`
+
+- [ ] **WORK-89** B-02: verify_chain 오검출 수정
+  - `packages/pow_service/__init__.py` — difficulty>0 블록 해시 계산에 nonce 포함 확인
+  - `verify_chain()` 레거시 블록(difficulty=0)과 신규 블록(difficulty>0) 분기 처리 검증
+  - 통합 테스트: 레거시 체인 + 신규 채굴 블록 혼합 시나리오
+
+- [ ] **WORK-90** B-03: metadata/params 키 표준화
+  - Playbook step 실행 시 `metadata` 필드와 `params` 필드 혼용 지점 전수 조사
+  - `packages/playbook_engine/__init__.py` 또는 관련 파일 표준화 (params로 통일)
+  - 기존 Playbook 데이터 마이그레이션 스크립트 작성
+
+- [ ] **WORK-91** B-04: stdout 절단 수정
+  - `packages/subagent_runtime/__init__.py` 또는 ToolBridge — 출력 버퍼 크기 제한 해제
+  - evidence 저장 시 텍스트 크기 제한 확인 (PostgreSQL TEXT 컬럼 제한 없음)
+  - 테스트: `seq 10000` 출력(>4KB) 명령 evidence 전체 저장 확인
+
+- [ ] **WORK-92** B-05: critical dry_run 강제 조건 완화
+  - `apps/manager-api/src/main.py` — `execute-plan` 로직에서 `confirmed=true` 파라미터 처리 추가
+  - critical 태스크: `confirmed` 없으면 dry_run, `confirmed=true`이면 실제 실행
+  - API 스펙: `execute-plan` body에 `confirmed: bool = False` 필드 추가
+
+### 완료 기준
+
+- [ ] Playbook run 실행 후 `GET /pow/blocks?agent_id=...` 에서 블록 확인
+- [ ] `GET /pow/verify` 에서 신규 채굴 블록 포함 체인 `valid=true` 반환
+- [ ] params 표준화 후 기존 Playbook seed 데이터 정상 실행
+- [ ] stdout 4KB 초과 명령 evidence 전체 저장 확인
+- [ ] `confirmed=true` critical 태스크 실제 실행 확인
+
+---
+
+## M22 — Playbook Engine v2 (2순위)
+
+**목표:** Playbook 실행 엔진 일반화 및 운영 편의 기능 추가
+
+### 개선 항목
+
+| ID | 내용 |
+|----|------|
+| A-01 | 스텝별 params override — Playbook step에서 base params 덮어쓰기 |
+| A-02 | execute-plan/Playbook 통합 — 동일 실행 엔진 사용 |
+| A-03 | sudo 실행 가이드 — elevated privilege 안전 규칙 및 가이드 |
+| A-06 | Playbook 버전 관리 — 버전 스냅샷, 히스토리, 롤백 |
+
+### 세부 작업 (TODO List)
+
+- [ ] **WORK-93** A-01: 스텝별 params override
+  - Playbook step 실행 시 `step.params`가 있으면 base_params와 merge (step 우선)
+  - `packages/playbook_engine/__init__.py` — `resolve_step_params()` 함수 추가
+  - 테스트: 동일 Playbook, 스텝별 다른 params로 실행
+
+- [ ] **WORK-94** A-02: execute-plan/Playbook 통합 실행 엔진
+  - `execute-plan` tasks[]와 Playbook steps[]를 동일 `_run_task()` 함수로 처리
+  - `POST /projects/{id}/execute-plan` — `playbook_id` 파라미터로 Playbook 직접 실행 지원
+  - 중복 코드 제거 및 결과 일관성 확보
+
+- [ ] **WORK-95** A-03: sudo 가이드 문서화 및 안전 규칙 구현
+  - `docs/manual/agent/06-sudo-guide.md` 작성: sudoers 설정, 최소 권한 원칙
+  - Manager API: sudo 명령 포함 task → `risk_level` 자동 상향 조정 로직
+  - CLAUDE.md 및 agent-system-prompt.md에 sudo 주의사항 추가
+
+- [ ] **WORK-96** A-06: Playbook 버전 관리
+  - DB: `playbook_versions` 테이블 (playbook_id, version, snapshot_json, created_at)
+  - API: `POST /playbooks/{id}/snapshot` — 현재 상태 버전 저장
+  - API: `GET /playbooks/{id}/versions` — 버전 목록 조회
+  - API: `POST /playbooks/{id}/rollback?version=N` — 특정 버전으로 롤백
+  - 마이그레이션: `migrations/0011_playbook_versions.sql`
+
+### 완료 기준
+
+- [ ] 동일 Playbook을 스텝별 다른 params로 실행 성공
+- [ ] execute-plan body에 `playbook_id` 지정 시 Playbook 단계 실행
+- [ ] Playbook 스냅샷 저장 → 수정 → 롤백 흐름 확인
+- [ ] sudo 가이드 문서 완성
+
+---
+
+## M23 — Async & Multi-Agent (3순위)
+
+**목표:** 장기 실행 작업 비동기화 및 다중 에이전트 병렬 실행 지원
+
+### 개선 항목
+
+| ID | 내용 |
+|----|------|
+| A-04 | 비동기 장기 태스크 — background task queue, polling endpoint |
+| A-05 | 멀티에이전트 병렬 실행 — 여러 SubAgent에 동시 dispatch |
+
+### 세부 작업 (TODO List)
+
+- [ ] **WORK-97** A-04: 비동기 태스크 큐
+  - `tasks` 테이블에 `async_job_id`, `job_status` 컬럼 추가
+  - `POST /projects/{id}/execute-plan` — `async=true` 파라미터 시 background 실행
+  - `GET /projects/{id}/tasks/{task_id}/status` — 태스크 상태 polling endpoint
+  - FastAPI `BackgroundTasks` 또는 `asyncio.create_task` 활용
+  - 마이그레이션: `migrations/0012_async_tasks.sql`
+
+- [ ] **WORK-98** A-05: 멀티에이전트 병렬 dispatch
+  - `execute-plan` tasks[]에 `subagent_url` 필드 추가 (태스크별 다른 에이전트 지정)
+  - `asyncio.gather()` 로 복수 SubAgent 동시 dispatch
+  - 결과 집계 및 partial failure 처리 (일부 성공 시 evidence 개별 저장)
+  - API: `POST /projects/{id}/execute-plan/parallel` — 병렬 실행 전용 엔드포인트
+
+### 완료 기준
+
+- [ ] `async=true` 태스크 → 즉시 job_id 반환 → polling으로 완료 확인
+- [ ] 2개 SubAgent에 동시 dispatch → 각 evidence 독립 저장 확인
+- [ ] partial failure (한 에이전트 실패) 시 성공 에이전트 evidence 유지
+
+---
+
+## M24 — Advanced RL & Experience (4순위)
+
+**목표:** Q-learning 정책 품질 향상 및 경험 자동 축적 시스템 강화
+
+### 개선 항목
+
+| ID | 내용 |
+|----|------|
+| A-07 | 자동 경험 승급 — task_memory → experiences 자동 프로모션 |
+| A-08 | RL Q-table 커버리지 향상 — exploration 전략, 상태 공간 확장 |
+
+### 세부 작업 (TODO List)
+
+- [ ] **WORK-99** A-07: 자동 경험 승급 정책
+  - `packages/rl_service/__init__.py` — 학습 후 고보상 에피소드 자동 experience 저장
+  - 조건: reward > threshold (기본 0.8) + 동일 state에서 N회 이상 반복 성공
+  - `packages/experience_service/__init__.py` — `auto_promote_from_rl(episodes)` 함수
+  - Scheduler worker에 주기적 자동 승급 태스크 등록 (daily)
+
+- [ ] **WORK-100** A-08: RL Q-table 커버리지 향상
+  - `packages/rl_service/__init__.py` — ε-greedy → UCB1 (Upper Confidence Bound) 탐색 전략으로 교체
+  - 미방문 state 우선 탐색 (exploration bonus)
+  - 상태 공간 확장: `asset_type` 차원 추가 (linux/windows/network) → 48→192 states
+  - `GET /rl/policy` 응답에 `unvisited_states_count`, `exploration_rate` 필드 추가
+  - 마이그레이션 불필요 (Q-table JSON 재생성)
+
+### 완료 기준
+
+- [ ] 고보상 에피소드 → experience DB 자동 저장 확인
+- [ ] UCB1 탐색으로 미방문 state coverage > 80% 달성
+- [ ] `GET /rl/policy` — `coverage_pct > 80` 및 `unvisited_states_count < 40` 확인
+
+---
+
+## 전체 TODO 요약 (M21~M24)
+
+### M21 (Bug Fix Sprint) — 목표: 2026-04 이내
+- [ ] WORK-88: B-01 Playbook run PoW 연동
+- [ ] WORK-89: B-02 verify_chain 오검출 수정
+- [ ] WORK-90: B-03 metadata/params 키 표준화
+- [ ] WORK-91: B-04 stdout 절단 수정
+- [ ] WORK-92: B-05 critical confirmed 파라미터 처리
+
+### M22 (Playbook Engine v2) — 목표: 2026-05 이내
+- [ ] WORK-93: A-01 스텝별 params override
+- [ ] WORK-94: A-02 execute-plan/Playbook 통합
+- [ ] WORK-95: A-03 sudo 가이드 및 안전 규칙
+- [ ] WORK-96: A-06 Playbook 버전 관리
+
+### M23 (Async & Multi-Agent) — 목표: 2026-06 이내
+- [ ] WORK-97: A-04 비동기 태스크 큐
+- [ ] WORK-98: A-05 멀티에이전트 병렬 dispatch
+
+### M24 (Advanced RL & Experience) — 목표: 2026-06 이내
+- [ ] WORK-99: A-07 자동 경험 승급
+- [ ] WORK-100: A-08 RL Q-table 커버리지 향상
+
+---
+
+*문서 갱신: M21~M24 각 마일스톤 완료 시 해당 completion-report 작성 후 이 파일 업데이트*
