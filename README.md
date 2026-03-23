@@ -269,7 +269,7 @@ apps/web-ui/ 에서 npm install && npm run build 실행해줘
 
 - CI 파이프라인 확대
 - 인프라 구축 재개 (web/siem enp4s0 케이블 확인 후): Docker+JuiceShop+BunkerWeb(web), Wazuh(siem), Suricata IPS(secu)
-- RL 에이전트 학습 루프 연결 (M18 PoW reward → 강화학습 실제 연동)
+- Deep RL 업그레이드 (Q-learning → PyTorch policy network, 데이터 축적 후)
 
 ---
 
@@ -437,11 +437,34 @@ GET /projects/{id}/replay
 | `OPSCLAW_POW_DIFFICULTY` | 4 | leading zero hex 개수 (4 ≈ 65K회 시행, ~0.03초) |
 | `OPSCLAW_POW_MAX_NONCE` | 10,000,000 | 무한루프 방지 안전장치 |
 
+### 강화학습 (Q-learning)
+
+PoW reward 데이터를 활용한 Lightweight RL이 구현되어 있다.
+`task_reward` 테이블에 쌓인 에피소드로 Q-table을 학습하고, 최적의 `risk_level`을 추천한다.
+
+```bash
+# 학습 실행 (task_reward에서 에피소드 수집 → Q-table 업데이트)
+curl -X POST http://localhost:8000/rl/train
+
+# 추천 조회 (Q-table 기반 최적 risk_level)
+curl "http://localhost:8000/rl/recommend?agent_id=http://localhost:8002&risk_level=low&task_order=1"
+
+# 현재 정책 상태 (Q-table 통계, 학습 횟수, coverage)
+curl http://localhost:8000/rl/policy
+```
+
+**State**: (risk_level, agent 성공률, task 순서) → 48개 이산 상태
+**Action**: risk_level 선택 (low/medium/high/critical)
+**학습 알고리즘**: Q-learning — `Q(s,a) ← Q(s,a) + α × (reward - Q(s,a))`
+
+작업을 많이 실행할수록 데이터가 쌓이고, 재학습(`POST /rl/train`)할 때마다 정책이 개선된다.
+
 ### 향후 발전 방향
 
-현재 PoW reward는 RL(강화학습) 보상 신호로 설계되어 있다.
-향후 `task_reward` 데이터를 기반으로 에이전트의 policy network를 학습시켜,
-더 나은 `instruction_prompt` 선택, 적절한 `risk_level` 판단 등 자기강화형 운영을 실현할 계획이다.
+- Deep RL (PyTorch policy network)로의 업그레이드 — 데이터 충분히 축적 후
+- `instruction_prompt` 자동 최적화 (현재는 risk_level만 추천)
+- `quality_bonus` 필드에 human feedback 연결
+- 자동 주기적 재학습 (scheduler 연동)
 
 ---
 

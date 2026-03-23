@@ -1,4 +1,5 @@
 import asyncio
+import time
 from pathlib import Path
 from typing import Any
 
@@ -665,6 +666,7 @@ def create_project_router() -> APIRouter:
                 "detail": {},
             }
 
+            t0 = time.time()
             try:
                 pb_id = pb_map.get(hint) if hint else None
                 if pb_id and not effective_dry_run:
@@ -710,6 +712,7 @@ def create_project_router() -> APIRouter:
                 step_result["detail"] = {"error": str(exc)}
                 tasks_failed += 1
 
+            step_result["duration_s"] = round(time.time() - t0, 3)
             task_results.append(step_result)
 
         overall = "success" if tasks_failed == 0 else ("partial" if tasks_ok > 0 else "failed")
@@ -1788,6 +1791,39 @@ def create_rewards_router() -> APIRouter:
     return router
 
 
+def create_rl_router() -> APIRouter:
+    """Lightweight RL — Q-learning 정책 학습 & 추천."""
+    router = APIRouter(prefix="/rl", tags=["rl"])
+
+    @router.post("/train")
+    def rl_train(
+        alpha: float = 0.1,
+        gamma: float = 0.95,
+        epsilon: float = 0.15,
+        limit: int = 500,
+    ) -> dict[str, Any]:
+        from packages.rl_service import train
+        result = train(alpha=alpha, gamma=gamma, epsilon=epsilon, limit=limit)
+        return {"status": "ok", **result}
+
+    @router.get("/recommend")
+    def rl_recommend(
+        agent_id: str,
+        risk_level: str = "medium",
+        task_order: int = 1,
+    ) -> dict[str, Any]:
+        from packages.rl_service import recommend
+        result = recommend(agent_id=agent_id, risk_level=risk_level, task_order=task_order)
+        return {"status": "ok", **result}
+
+    @router.get("/policy")
+    def rl_policy() -> dict[str, Any]:
+        from packages.rl_service import get_policy_stats
+        return {"status": "ok", **get_policy_stats()}
+
+    return router
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
@@ -1819,6 +1855,7 @@ def create_app() -> FastAPI:
     app.include_router(create_completion_report_router())
     app.include_router(create_pow_router())
     app.include_router(create_rewards_router())
+    app.include_router(create_rl_router())
 
     @app.websocket("/ws/projects/{project_id}")
     async def ws_project_status(websocket: WebSocket, project_id: str):

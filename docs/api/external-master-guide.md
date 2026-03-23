@@ -326,3 +326,61 @@ GET /projects/{id}/replay
 |------|--------|------|
 | `OPSCLAW_POW_DIFFICULTY` | 4 | leading zero hex 개수 (4 ≈ 65K회 시행) |
 | `OPSCLAW_POW_MAX_NONCE` | 10,000,000 | 무한루프 방지 |
+
+---
+
+## 강화학습 (RL) API
+
+task_reward 데이터로 Q-learning 정책을 학습하고, 최적 risk_level을 추천한다.
+작업을 많이 실행할수록 정책이 개선된다.
+
+### 학습 실행
+
+```http
+POST /rl/train?alpha=0.1&gamma=0.95&epsilon=0.15&limit=500
+```
+
+응답:
+```json
+{
+  "status": "ok",
+  "episodes_used": 12,
+  "updates": 12,
+  "train_count": 2
+}
+```
+
+### 추천 조회
+
+```http
+GET /rl/recommend?agent_id=http://localhost:8002&risk_level=low&task_order=1
+```
+
+응답:
+```json
+{
+  "status": "ok",
+  "recommended_risk_level": "low",
+  "q_values": {"low": 0.74, "medium": 0.0, "high": 0.0, "critical": 0.0},
+  "confidence": "trained"
+}
+```
+
+### 정책 상태 조회
+
+```http
+GET /rl/policy
+```
+
+응답:
+```json
+{
+  "status": "ok",
+  "num_states": 48,
+  "num_actions": 4,
+  "nonzero_entries": 2,
+  "coverage_pct": 1.0,
+  "episodes_trained": 12,
+  "train_count": 2
+}
+```

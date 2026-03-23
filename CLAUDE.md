@@ -77,6 +77,21 @@ curl http://localhost:8000/pow/leaderboard
 curl http://localhost:8000/projects/{id}/replay
 ```
 
+## 강화학습 (RL)
+
+task_reward 데이터로 Q-learning 정책을 학습하여 최적 risk_level을 추천한다.
+
+```bash
+# 학습 실행
+curl -X POST http://localhost:8000/rl/train
+
+# 추천 조회
+curl "http://localhost:8000/rl/recommend?agent_id=http://localhost:8002&risk_level=low"
+
+# 정책 상태
+curl http://localhost:8000/rl/policy
+```
+
 ## 중요 규칙
 
 - `execute-plan` 호출 전 반드시 `/plan` → `/execute` stage 전환 필요
