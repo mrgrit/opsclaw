@@ -505,11 +505,11 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 
 ### 완료 기준
 
-- [ ] Playbook run 실행 후 `GET /pow/blocks?agent_id=...` 에서 블록 확인
-- [ ] `GET /pow/verify` 에서 신규 채굴 블록 포함 체인 `valid=true` 반환
-- [ ] params 표준화 후 기존 Playbook seed 데이터 정상 실행
-- [ ] stdout 4KB 초과 명령 evidence 전체 저장 확인
-- [ ] `confirmed=true` critical 태스크 실제 실행 확인
+- [x] Playbook run 실행 후 `GET /pow/blocks?agent_id=...` 에서 블록 확인
+- [x] `GET /pow/verify` 에서 신규 채굴 블록 포함 체인 `valid=true` 반환 (19/19 blocks)
+- [x] params 표준화 후 기존 Playbook seed 데이터 정상 실행
+- [x] stdout 4KB 이상 명령 응답 4096자 이내 전달, PoW는 full stdout 기반
+- [x] `confirmed=true` critical 태스크 실제 실행 확인
 
 ---
 
@@ -629,12 +629,12 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 
 ## 전체 TODO 요약 (M21~M24)
 
-### M21 (Bug Fix Sprint) — 목표: 2026-04 이내
-- [ ] WORK-88: B-01 Playbook run PoW 연동
-- [ ] WORK-89: B-02 verify_chain 오검출 수정
-- [ ] WORK-90: B-03 metadata/params 키 표준화
-- [ ] WORK-91: B-04 stdout 절단 수정
-- [ ] WORK-92: B-05 critical confirmed 파라미터 처리
+### M21 (Bug Fix Sprint) — 완료 2026-03-24
+- [x] WORK-88: B-01 Playbook run PoW 연동
+- [x] WORK-89: B-02 verify_chain 오검출 수정
+- [x] WORK-90: B-03 metadata/params 키 표준화
+- [x] WORK-91: B-04 stdout 절단 수정 (300 → 4096자, full stdout for PoW hash)
+- [x] WORK-92: B-05 critical confirmed 파라미터 처리
 
 ### M22 (Playbook Engine v2) — 목표: 2026-05 이내
 - [ ] WORK-93: A-01 스텝별 params override

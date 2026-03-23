@@ -62,7 +62,7 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M18 | Proof of Work & Blockchain Reward — 작업증명, 블록체인 보상, Audit DB, 작업 Replay | ✅ 완료 |
 | M19 | Skill/Tool/Experience 실동작 검증 — 실질적 기능 검증 및 보완 구현 | ✅ 완료 |
 | M20 | User & Agent Manual — 사용자/에이전트용 운용 매뉴얼 완성 | ✅ 완료 |
-| M21 | Bug Fix Sprint — B-01~B-05 실운영 버그 수정 (PoW 누락, verify_chain, params, stdout, critical dry_run) | 🔲 예정 |
+| M21 | Bug Fix Sprint — B-01~B-05 실운영 버그 수정 (PoW 누락, verify_chain, params, stdout, critical dry_run) | ✅ 완료 |
 | M22 | Playbook Engine v2 — 스텝 params override, execute-plan/Playbook 통합, sudo 가이드, 버전 관리 | 🔲 예정 |
 | M23 | Async & Multi-Agent — 비동기 장기 태스크 큐, 멀티에이전트 병렬 dispatch | 🔲 예정 |
 | M24 | Advanced RL & Experience — UCB1 탐색 전략, 자동 경험 승급, Q-table 커버리지 향상 | 🔲 예정 |
