@@ -215,11 +215,18 @@ def verify_chain(
 
     tampered = []
     for i, block in enumerate(blocks):
-        ts_str = (
-            block["ts"].isoformat()
-            if hasattr(block["ts"], "isoformat")
-            else str(block["ts"])
-        )
+        # B-02: ts_str을 채굴 시 사용한 포맷과 일치시킴 (항상 +00:00 포함)
+        # generate_proof()는 datetime.now(timezone.utc).isoformat() → "...+00:00" 형식으로 채굴
+        # psycopg2가 naive datetime을 반환할 경우 +00:00 없이 비교되어 해시 불일치 발생
+        if hasattr(block["ts"], "isoformat"):
+            dt = block["ts"]
+            if dt.utcoffset() is None:
+                # naive datetime — UTC로 가정, +00:00 추가
+                ts_str = dt.isoformat() + "+00:00"
+            else:
+                ts_str = dt.isoformat()
+        else:
+            ts_str = str(block["ts"])
         difficulty = block.get("difficulty") or 0
         nonce = block.get("nonce") or 0
 

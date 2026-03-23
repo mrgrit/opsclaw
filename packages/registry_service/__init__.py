@@ -302,7 +302,7 @@ def upsert_playbook_steps(
                         s.get("condition"),
                         _j(s.get("retry_policy")),
                         s.get("on_failure", "abort"),
-                        _j(s.get("metadata")),
+                        _j(s.get("metadata") or s.get("params")),  # B-03: metadata/params 모두 허용
                     ),
                 )
                 result.append(dict(cur.fetchone()))

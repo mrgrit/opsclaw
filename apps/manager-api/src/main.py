@@ -225,6 +225,7 @@ class ExecutePlanRequest(BaseModel):
     tasks: list[dict]          # [{order, title, playbook_hint, instruction_prompt, risk_level}]
     subagent_url: str | None = None
     dry_run: bool = False
+    confirmed: bool = False    # B-05: True면 risk_level=critical 태스크도 실제 실행
 
 
 class ScheduleCreateRequest(BaseModel):
@@ -610,6 +611,26 @@ def create_project_router() -> APIRouter:
                 dry_run=payload.dry_run,
                 params=payload.params,
             )
+            # B-01: Playbook run 완료 후 PoW 블록 자동 생성 (dry_run 제외)
+            if not payload.dry_run:
+                agent_id = payload.subagent_url or "local"
+                for sr in result.get("step_results", []):
+                    if sr.get("status") not in ("ok", "failed"):
+                        continue
+                    try:
+                        generate_proof(
+                            project_id=project_id,
+                            agent_id=agent_id,
+                            task_order=sr.get("order", 0),
+                            task_title=sr.get("name", ""),
+                            exit_code=sr.get("exit_code", 0 if sr.get("status") == "ok" else 1),
+                            stdout=sr.get("stdout", ""),
+                            stderr=sr.get("stderr", ""),
+                            duration_s=sr.get("duration_s", 0.0),
+                            risk_level="medium",
+                        )
+                    except Exception:
+                        pass  # PoW 실패가 Playbook 결과에 영향 주지 않음
             return {"status": "ok", "result": result}
         except ProjectNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
@@ -653,8 +674,8 @@ def create_project_router() -> APIRouter:
             prompt = task.get("instruction_prompt", title)
             risk = task.get("risk_level", "medium")
 
-            # critical 태스크는 dry_run 강제
-            effective_dry_run = payload.dry_run or (risk == "critical")
+            # B-05: critical 태스크는 dry_run 강제 (confirmed=True이면 실제 실행)
+            effective_dry_run = payload.dry_run or (risk == "critical" and not payload.confirmed)
 
             step_result: dict[str, Any] = {
                 "order": order,
@@ -697,9 +718,13 @@ def create_project_router() -> APIRouter:
                     )
                     step_result["method"] = "adhoc"
                     step_result["status"] = "ok" if r.get("exit_code", 1) == 0 else "failed"
+                    # B-04: full_stdout을 PoW 해시에 사용, 응답은 4096자 제한
+                    full_stdout = r.get("stdout") or ""
+                    step_result["_full_stdout"] = full_stdout  # PoW 생성 시 참조
                     step_result["detail"] = {
                         "exit_code": r.get("exit_code"),
-                        "stdout": (r.get("stdout") or "")[:300],
+                        "stdout": full_stdout[:4096],
+                        "stderr": (r.get("stderr") or "")[:1024],
                     }
 
                 if step_result["status"] in ("ok", "dry_run", "success", "partial"):
@@ -733,7 +758,7 @@ def create_project_router() -> APIRouter:
                         task_order=sr.get("order", 0),
                         task_title=sr.get("title", ""),
                         exit_code=detail.get("exit_code", 0 if sr["status"] == "ok" else 1),
-                        stdout=detail.get("stdout", ""),
+                        stdout=sr.pop("_full_stdout", detail.get("stdout", "")),  # B-04: full stdout 사용
                         stderr=detail.get("stderr", ""),
                         duration_s=sr.get("duration_s", 0.0),
                         risk_level=sr.get("risk_level", "low"),
