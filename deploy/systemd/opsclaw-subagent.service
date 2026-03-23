@@ -3,8 +3,12 @@ Description=OpsClaw SubAgent Runtime
 After=network.target
 
 [Service]
-ExecStart=python3 -m uvicorn apps.subagent-runtime.src.main:app --host 0.0.0.0 --port 8001
-WorkingDirectory=/opt/opsclaw
+Type=simple
+User=opsclaw
+Environment=PYTHONPATH=/home/opsclaw/opsclaw
+ExecStart=/home/opsclaw/opsclaw/.venv/bin/uvicorn apps.subagent-runtime.src.main:app --host 0.0.0.0 --port 8002
+WorkingDirectory=/home/opsclaw/opsclaw
+EnvironmentFile=/home/opsclaw/opsclaw/.env
 Restart=always
 RestartSec=5
 StandardOutput=journal

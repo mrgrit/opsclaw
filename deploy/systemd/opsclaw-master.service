@@ -1,5 +1,5 @@
 [Unit]
-Description=OpsClaw Manager API
+Description=OpsClaw Master Service
 After=network.target docker.service
 Wants=docker.service
 
@@ -7,7 +7,7 @@ Wants=docker.service
 Type=simple
 User=opsclaw
 Environment=PYTHONPATH=/home/opsclaw/opsclaw
-ExecStart=/home/opsclaw/opsclaw/.venv/bin/uvicorn apps.manager-api.src.main:app --host 0.0.0.0 --port 8000 --log-level warning
+ExecStart=/home/opsclaw/opsclaw/.venv/bin/uvicorn apps.master-service.src.main:app --host 0.0.0.0 --port 8001 --log-level info
 WorkingDirectory=/home/opsclaw/opsclaw
 EnvironmentFile=/home/opsclaw/opsclaw/.env
 Restart=always

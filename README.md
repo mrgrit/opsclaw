@@ -299,6 +299,7 @@ seed/playbooks/                # 10개 playbook YAML 정의
 tools/dev/                     # 개발용 smoke / seed 스크립트
 scripts/                       # 통합 테스트 스크립트
 deploy/bootstrap/              # install.sh (원격 SubAgent 설치)
+deploy/systemd/                # systemd unit 파일 (reboot 후 자동 기동)
 docs/
   api/                         # external-master-guide.md
   manual/user/                 # 사용자 매뉴얼 (01~07)

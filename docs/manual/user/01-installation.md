@@ -155,14 +155,35 @@ PYTHONPATH=. .venv/bin/python3 tools/dev/seed_loader.py
 
 ## 7. 서비스 기동
 
-```bash
-# 전체 기동 (manager-api + master-service + subagent-runtime)
-./dev.sh all
+### 방법 A — systemd (운영 권장, reboot 후 자동 기동)
 
-# 개별 기동
-./dev.sh manager    # manager-api :8000
-./dev.sh master     # master-service :8001
-./dev.sh subagent   # subagent-runtime :8002
+```bash
+# 서비스 파일 등록
+sudo ln -sf $(pwd)/deploy/systemd/opsclaw-manager.service /etc/systemd/system/
+sudo ln -sf $(pwd)/deploy/systemd/opsclaw-master.service /etc/systemd/system/
+sudo ln -sf $(pwd)/deploy/systemd/opsclaw-subagent.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now opsclaw-manager opsclaw-master opsclaw-subagent
+```
+
+> `deploy/systemd/*.service`의 경로가 실제 설치 경로와 다르면 `WorkingDirectory`, `ExecStart`, `EnvironmentFile`을 수정해야 한다.
+
+### 방법 B — dev.sh (개발용, foreground)
+
+```bash
+./dev.sh all        # 전체 기동
+./dev.sh manager    # manager-api :8000 만
+./dev.sh master     # master-service :8001 만
+./dev.sh subagent   # subagent-runtime :8002 만
+```
+
+### 로그 확인
+
+```bash
+# systemd 사용 시
+journalctl -u opsclaw-manager -f
+journalctl -u opsclaw-master -f
+journalctl -u opsclaw-subagent -f
 ```
 
 ---
