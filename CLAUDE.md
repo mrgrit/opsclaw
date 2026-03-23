@@ -59,6 +59,24 @@ curl -X POST http://localhost:8000/projects/{id}/completion-report \
 
 상세: `docs/api/external-master-guide.md`
 
+## PoW & 보상
+
+`execute-plan`으로 Task를 실행하면 **자동으로** PoW 블록과 보상이 생성된다. 별도 호출 불필요.
+
+```bash
+# PoW 블록 조회
+curl "http://localhost:8000/pow/blocks?agent_id=http://localhost:8002"
+
+# 체인 무결성 검증
+curl "http://localhost:8000/pow/verify?agent_id=http://localhost:8002"
+
+# 보상 랭킹
+curl http://localhost:8000/pow/leaderboard
+
+# 프로젝트 작업 Replay
+curl http://localhost:8000/projects/{id}/replay
+```
+
 ## 중요 규칙
 
 - `execute-plan` 호출 전 반드시 `/plan` → `/execute` stage 전환 필요

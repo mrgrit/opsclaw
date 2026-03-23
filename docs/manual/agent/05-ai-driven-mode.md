@@ -228,12 +228,44 @@ curl -X POST http://localhost:8000/playbooks/{pb_id}/steps \
 
 ---
 
+## PoW & 보상 자동 연동
+
+`execute-plan`으로 Task를 실행하면 **별도 호출 없이** PoW 블록과 보상이 자동 생성된다.
+
+### 동작 원리
+
+1. SubAgent가 Task 실행 완료
+2. Manager가 `generate_proof()` 자동 호출
+3. SHA-256 nonce 채굴 → PoW 블록 생성 (difficulty=4, `0000...`으로 시작하는 해시 탐색)
+4. 보상 계산: 성공 +1.0 / 실패 -1.0 + 속도 보너스 + 위험도 페널티
+5. `reward_ledger`에 누적 잔액 갱신
+
+### 확인 방법
+
+```bash
+# 에이전트의 PoW 블록 조회
+curl "http://localhost:8000/pow/blocks?agent_id=http://localhost:8002"
+
+# 블록체인 무결성 검증
+curl "http://localhost:8000/pow/verify?agent_id=http://localhost:8002"
+
+# 보상 랭킹
+curl http://localhost:8000/pow/leaderboard
+
+# 프로젝트 작업 Replay
+curl http://localhost:8000/projects/{id}/replay
+```
+
+> `dry_run=true`인 Task는 PoW 블록이 생성되지 않는다.
+
+---
+
 ## 체크리스트 — 에이전트 연동 전 확인
 
 - [ ] `docs/agent-system-prompt.md`를 system prompt에 삽입했는가?
 - [ ] Manager API(`localhost:8000`)가 응답하는가? `GET /health`
 - [ ] SubAgent Runtime(`localhost:8002`)이 응답하는가? `GET /health`
-- [ ] DB migration이 모두 적용되었는가? (0008까지)
+- [ ] DB migration이 모두 적용되었는가? (0001~0010)
 - [ ] `master_mode: "external"` 로 프로젝트를 생성하는가?
 - [ ] `/plan` → `/execute` 순서를 지키는가?
 - [ ] `risk_level=critical` 태스크에 dry_run 검토가 있는가?

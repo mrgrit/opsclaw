@@ -65,10 +65,12 @@ npm run build
 
 ### PoW Blocks
 
+`execute-plan`으로 작업을 실행하면 자동으로 PoW 블록이 생성된다. 별도의 채굴 명령은 없다.
+
 - 에이전트 목록 (잔액 기준 정렬)
 - 에이전트 선택 시 블록 체인 조회
-- 블록 상세: prev_hash, 보상, exit code, 블록 해시, 생성시각
-- Chain 무결성 검증 (tamper 감지)
+- 블록 상세: prev_hash, 보상, exit code, **Nonce, Difficulty**, 블록 해시, 생성시각
+- Chain 무결성 검증 (tamper 감지: hash mismatch, difficulty 미충족, chain 끊김)
 
 ### Settings
 

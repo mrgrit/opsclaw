@@ -199,3 +199,130 @@ POST /projects/{project_id}/close
 3. /plan → /execute → /playbook/run
 4. evidence에서 stdout 확인 → 이슈 분석
 ```
+
+---
+
+## PoW & Reward API
+
+`execute-plan`으로 Task를 실행하면 **자동으로 PoW 블록이 생성되고 보상이 지급**된다.
+별도의 채굴 API 호출은 필요 없다.
+
+### 채굴 흐름
+
+```
+execute-plan → Task 실행 → generate_proof() 자동 호출
+  ├─ evidence_hash = sha256(stdout + stderr + exit_code)
+  ├─ nonce 채굴 (sha256 반복하여 leading zero 해시 탐색)
+  ├─ proof_of_work INSERT (블록 기록)
+  ├─ task_reward INSERT (보상 기록)
+  └─ reward_ledger UPSERT (잔액 갱신)
+```
+
+### 엔드포인트
+
+#### PoW 블록 조회
+
+```http
+GET /pow/blocks?agent_id=http://localhost:8002&limit=50
+```
+
+응답:
+```json
+{
+  "status": "ok",
+  "total": 5,
+  "blocks": [
+    {
+      "id": "pow_88210bdf570b",
+      "agent_id": "http://localhost:8002",
+      "project_id": "prj_...",
+      "task_order": 1,
+      "task_title": "task-1",
+      "evidence_hash": "c530...",
+      "prev_hash": "0000...",
+      "block_hash": "000052f7...",
+      "nonce": 36166,
+      "difficulty": 4,
+      "ts": "2026-03-23T05:47:13Z"
+    }
+  ]
+}
+```
+
+#### 단건 블록 조회
+
+```http
+GET /pow/blocks/{pow_id}
+```
+
+#### 체인 무결성 검증
+
+```http
+GET /pow/verify?agent_id=http://localhost:8002
+```
+
+응답:
+```json
+{
+  "status": "ok",
+  "result": {
+    "agent_id": "http://localhost:8002",
+    "valid": true,
+    "blocks": 11,
+    "tampered": []
+  }
+}
+```
+
+위변조 감지 시 `tampered` 배열에 `block_hash_mismatch`, `difficulty_not_met`, `chain_broken` 중 하나의 reason 포함.
+
+#### 보상 랭킹
+
+```http
+GET /pow/leaderboard?limit=10
+```
+
+#### 에이전트 잔액 + 보상 이력
+
+```http
+GET /rewards/agents?agent_id=http://localhost:8002
+```
+
+#### 프로젝트별 PoW 블록
+
+```http
+GET /projects/{id}/pow
+```
+
+#### 프로젝트 Replay (작업 타임라인)
+
+```http
+GET /projects/{id}/replay
+```
+
+응답:
+```json
+{
+  "project_id": "prj_...",
+  "steps_total": 3,
+  "steps_success": 3,
+  "total_reward": 3.9,
+  "timeline": [
+    {
+      "task_order": 1,
+      "task_title": "현황 수집",
+      "exit_code": 0,
+      "duration_s": 1.2,
+      "total_reward": 1.3,
+      "block_hash": "0000..."
+    }
+  ]
+}
+```
+
+### 환경변수
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `OPSCLAW_POW_DIFFICULTY` | 4 | leading zero hex 개수 (4 ≈ 65K회 시행) |
+| `OPSCLAW_POW_MAX_NONCE` | 10,000,000 | 무한루프 방지 |

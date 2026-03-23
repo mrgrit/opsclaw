@@ -1,6 +1,6 @@
 # OpsClaw M18 완료보고서: Proof of Work & Blockchain Reward
 
-**날짜:** 2026-03-22
+**날짜:** 2026-03-22 (nonce 채굴 추가: 2026-03-23)
 **마일스톤:** M18 — Proof of Work & Blockchain Reward
 **상태:** ✅ 완료
 
@@ -9,6 +9,8 @@
 ## 개요
 
 각 SubAgent의 Task 실행 결과를 해시 체인으로 기록하고 RL(강화학습) reward signal을 자동 계산하는 인프라를 구현했다. 외부 블록체인 의존성 없이 내부망에서 완전히 동작하는 자체 Merkle Chain을 채택했다.
+
+**핵심 개념: 작업 수행 = 채굴.** `execute-plan`으로 Task를 실행하면 자동으로 nonce 채굴 → PoW 블록 생성 → 보상 지급이 이루어진다.
 
 **장기 비전:** PoW → 보상 토큰 → 강화학습 → 에이전트 policy 지속 개선
 
@@ -20,15 +22,18 @@
 
 | 테이블 | 역할 |
 |--------|------|
-| `proof_of_work` | Task 1개 = 블록 1개. sha256 해시 체인으로 위변조 불가 기록 |
+| `proof_of_work` | Task 1개 = 블록 1개. sha256 해시 체인으로 위변조 불가 기록. nonce/difficulty 컬럼 포함 (0010) |
 | `task_reward` | Task별 RL reward signal. base_score + speed_bonus + risk_penalty |
 | `reward_ledger` | 에이전트별 누적 잔액. UPSERT로 자동 관리 |
 
-### WORK-80~82: pow_service (`packages/pow_service/__init__.py`)
+> **migration 0010 (2026-03-23 추가):** `proof_of_work` 테이블에 `nonce INTEGER`, `difficulty INTEGER` 컬럼 추가. 기존 블록은 nonce=0, difficulty=0으로 자동 마이그레이션.
+
+### WORK-80~82 + nonce 채굴 (2026-03-23): pow_service (`packages/pow_service/__init__.py`)
 
 핵심 함수:
-- `generate_proof()` — Task 실행 결과 → PoW 블록 + 보상 + ledger UPSERT (원자적)
-- `verify_chain()` — 에이전트 전체 블록 hash chain 재계산 검증
+- `_mine_block()` — nonce를 0부터 증가시키며 `sha256(prev_hash+evidence_hash+ts+nonce)`가 difficulty개 leading zero 만족하는 값 탐색
+- `generate_proof()` — Task 실행 결과 → nonce 채굴 → PoW 블록 + 보상 + ledger UPSERT (원자적)
+- `verify_chain()` — 에이전트 전체 블록 hash chain 재계산 검증 + nonce/difficulty 검증
 - `get_agent_stats()` — 잔액 + 최근 보상 이력
 - `get_leaderboard()` — 보상 상위 에이전트 랭킹
 - `get_project_pow()` — 프로젝트 PoW 블록 목록
