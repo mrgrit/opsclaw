@@ -82,6 +82,32 @@ curl -X POST http://localhost:8000/projects/$ID/completion-report \
 
 ---
 
+## Web UI 문제
+
+### Q: `http://localhost:8000/app/` → 404
+
+dist가 없거나 Manager API가 dist 없이 기동된 경우:
+
+```bash
+# 1. Web UI 빌드
+cd apps/web-ui && npm install && npm run build && cd ../..
+
+# 2. Manager API 재시작 (dist가 있어야 /app/ 경로가 등록됨)
+pkill -f "manager-api"
+./dev.sh manager
+```
+
+### Q: `/` 접속 시 `/ui`로 리다이렉트 (구 버전 동작)
+
+Manager API가 코드 변경 전 상태로 실행 중인 경우:
+
+```bash
+pkill -f "manager-api"
+./dev.sh manager
+```
+
+---
+
 ## SubAgent 실행 문제
 
 ### Q: SubAgent 연결 불가

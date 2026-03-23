@@ -1,68 +1,100 @@
 # Web UI 가이드
 
-> **현재 상태:** Web UI는 M16에서 구현 예정이다. 현재 OpsClaw는 API 전용으로 운영된다.
-> 이 문서는 M16 완료 후 업데이트된다.
+OpsClaw Web UI는 React + Vite SPA로 구현되어 있으며, Manager API(`http://localhost:8000/app/`)에서 서빙된다.
 
 ---
 
-## 현재 사용 가능한 인터페이스
+## 접근 방법
 
-### 1. Claude Code (권장)
+```
+http://localhost:8000/app/
+```
 
-OpsClaw 프로젝트 디렉토리에서 `claude` 명령으로 실행.
-`CLAUDE.md`를 자동으로 읽고 External Master로서 작업을 수행한다.
+`http://localhost:8000/`로 접근하면 자동으로 `/app/`으로 리다이렉트된다.
 
-### 2. REST API (curl / Postman / httpie)
+> **빌드 필요**: `apps/web-ui/dist/`는 gitignore 대상이므로 clone 후 직접 빌드해야 한다.
 
-모든 기능은 REST API로 접근 가능하다.
+---
+
+## 최초 빌드
 
 ```bash
-# API 엔드포인트 목록 확인
-curl http://localhost:8000/openapi.json | python3 -m json.tool | grep '"path"'
+# Node.js 없으면 먼저 설치
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
 
-# 또는 브라우저에서
-http://localhost:8000/docs      # Swagger UI
-http://localhost:8000/redoc     # ReDoc
+cd apps/web-ui
+npm install
+npm run build
 ```
 
-### 3. Python SDK (직접 구성)
+빌드 완료 후 `dist/`가 생성되며, Manager API 재시작 시 자동으로 서빙된다.
 
-```python
-import httpx
-
-MANAGER = "http://localhost:8000"
-
-def create_project(name, request_text):
-    r = httpx.post(f"{MANAGER}/projects", json={
-        "name": name,
-        "request_text": request_text,
-        "master_mode": "external"
-    })
-    return r.json()["project"]["id"]
-```
+> Manager API가 이미 실행 중이면 **재시작** 필요 (dist가 없는 상태로 기동된 경우 `/app/` 경로가 등록되지 않는다).
 
 ---
 
-## M16 Web UI 예정 기능
+## 페이지 안내
 
-M16에서 구현될 화면 목록:
+### Dashboard
 
-| 화면 | 주요 기능 |
-|------|---------|
-| 대시보드 | 에이전트 상태, 진행 중 프로젝트, 최근 알림 |
-| 프로젝트 | 목록, 생성, 상태 추적, evidence 조회 |
-| 에이전트 | SubAgent 등록/편집, 상태 모니터링, bootstrap 실행 |
-| Playbook | 목록, 생성/편집, 실행 이력 |
-| 설정 | 알림 채널(Slack/Email/Webhook), RBAC 사용자/역할 |
-| 작업 Replay | 프로젝트 단위 단계별 Replay 뷰어 |
+- 서비스 health 상태 (ok / error)
+- 활성 프로젝트 수 및 에이전트 수
+- 최근 프로젝트 목록
+- 에이전트 보상 랭킹 (PoW leaderboard)
+
+### Projects
+
+- 프로젝트 목록 조회 및 신규 생성
+- Stage 전환 버튼 (plan → execute → validate → close)
+- Evidence 목록 (명령, exit code, stdout 미리보기)
+- WebSocket 기반 실시간 stage 업데이트
+
+### Playbooks
+
+- Playbook 목록 조회
+- Playbook 선택 시 step 목록 확인
+- 새 Playbook 생성
+- 특정 프로젝트에 Playbook 실행
+
+### Replay
+
+- Project ID 입력 → 실행 타임라인 조회
+- 각 task: 순서, 제목, exit code, 소요시간, 보상 포인트, 블록 해시
+- Chain 무결성 검증 결과 표시
+
+### PoW Blocks
+
+- 에이전트 목록 (잔액 기준 정렬)
+- 에이전트 선택 시 블록 체인 조회
+- 블록 상세: prev_hash, 보상, exit code, 블록 해시, 생성시각
+- Chain 무결성 검증 (tamper 감지)
+
+### Settings
+
+- 알림 채널 추가 (Slack / Email / Webhook)
+- 알림 규칙 추가 (event_type 매칭)
+- 채널 및 규칙 목록 조회
 
 ---
 
-## Swagger UI 사용법
+## 개발 서버 (프론트엔드 개발용)
 
-`http://localhost:8000/docs`에서 모든 API를 브라우저에서 직접 테스트할 수 있다.
+```bash
+cd apps/web-ui
+npm run dev
+# → http://localhost:5173/app/
+```
 
-1. 엔드포인트 클릭 → "Try it out"
-2. Request body 입력
-3. "Execute" 클릭
-4. Response 확인
+개발 서버는 `/api/*` 요청을 `http://localhost:8000`으로 프록시하므로 Manager API가 실행 중이어야 한다.
+
+---
+
+## 문제 해결
+
+| 증상 | 원인 | 해결 |
+|------|------|------|
+| `/app/` → 404 | dist 없거나 서버 재시작 필요 | `npm run build` 후 Manager API 재시작 |
+| `/` → `/ui` 로 리다이렉트 | 서버가 구 코드로 기동됨 | Manager API 재시작 |
+| API 호출 실패 | Manager API 미실행 | `./dev.sh manager` |
+| 빈 목록 | DB 미연결 또는 seed 미적재 | `./dev.sh manager` + seed_loader 실행 |
