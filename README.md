@@ -1,37 +1,27 @@
 # OpsClaw
 
-OpsClaw는 **pi runtime 기반 정보시스템 운영/보안 작업 오케스트레이션 플랫폼**이다.
-Claude Code로 OpsClaw를 실행시키고 작업을 시킬 수 있다. 
-User가 대충 쓴 작업요청도 Mater Agent인 Claude Code가 명석하게 계획을 짜고 작업을 성공시킬 수 있는 프롬프트로 작업을 시킨다.
-내부망 전용으로 활요하고자 한다면 Claude Code만 오픈모델로 바꾸면 된다. 
-현재 완전히 폐쇄망 작업을 고려하여 Manager Agent, Sub Agent는 gpt-oss:120b, qwen3:32b, gtp-oss:20b, qwen3:8b 등 GPU에 맞는 모델을 사용할 수 있다. 
-
-프로젝트의 핵심 목적은 자연어 요청을 내부망 운영 작업으로 바로 흘려보내는 것이 아니라,
-그 요청을 **프로젝트 단위로 접수하고**, **단계별 상태 전이(plan → execute → validate → report → close)** 로 관리하며,
-결과를 **evidence/report 중심으로 기록 가능한 형태**로 남기는 것이다.
-
----
-
 ## 1. 시스템 소개
 
-OpsClaw는 다음 상황을 해결하기 위해 설계되었다.
+시스템 소개
 
-- 내부망 또는 통제된 환경에서 운영/보안 작업을 구조화해서 수행하고 싶다.
-- 자연어 요청을 바로 실행하지 않고, 프로젝트/단계/증빙 단위로 관리하고 싶다.
-- 실행 결과를 stdout/stderr 감상이 아니라 evidence/report 로 남기고 싶다.
-- 신규 업무를 코어 수정이 아니라 asset / skill / playbook 추가 중심으로 수용하고 싶다.
-- 장기적으로 approval, policy, history‑aware retrieval, continuous watch 모드까지 확장하고 싶다.
-- 반복/정기적인 정보시스템 작업은 Playbook 기반으로 LLM이 함부로 창의적인 작업을 통제한다.
+OpsClaw는 pi runtime 기반 정보시스템 운영·보안 작업 오케스트레이션 플랫폼이다.
+Pi(https://github.com/badlogic/pi-mono/)는 OpenClaw의 코어에 SDK를 결합하여 하네스를 구현할 수 있도록 만든 오픈소스 런타임이며, OpsClaw는 이를 기반으로 서버, 네트워크, 보안, 클라우드 구축 및 운영 업무를 체계적으로 통제하고 수행하도록 설계되었다.
 
-OpsClaw는 이 목표를 위해 다음 철학을 따른다.
+OpsClaw의 핵심은 사용자의 자연어 요청을 단순히 곧바로 내부망 작업으로 흘려보내는 것이 아니다.
+대신 요청을 먼저 프로젝트 단위로 접수하고, 이를 관리 가능한 작업 체계로 구조화한 뒤, plan → execute → validate → report → close의 단계별 상태 전이를 통해 작업을 통제한다. 즉, 요청을 즉시 실행하는 자동화 도구가 아니라, 작업의 목적·대상·절차·검수 결과를 모두 관리 가능한 형태로 다루는 운영 플랫폼에 가깝다.
 
-- **pi는 실행 런타임 엔진**
-- **OpsClaw는 control‑plane**
-- **asset‑first**: 모든 실행은 자산에서 시작
-- **evidence‑first**: close 전에 반드시 evidence 존재
-- **history‑aware, context‑light**
-- **구조 우선**
-- **신규 업무는 코어 수정이 아니라 skill / playbook 추가로 수용**
+OpsClaw는 일반적인 에이전트 프로그램과도 구조적으로 다르다. 작업 대상 시스템을 먼저 Asset으로 등록하고, 대상 환경에 Subagent를 설치한 뒤, Playbook 기반으로 작업을 수행한다. 이 방식은 작업 대상을 명확히 식별하고, 사전에 정의된 절차와 검증 가능한 실행 흐름 안에서 작업을 수행하게 하므로, 장기간 유지에 따른 높은 신뢰성과 재현성, 엄격한 작업 증명 체계를 확보할 수 있다. 그 결과 OpsClaw는 사람의 숙련도에 의존하던 운영·보안 작업을 보다 일관되고 감사 가능한 방식으로 수행하도록 만든다.
+
+특히 OpsClaw는 모든 결과를 evidence/report 중심으로 남기는 것을 중요하게 본다. 작업 과정에서 생성된 명령 실행 기록, 수집 결과, 오류, 조치 내역, 검수 결과를 단순 로그가 아니라 증빙 가능한 산출물로 저장함으로써, 나중에 누가 무엇을 왜 수행했는지 추적할 수 있도록 한다. 이를 통해 감사(Audit), 책임추적성(Accountability), 사후 검토, 재현 가능한 운영 절차 수립이 가능해진다.
+
+또한 모든 작업 이력과 프롬프트, 상태 변화, 결과물은 데이터베이스에 축적되며, 작업이 완료된 이후에는 작업 과정, 시행착오, 이슈, 결과 검수 내용을 종합하여 RAG 기반의 Experience Layer로 발전한다. 이 Experience Layer는 이후 유사한 작업이 들어왔을 때 참고 가능한 운영 지식으로 활용되며, 에이전트가 과거의 성공 사례와 실패 사례를 기반으로 더 일관되고 정교한 방식으로 작업을 수행하도록 돕는다.
+
+OpsClaw의 또 다른 중요한 축은 블록체인 기반 보상 체계이다. 여기서 블록체인은 단순 기록 수단이 아니라, 작업 수행에 대한 대가 지급 기능을 담당한다. 즉, 작업의 수행 결과와 검수 내용, 증빙 자료를 바탕으로 정당한 보상이 연결되도록 설계함으로써, 플랫폼 내부에서 작업 품질과 책임 있는 수행을 유도하는 역할을 한다. 향후에는 여기에 강화학습(RL) 을 결합하여, 에이전트가 보상 극대화 전략을 스스로 학습하고 더 나은 실행 방식을 선택하도록 발전시킬 수 있다. 이는 단순 자동화를 넘어, 시간이 지날수록 품질이 개선되는 자기강화형 운영 구조를 지향한다.
+
+OpsClaw는 Claude Code를 통해 실행하고 작업을 지시할 수 있다. 사용자가 다소 거칠거나 불완전하게 작성한 요청을 입력하더라도, 상위 에이전트가 이를 해석해 명확한 계획과 실행 가능한 작업 지시로 정제하고, 적절한 프로젝트 및 실행 단계로 편입시켜 작업을 진행할 수 있다. 또한 내부망 전용 운영을 고려할 경우 상위 모델만 교체하는 방식으로 폐쇄망 구조에 맞게 조정할 수 있으며, Manager Agent와 Sub Agent에는 gpt-oss:120b, qwen3:32b, gpt-oss:20b, qwen3:8b 등 GPU 자원에 맞는 다양한 모델을 적용할 수 있도록 설계하고 있다.
+
+결국 OpsClaw는 자연어 기반 요청을 신뢰할 수 있는 운영 작업으로 바꾸기 위해, 프로젝트 단위 접수, 단계별 상태 관리, Asset/Subagent/Playbook 기반 실행, evidence/report 중심 기록, 보상과 학습을 통한 품질 개선을 하나의 플랫폼 안에 통합한 시스템이다.
+이는 단순히 “에이전트가 대신 일한다”는 수준을 넘어, 작업이 어떻게 계획되고, 어떻게 실행되었으며, 무엇으로 검증되었고, 어떤 결과가 남았는지를 끝까지 설명할 수 있는 구조를 지향한다. 그리고 이러한 축적이 반복될수록, OpsClaw는 최종적으로 사람이 세부 절차를 직접 통제하지 않아도 스스로 운영을 수행하는 자율 시스템(Self System) 에 가까워지게 된다.
 
 ---
 
@@ -254,6 +244,19 @@ apps/web-ui/ 에서 npm install && npm run build 실행해줘
 - Experience 생성 → FTS 검색 → 참조 흐름 정상 동작
 - 통합 smoke 테스트 30/30 PASS
 
+**Web UI/Dashboard (M16)**
+- React + Vite SPA (`apps/web-ui/`)
+- 페이지: Projects, Playbooks, Replay, PoW Blocks, Settings
+- Manager API 연동 (proxy via FastAPI `/app/` static serving)
+- `npm run build` → `dist/` → Manager API `/app/` 경로로 서빙
+
+**Proof of Work & Blockchain Reward (M18)**
+- PoW 블록 생성: SHA-256 nonce 채굴, target difficulty 제어
+- 작업 완료 시 reward 블록 자동 생성 (completion-report 연동)
+- Blockchain Audit DB: `pow_blocks` 테이블, chain 무결성 검증
+- Replay API: 과거 프로젝트 실행 흐름 재현 (`/projects/{id}/replay`)
+- RL 연결 기반: PoW reward → 강화학습 보상 신호 설계 기반 마련
+
 **User & Agent Manual (M20)**
 - 사용자 매뉴얼: `docs/manual/user/` (설치~트러블슈팅 7개 파일)
 - 에이전트 매뉴얼: `docs/manual/agent/` (SubAgent 설치~A2A 프로토콜 5개 파일)
@@ -261,10 +264,9 @@ apps/web-ui/ 에서 npm install && npm run build 실행해줘
 
 ### 아직 남아 있는 것
 
-- M16: Web UI/Dashboard (React + FastAPI)
-- M18: Proof of Work & Blockchain Reward
 - CI 파이프라인 확대
 - 인프라 구축 재개 (web/siem enp4s0 케이블 확인 후): Docker+JuiceShop+BunkerWeb(web), Wazuh(siem), Suricata IPS(secu)
+- RL 에이전트 학습 루프 연결 (M18 PoW reward → 강화학습 실제 연동)
 
 ---
 
@@ -355,7 +357,7 @@ PYTHONPATH=. python3 tools/dev/seed_loader.py --dry-run # 확인만
 
 README는 현재 구현 상태를 반영하는 대표 문서다.
 없는 기능을 완성된 것처럼 적지 않는다.
-M14 이후는 **계획 범위**이지 현재 완료 기능이 아니다.
+M0~M20 전 마일스톤이 완료된 상태이며, "아직 남아 있는 것" 항목만 미구현이다.
 
 ---
 
