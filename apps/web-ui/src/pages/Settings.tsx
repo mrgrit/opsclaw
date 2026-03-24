@@ -16,8 +16,8 @@ export default function Settings() {
       api.get<{ channels: NotificationChannel[] }>('/notifications/channels').catch(() => ({ channels: [] })),
       api.get<{ rules: NotificationRule[] }>('/notifications/rules').catch(() => ({ rules: [] })),
     ])
-    setChannels(c.channels)
-    setRules(r.rules)
+    setChannels(c.channels ?? [])
+    setRules(r.rules ?? [])
   }
 
   useEffect(() => { load() }, [])
