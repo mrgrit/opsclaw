@@ -467,3 +467,138 @@ def explain_playbook(playbook_id: str, database_url: str | None = None) -> dict[
         "explanation": "\n".join(lines),
         "plan": plan,
     }
+
+
+# ── Playbook 버전 관리 (M22) ────────────────────────────────────────────────
+
+def snapshot_playbook(
+    playbook_id: str,
+    note: str | None = None,
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    """
+    현재 Playbook + Steps 상태를 스냅샷으로 저장한다.
+    version_number는 해당 Playbook의 현재 최대값 + 1.
+    """
+    with _conn(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM playbooks WHERE id = %s", (playbook_id,))
+            pb = cur.fetchone()
+            if pb is None:
+                raise RegistryNotFoundError(f"Playbook not found: {playbook_id}")
+            cur.execute(
+                "SELECT * FROM playbook_steps WHERE playbook_id = %s ORDER BY step_order",
+                (playbook_id,),
+            )
+            steps = [dict(r) for r in cur.fetchall()]
+
+            cur.execute(
+                "SELECT COALESCE(MAX(version_number), 0) FROM playbook_versions WHERE playbook_id = %s",
+                (playbook_id,),
+            )
+            next_version = (cur.fetchone()[0] or 0) + 1
+
+            snap_id = f"pbv_{uuid.uuid4().hex[:12]}"
+            snapshot_json = {"playbook": dict(pb), "steps": steps}
+            cur.execute(
+                """
+                INSERT INTO playbook_versions (id, playbook_id, version_number, snapshot_json, note)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING *
+                """,
+                (snap_id, playbook_id, next_version, json.dumps(snapshot_json), note),
+            )
+            row = dict(cur.fetchone())
+    return {
+        "id": row["id"],
+        "playbook_id": playbook_id,
+        "version_number": next_version,
+        "note": note,
+        "created_at": str(row["created_at"]),
+    }
+
+
+def list_playbook_versions(
+    playbook_id: str,
+    database_url: str | None = None,
+) -> list[dict[str, Any]]:
+    """버전 목록 조회 (최신순)."""
+    with _conn(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, playbook_id, version_number, note, created_at
+                FROM playbook_versions
+                WHERE playbook_id = %s
+                ORDER BY version_number DESC
+                """,
+                (playbook_id,),
+            )
+            return [dict(r) for r in cur.fetchall()]
+
+
+def rollback_playbook(
+    playbook_id: str,
+    version_number: int,
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    """
+    지정한 버전의 스냅샷으로 Playbook과 Steps를 복원한다.
+    복원 전 현재 상태를 자동 스냅샷 저장 (rollback 이력 보존).
+    """
+    with _conn(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT snapshot_json FROM playbook_versions WHERE playbook_id=%s AND version_number=%s",
+                (playbook_id, version_number),
+            )
+            row = cur.fetchone()
+            if row is None:
+                raise RegistryNotFoundError(
+                    f"Version {version_number} not found for playbook {playbook_id}"
+                )
+            snap = row["snapshot_json"]
+            pb_snap = snap["playbook"]
+            steps_snap = snap["steps"]
+
+            # Playbook 메타 복원
+            cur.execute(
+                """
+                UPDATE playbooks SET
+                    name=%(name)s, version=%(version)s, description=%(description)s,
+                    category=%(category)s, execution_mode=%(execution_mode)s,
+                    default_risk_level=%(default_risk_level)s, enabled=%(enabled)s,
+                    metadata=%(metadata)s, updated_at=NOW()
+                WHERE id=%(id)s
+                """,
+                {k: pb_snap.get(k) for k in (
+                    "id", "name", "version", "description", "category",
+                    "execution_mode", "default_risk_level", "enabled", "metadata",
+                )},
+            )
+
+            # Steps 복원: 기존 삭제 후 재삽입
+            cur.execute("DELETE FROM playbook_steps WHERE playbook_id = %s", (playbook_id,))
+            for s in steps_snap:
+                cur.execute(
+                    """
+                    INSERT INTO playbook_steps
+                        (id, playbook_id, step_order, step_type, ref_id, name,
+                         condition_expr, retry_policy, on_failure_action, metadata)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    (
+                        s["id"], playbook_id, s["step_order"], s["step_type"],
+                        s.get("ref_id"), s.get("name"), s.get("condition_expr"),
+                        json.dumps(s.get("retry_policy")) if s.get("retry_policy") else None,
+                        s.get("on_failure_action", "abort"),
+                        json.dumps(s.get("metadata")) if s.get("metadata") else None,
+                    ),
+                )
+
+    return {
+        "playbook_id": playbook_id,
+        "restored_version": version_number,
+        "steps_restored": len(steps_snap),
+    }

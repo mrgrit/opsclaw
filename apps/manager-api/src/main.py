@@ -31,10 +31,13 @@ from packages.registry_service import (
     get_playbook_steps,
     get_skill_by_name,
     get_tool_by_name,
+    list_playbook_versions,
     list_playbooks,
     list_skills,
     list_tools,
     resolve_playbook,
+    rollback_playbook,
+    snapshot_playbook,
     upsert_playbook,
     upsert_playbook_steps,
 )
@@ -223,7 +226,8 @@ class CompletionReportRequest(BaseModel):
 
 class ExecutePlanRequest(BaseModel):
     """Master /master-plan 결과의 tasks 배열을 받아 순서대로 실행."""
-    tasks: list[dict]          # [{order, title, playbook_hint, instruction_prompt, risk_level}]
+    tasks: list[dict] = []     # [{order, title, playbook_hint, instruction_prompt, risk_level}]
+    playbook_id: str | None = None  # M22 A-02: 지정 시 해당 Playbook 직접 실행 (tasks 불필요)
     subagent_url: str | None = None
     dry_run: bool = False
     confirmed: bool = False    # B-05: True면 risk_level=critical 태스크도 실제 실행
@@ -678,6 +682,51 @@ def create_project_router() -> APIRouter:
         from packages.registry_service import list_playbooks
         from packages.project_service import dispatch_command_to_subagent
 
+        # M22 A-02: playbook_id 직접 지정 시 해당 Playbook 실행 (tasks 불필요)
+        if payload.playbook_id and not payload.tasks:
+            try:
+                result = run_playbook_steps(
+                    project_id=project_id,
+                    subagent_url=payload.subagent_url,
+                    dry_run=payload.dry_run,
+                    params={"playbook_id": payload.playbook_id},
+                )
+                if not payload.dry_run:
+                    agent_id = payload.subagent_url or "local"
+                    for sr in result.get("step_results", []):
+                        if sr.get("status") not in ("ok", "failed"):
+                            continue
+                        try:
+                            generate_proof(
+                                project_id=project_id,
+                                agent_id=agent_id,
+                                task_order=sr.get("order", 0),
+                                task_title=sr.get("name", ""),
+                                exit_code=sr.get("exit_code", 0 if sr.get("status") == "ok" else 1),
+                                stdout=sr.get("stdout", ""),
+                                stderr=sr.get("stderr", ""),
+                                duration_s=sr.get("duration_s", 0.0),
+                                risk_level="medium",
+                            )
+                        except Exception:
+                            pass
+                steps_ok = result.get("steps_ok", 0)
+                steps_failed = result.get("steps_failed", 0)
+                return {
+                    "status": "ok",
+                    "project_id": project_id,
+                    "tasks_total": result.get("steps_total", 0),
+                    "tasks_ok": steps_ok,
+                    "tasks_failed": steps_failed,
+                    "overall": result.get("status", "ok"),
+                    "playbook_id": payload.playbook_id,
+                    "result": result,
+                }
+            except ProjectNotFoundError as exc:
+                raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
+
         tasks = sorted(payload.tasks, key=lambda t: t.get("order", 0))
         task_results: list[dict] = []
         tasks_ok = tasks_failed = 0
@@ -689,12 +738,19 @@ def create_project_router() -> APIRouter:
         except Exception:
             pass
 
+        import re as _re
         for task in tasks:
             order = task.get("order", 0)
             title = task.get("title", f"task-{order}")
             hint = task.get("playbook_hint")
             prompt = task.get("instruction_prompt", title)
             risk = task.get("risk_level", "medium")
+
+            # M22 A-03: sudo 포함 명령은 risk_level 자동 high 상향
+            sudo_elevated = False
+            if _re.search(r'\bsudo\b', prompt or "") and risk in ("low", "medium"):
+                risk = "high"
+                sudo_elevated = True
 
             # B-05: critical 태스크는 dry_run 강제 (confirmed=True이면 실제 실행)
             effective_dry_run = payload.dry_run or (risk == "critical" and not payload.confirmed)
@@ -704,6 +760,7 @@ def create_project_router() -> APIRouter:
                 "title": title,
                 "risk_level": risk,
                 "dry_run": effective_dry_run,
+                "sudo_elevated": sudo_elevated,
                 "method": None,
                 "status": "pending",
                 "detail": {},
@@ -1256,6 +1313,42 @@ def create_registry_router() -> APIRouter:
             return {"status": "ok", "playbook_id": playbook_id, "explanation": md}
         except RegistryNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    # ── Playbook 버전 관리 (M22) ──────────────────────────────────────────────
+
+    @router.post("/playbooks/{playbook_id}/snapshot")
+    def snapshot_playbook_endpoint(playbook_id: str, payload: dict = {}) -> dict[str, Any]:
+        """현재 Playbook + Steps 상태를 버전 스냅샷으로 저장한다."""
+        try:
+            result = snapshot_playbook(playbook_id, note=payload.get("note"))
+            return {"status": "ok", **result}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
+
+    @router.get("/playbooks/{playbook_id}/versions")
+    def list_playbook_versions_endpoint(playbook_id: str) -> dict[str, Any]:
+        """Playbook 버전 목록 조회 (최신순)."""
+        try:
+            versions = list_playbook_versions(playbook_id)
+            return {"status": "ok", "playbook_id": playbook_id, "versions": versions}
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
+
+    @router.post("/playbooks/{playbook_id}/rollback")
+    def rollback_playbook_endpoint(playbook_id: str, payload: dict) -> dict[str, Any]:
+        """지정 버전으로 Playbook + Steps 복원."""
+        version_number = payload.get("version_number")
+        if version_number is None:
+            raise HTTPException(status_code=422, detail={"message": "version_number required"})
+        try:
+            result = rollback_playbook(playbook_id, int(version_number))
+            return {"status": "ok", **result}
+        except RegistryNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
 
     @router.post("/playbook/run")
     def run_playbook_global(payload: dict) -> dict[str, Any]:

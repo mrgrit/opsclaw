@@ -218,8 +218,14 @@ def resolve_step_script(
     if "script" in step_meta:
         return step_meta["script"]
 
-    # step metadata + run-time params 병합 (run-time params가 override)
-    merged_meta = {**step_meta, **project_ctx.get("params", {})}
+    # 3-레이어 params 병합:
+    #   1. request params (기본값, 호출자 제공)
+    #   2. step.metadata.params (스텝별 override — step 정의가 우선)
+    # 결과: step별 host/target 등 독립 파라미터 지정 가능
+    request_params = project_ctx.get("params") or {}
+    step_params = step_meta.get("params") or {}
+    effective_params = {**request_params, **step_params}  # step > request
+    merged_meta = {**step_meta, **effective_params}
 
     if step_type == "skill":
         builder = _SKILL_BUILDERS.get(ref)

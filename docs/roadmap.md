@@ -457,7 +457,7 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 |---------|---------|---------|---------|
 | M21 | Bug Fix Sprint | B-01~B-05 | **1순위** (즉시) |
 | M25 | Web UI 정상화 | GET /projects, key alias, evidence 정규화, Agents 페이지 | 즉시 |
-| M22 | Playbook Engine v2 | A-01, A-02, A-03, A-06 | 2순위 |
+| M22 | Playbook Engine v2 | A-01, A-02, A-03, A-06 | ✅ 완료 |
 | M23 | Async & Multi-Agent | A-04, A-05 | 3순위 |
 | M24 | Advanced RL & Experience | A-07, A-08 | 4순위 |
 
@@ -646,11 +646,11 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 - [x] WORK-91: B-04 stdout 절단 수정 (300 → 4096자, full stdout for PoW hash)
 - [x] WORK-92: B-05 critical confirmed 파라미터 처리
 
-### M22 (Playbook Engine v2) — 목표: 2026-05 이내
-- [ ] WORK-93: A-01 스텝별 params override
-- [ ] WORK-94: A-02 execute-plan/Playbook 통합
-- [ ] WORK-95: A-03 sudo 가이드 및 안전 규칙
-- [ ] WORK-96: A-06 Playbook 버전 관리
+### M22 (Playbook Engine v2) — 완료 2026-03-24
+- [x] WORK-93: A-01 스텝별 params override (step.metadata.params > request.params)
+- [x] WORK-94: A-02 execute-plan에 playbook_id 직접 지원
+- [x] WORK-95: A-03 sudo 감지 + risk_level 자동 high 상향 + 가이드 문서
+- [x] WORK-96: A-06 Playbook 버전 관리 (snapshot/versions/rollback API)
 
 ### M23 (Async & Multi-Agent) — 목표: 2026-06 이내
 - [ ] WORK-97: A-04 비동기 태스크 큐
