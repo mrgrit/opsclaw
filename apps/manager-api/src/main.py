@@ -9,7 +9,42 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
+import re as _re_secret
+
 from fastapi import APIRouter, FastAPI, HTTPException, Request, WebSocket, status
+
+
+# ── 시크릿 마스킹 (PAT, token, password 노출 방지) ─────────────────────────
+_SECRET_PATTERNS = [
+    (r'ghp_[A-Za-z0-9_]{36,}', 'ghp_****'),
+    (r'github_pat_[A-Za-z0-9_]{22,}', 'github_pat_****'),
+    (r'gho_[A-Za-z0-9_]{36,}', 'gho_****'),
+    (r'ghs_[A-Za-z0-9_]{36,}', 'ghs_****'),
+    (r'glpat-[A-Za-z0-9_\-]{20,}', 'glpat-****'),
+    (r'https?://[^@\s]+@github\.com', 'https://****@github.com'),
+]
+_SECRET_COMPILED = [(_re_secret.compile(p), r) for p, r in _SECRET_PATTERNS]
+
+
+def _mask_secrets(text: str) -> str:
+    """문자열 내 시크릿(PAT, token 등)을 마스킹."""
+    if not text:
+        return text
+    for pat, repl in _SECRET_COMPILED:
+        text = pat.sub(repl, text)
+    return text
+
+
+def _mask_dict(d: dict) -> dict:
+    """dict 내 문자열 필드 시크릿 마스킹."""
+    masked = dict(d)
+    for key in ('stdout', 'stderr', 'command', 'body_ref', 'stdout_ref',
+                'command_text', 'instruction_prompt', 'original_command', 'summary'):
+        if key in masked and isinstance(masked[key], str):
+            masked[key] = _mask_secrets(masked[key])
+    if 'detail' in masked and isinstance(masked['detail'], dict):
+        masked['detail'] = _mask_dict(masked['detail'])
+    return masked
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -491,7 +526,7 @@ def create_project_router() -> APIRouter:
                 else:
                     item["stdout"] = stdout_ref
                 item["stderr"] = item.pop("stderr_ref", "") or ""
-                normalized.append(item)
+                normalized.append(_mask_dict(item))
             return {"status": "ok", "project_id": project_id, "evidence": normalized, "items": normalized}
         except ProjectNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
@@ -627,7 +662,7 @@ def create_project_router() -> APIRouter:
             )
             result["original_command"] = payload.command
             result["llm_converted"] = needs_llm
-            return {"status": "ok", "result": result}
+            return {"status": "ok", "result": _mask_dict(result)}
         except ProjectNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
         except (ProjectStageError, ProjectServiceError) as exc:
@@ -873,7 +908,7 @@ def create_project_router() -> APIRouter:
             "status": "ok", "project_id": project_id,
             "tasks_total": len(tasks), "tasks_ok": tasks_ok,
             "tasks_failed": tasks_failed, "overall": overall,
-            "task_results": task_results,
+            "task_results": [_mask_dict(tr) for tr in task_results],
         }
 
     def _execute_plan_background(job_id: str, project_id: str, payload: ExecutePlanRequest):

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { PoWBlock, LedgerEntry } from '../api/types'
 import ChatPanel from '../components/ChatPanel'
+import { maskSecrets } from '../utils/mask'
 
 interface VerifyResult { valid: boolean; blocks: number; tampered: { id: string; reason: string }[] }
 interface TaskDetail { evidence: any[]; report: any; project: any }
@@ -162,7 +163,7 @@ export default function PoW() {
                         onClick={() => openTaskDetail(b)}
                         style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', color: '#2563eb', textDecoration: 'underline' }}
                         title="클릭하면 프로젝트 상세(evidence, 보고서) 확인"
-                      >{b.task_title}</div>
+                      >{maskSecrets(b.task_title)}</div>
                       <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'monospace' }}>
                         prev: {b.prev_hash.slice(0, 8)}... · {b.project_id}
                       </div>

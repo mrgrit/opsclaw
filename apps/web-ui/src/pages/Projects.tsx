@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import type { Project, Evidence, TaskItem, ExecutePlanResult, DispatchResult } from '../api/types'
 import StageBadge from '../components/StageBadge'
 import ChatPanel from '../components/ChatPanel'
+import { maskSecrets } from '../utils/mask'
 
 const STAGES = ['plan', 'execute', 'validate', 'close']
 const RISK_LEVELS = ['low', 'medium', 'high', 'critical']
@@ -174,7 +175,7 @@ export default function Projects() {
                       <div key={ev.id} style={{ borderLeft: `3px solid ${ev.exit_code === 0 ? '#10b981' : '#ef4444'}`, paddingLeft: 12 }}>
                         <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#374151' }}>{ev.command}</div>
                         <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: 2 }}>exit {ev.exit_code}</div>
-                        {ev.stdout && <pre style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'pre-wrap', maxHeight: 80, overflow: 'auto' }}>{ev.stdout.slice(0, 500)}</pre>}
+                        {ev.stdout && <pre style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'pre-wrap', maxHeight: 80, overflow: 'auto' }}>{maskSecrets(ev.stdout.slice(0, 500))}</pre>}
                       </div>
                     ))}
                   </div>
@@ -208,8 +209,8 @@ export default function Projects() {
                     <div style={{ fontSize: '0.8rem', fontWeight: 700, color: dispResult.exit_code === 0 ? '#059669' : '#dc2626' }}>
                       exit {dispResult.exit_code} {dispResult.llm_converted ? '(LLM 변환)' : ''}
                     </div>
-                    {dispResult.stdout && <pre style={preStyle}>{dispResult.stdout}</pre>}
-                    {dispResult.stderr && <pre style={{ ...preStyle, color: '#dc2626' }}>{dispResult.stderr}</pre>}
+                    {dispResult.stdout && <pre style={preStyle}>{maskSecrets(dispResult.stdout)}</pre>}
+                    {dispResult.stderr && <pre style={{ ...preStyle, color: '#dc2626' }}>{maskSecrets(dispResult.stderr)}</pre>}
                   </div>
                 )}
               </div>
@@ -291,9 +292,9 @@ export default function Projects() {
                         {expandedTask === i && tr.detail && (
                           <div style={{ marginTop: 4 }}>
                             {tr.detail.exit_code !== undefined && <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>exit {tr.detail.exit_code}</div>}
-                            {tr.detail.stdout && <pre style={preStyle}>{tr.detail.stdout}</pre>}
-                            {tr.detail.stderr && <pre style={{ ...preStyle, color: '#dc2626' }}>{tr.detail.stderr}</pre>}
-                            {tr.detail.error && <pre style={{ ...preStyle, color: '#dc2626' }}>{tr.detail.error}</pre>}
+                            {tr.detail.stdout && <pre style={preStyle}>{maskSecrets(tr.detail.stdout)}</pre>}
+                            {tr.detail.stderr && <pre style={{ ...preStyle, color: '#dc2626' }}>{maskSecrets(tr.detail.stderr)}</pre>}
+                            {tr.detail.error && <pre style={{ ...preStyle, color: '#dc2626' }}>{maskSecrets(tr.detail.error)}</pre>}
                           </div>
                         )}
                       </div>
