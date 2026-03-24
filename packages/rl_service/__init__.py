@@ -12,6 +12,7 @@ task_reward 데이터로 Q-table을 학습하여 작업 실행 전략(risk_level
 from __future__ import annotations
 
 import json
+import math
 import os
 from datetime import datetime, timezone
 from typing import Any
@@ -65,27 +66,34 @@ def _get_agent_success_rate(
 
 def _load_q_table(
     path: str | None = None,
-) -> tuple[np.ndarray, dict]:
-    """Q-table + 메타데이터 로드. 파일 없으면 초기화."""
+) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Q-table + visit_counts + 메타데이터 로드. 파일 없으면 초기화."""
     path = path or DEFAULT_POLICY_PATH
     try:
         with open(path, "r") as f:
             data = json.load(f)
         q = np.array(data["q_table"], dtype=np.float64)
+        vc = np.array(data.get("visit_counts", np.zeros((NUM_STATES, NUM_ACTIONS)).tolist()), dtype=np.float64)
         meta = data.get("metadata", {})
-        return q, meta
+        return q, vc, meta
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        return np.zeros((NUM_STATES, NUM_ACTIONS), dtype=np.float64), {}
+        return (
+            np.zeros((NUM_STATES, NUM_ACTIONS), dtype=np.float64),
+            np.zeros((NUM_STATES, NUM_ACTIONS), dtype=np.float64),
+            {},
+        )
 
 
 def _save_q_table(
-    q_table: np.ndarray, metadata: dict, path: str | None = None
+    q_table: np.ndarray, metadata: dict, path: str | None = None,
+    visit_counts: np.ndarray | None = None,
 ) -> str:
-    """Q-table을 JSON으로 저장."""
+    """Q-table + visit_counts를 JSON으로 저장."""
     path = path or DEFAULT_POLICY_PATH
     os.makedirs(os.path.dirname(path), exist_ok=True)
     data = {
         "q_table": q_table.tolist(),
+        "visit_counts": visit_counts.tolist() if visit_counts is not None else np.zeros((NUM_STATES, NUM_ACTIONS)).tolist(),
         "metadata": metadata,
     }
     with open(path, "w") as f:
@@ -156,13 +164,14 @@ def train(
             "episodes_found": len(episodes),
         }
 
-    q_table, meta = _load_q_table(policy_path)
+    q_table, visit_counts, meta = _load_q_table(policy_path)
     updates = 0
 
     for ep in episodes:
         s, a, r = ep["state"], ep["action"], ep["reward"]
         old_q = q_table[s, a]
         q_table[s, a] = old_q + alpha * (r - old_q)
+        visit_counts[s, a] += 1
         updates += 1
 
     train_count = meta.get("train_count", 0) + 1
@@ -175,7 +184,7 @@ def train(
         "gamma": gamma,
         "epsilon": epsilon,
     }
-    saved_path = _save_q_table(q_table, new_meta, policy_path)
+    saved_path = _save_q_table(q_table, new_meta, policy_path, visit_counts=visit_counts)
 
     return {
         "status": "ok",
@@ -190,18 +199,46 @@ def recommend(
     agent_id: str,
     risk_level: str = "medium",
     task_order: int = 1,
+    exploration: str = "greedy",  # "greedy" | "ucb1" | "epsilon"
+    ucb_c: float = 1.0,          # UCB1 탐색 계수
     policy_path: str | None = None,
     database_url: str | None = None,
 ) -> dict[str, Any]:
     """
     Q-table 기반 최적 action(risk_level) 추천.
+
+    exploration:
+      greedy — Q-value 최대 action (기본)
+      ucb1   — UCB1 탐색: Q(s,a) + c√(ln(N)/n(s,a))
+      epsilon — ε-greedy: ε 확률로 랜덤
     """
-    q_table, meta = _load_q_table(policy_path)
+    q_table, visit_counts, meta = _load_q_table(policy_path)
     success_rate = _get_agent_success_rate(agent_id, database_url)
     state = _encode_state(risk_level, success_rate, task_order)
 
     q_values = q_table[state]
-    best_action = int(np.argmax(q_values))
+
+    if exploration == "ucb1":
+        total_visits = max(float(visit_counts.sum()), 1.0)
+        ucb_values = np.zeros(NUM_ACTIONS, dtype=np.float64)
+        for a in range(NUM_ACTIONS):
+            n_sa = max(float(visit_counts[state, a]), 1.0)
+            ucb_bonus = ucb_c * math.sqrt(math.log(total_visits) / n_sa)
+            ucb_values[a] = q_values[a] + ucb_bonus
+        best_action = int(np.argmax(ucb_values))
+        extra = {"exploration": "ucb1", "ucb_c": ucb_c, "ucb_values": {
+            ACTION_LABELS[i]: round(float(ucb_values[i]), 4) for i in range(NUM_ACTIONS)
+        }}
+    elif exploration == "epsilon":
+        eps = meta.get("epsilon", DEFAULT_EPSILON)
+        if np.random.random() < eps:
+            best_action = int(np.random.randint(NUM_ACTIONS))
+        else:
+            best_action = int(np.argmax(q_values))
+        extra = {"exploration": "epsilon", "epsilon": eps}
+    else:
+        best_action = int(np.argmax(q_values))
+        extra = {"exploration": "greedy"}
 
     return {
         "agent_id": agent_id,
@@ -216,24 +253,37 @@ def recommend(
             ACTION_LABELS[i]: round(float(q_values[i]), 4)
             for i in range(NUM_ACTIONS)
         },
+        "visit_counts": {
+            ACTION_LABELS[i]: int(visit_counts[state, i])
+            for i in range(NUM_ACTIONS)
+        },
         "confidence": "trained" if meta.get("train_count", 0) > 0 else "untrained",
+        **extra,
     }
 
 
 def get_policy_stats(
     policy_path: str | None = None,
 ) -> dict[str, Any]:
-    """현재 Q-table 통계 및 학습 메타데이터."""
-    q_table, meta = _load_q_table(policy_path)
+    """현재 Q-table 통계, visit count, 학습 메타데이터."""
+    q_table, visit_counts, meta = _load_q_table(policy_path)
     nonzero = int(np.count_nonzero(q_table))
+    total_cells = NUM_STATES * NUM_ACTIONS
+    visited = int(np.count_nonzero(visit_counts))
+    unvisited = total_cells - visited
     return {
         "num_states": NUM_STATES,
         "num_actions": NUM_ACTIONS,
         "action_labels": ACTION_LABELS,
         "nonzero_entries": nonzero,
-        "coverage_pct": round(nonzero / (NUM_STATES * NUM_ACTIONS) * 100, 1),
+        "coverage_pct": round(nonzero / total_cells * 100, 1),
         "q_table_mean": round(float(np.mean(q_table)), 4),
         "q_table_max": round(float(np.max(q_table)), 4),
         "q_table_min": round(float(np.min(q_table)), 4),
+        # M24: visit count 통계
+        "visit_counts_total": int(visit_counts.sum()),
+        "visited_count": visited,
+        "unvisited_count": unvisited,
+        "coverage_by_visits_pct": round(visited / total_cells * 100, 1),
         **meta,
     }

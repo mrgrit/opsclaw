@@ -263,3 +263,61 @@ def auto_promote_experience(
         outcome=f"{outcome}: {lesson}",
         database_url=database_url,
     )
+
+
+# ── 자동 경험 승급 (M24) ──────────────────────────────────────────────────
+
+def auto_promote_high_reward(
+    project_id: str,
+    reward_threshold: float = 1.1,
+    database_url: str | None = None,
+) -> dict:
+    """
+    프로젝트의 task_reward 평균이 threshold 이상이면 자동 experience 생성.
+    이미 해당 프로젝트의 task_memory가 experience로 승급된 적 있으면 skip.
+
+    Returns: {"promoted": True/False, "avg_reward": ..., ...}
+    """
+    with _conn(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # 해당 프로젝트의 task_reward 평균 조회
+            cur.execute(
+                "SELECT AVG(total_reward) AS avg_reward, COUNT(*) AS cnt FROM task_reward WHERE project_id = %s",
+                (project_id,),
+            )
+            row = cur.fetchone()
+            avg_reward = float(row["avg_reward"]) if row and row["avg_reward"] is not None else 0.0
+            cnt = int(row["cnt"]) if row else 0
+
+            if cnt == 0 or avg_reward < reward_threshold:
+                return {"promoted": False, "avg_reward": round(avg_reward, 4), "reason": "below_threshold"}
+
+            # 이미 task_memory 존재 시 experience 승급 여부 확인
+            cur.execute(
+                "SELECT id FROM task_memories WHERE project_id = %s LIMIT 1",
+                (project_id,),
+            )
+            existing_tm = cur.fetchone()
+
+            # experience에 이미 이 프로젝트 기반 항목 있는지 확인
+            if existing_tm:
+                cur.execute(
+                    "SELECT id FROM experiences WHERE metadata->>'task_memory_id' = %s LIMIT 1",
+                    (str(existing_tm["id"]),),
+                )
+                if cur.fetchone():
+                    return {"promoted": False, "avg_reward": round(avg_reward, 4), "reason": "already_promoted"}
+
+    # threshold 충족 + 미승급 → 자동 승급
+    try:
+        tm = build_task_memory(project_id, database_url)
+        exp = promote_to_experience(
+            task_memory_id=tm["id"],
+            category="operations",
+            title=f"[Auto] {tm.get('summary', '')[:60]}",
+            outcome=f"avg_reward={round(avg_reward, 4)}, tasks={cnt}",
+            database_url=database_url,
+        )
+        return {"promoted": True, "avg_reward": round(avg_reward, 4), "experience_id": exp.get("id")}
+    except Exception as exc:
+        return {"promoted": False, "avg_reward": round(avg_reward, 4), "reason": f"error: {exc}"}

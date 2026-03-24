@@ -459,7 +459,7 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 | M25 | Web UI 정상화 | GET /projects, key alias, evidence 정규화, Agents 페이지 | 즉시 |
 | M22 | Playbook Engine v2 | A-01, A-02, A-03, A-06 | ✅ 완료 |
 | M23 | Async & Multi-Agent | A-04, A-05 | ✅ 완료 |
-| M24 | Advanced RL & Experience | A-07, A-08 | 4순위 |
+| M24 | Advanced RL & Experience | A-07, A-08 | ✅ 완료 |
 
 ---
 
@@ -656,9 +656,9 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 - [x] WORK-97: A-04 비동기 태스크 큐 (async_mode=true, polling endpoint, async_jobs 테이블)
 - [x] WORK-98: A-05 멀티에이전트 병렬 dispatch (parallel=true, task별 subagent_url, ThreadPoolExecutor)
 
-### M24 (Advanced RL & Experience) — 목표: 2026-06 이내
-- [ ] WORK-99: A-07 자동 경험 승급
-- [ ] WORK-100: A-08 RL Q-table 커버리지 향상
+### M24 (Advanced RL & Experience) — 완료 2026-03-24
+- [x] WORK-99: A-07 자동 경험 승급 (auto_promote_high_reward, execute-plan 완료 후 자동 트리거)
+- [x] WORK-100: A-08 UCB1 탐색 + visit count 추적 + coverage 통계 확장
 
 ---
 

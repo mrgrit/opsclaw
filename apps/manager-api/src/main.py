@@ -859,6 +859,14 @@ def create_project_router() -> APIRouter:
                 except Exception:
                     pass
 
+        # M24: 고보상 에피소드 자동 경험 승급
+        if not payload.dry_run:
+            try:
+                from packages.experience_service import auto_promote_high_reward
+                auto_promote_high_reward(project_id)
+            except Exception:
+                pass  # 승급 실패가 실행 결과에 영향 주지 않음
+
         return {
             "status": "ok", "project_id": project_id,
             "tasks_total": len(tasks), "tasks_ok": tasks_ok,
@@ -2041,9 +2049,14 @@ def create_rl_router() -> APIRouter:
         agent_id: str,
         risk_level: str = "medium",
         task_order: int = 1,
+        exploration: str = "greedy",  # M24: "greedy" | "ucb1" | "epsilon"
+        ucb_c: float = 1.0,          # M24: UCB1 탐색 계수
     ) -> dict[str, Any]:
         from packages.rl_service import recommend
-        result = recommend(agent_id=agent_id, risk_level=risk_level, task_order=task_order)
+        result = recommend(
+            agent_id=agent_id, risk_level=risk_level, task_order=task_order,
+            exploration=exploration, ucb_c=ucb_c,
+        )
         return {"status": "ok", **result}
 
     @router.get("/policy")
