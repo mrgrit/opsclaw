@@ -1,15 +1,17 @@
 import asyncio
 import json as _json
+import os
 import re as _re_mod
+import secrets
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, HTTPException, WebSocket, status
+from fastapi import APIRouter, FastAPI, HTTPException, Request, WebSocket, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -2242,6 +2244,33 @@ def create_app() -> FastAPI:
         description="OpsClaw Manager API — lifecycle, evidence, assets, registry, validation, batch/watch, history/experience/retrieval, RBAC/audit/monitoring, notifications.",
     )
 
+    @app.middleware("http")
+    async def api_key_auth(request: Request, call_next):
+        path = request.url.path
+        # Whitelist: CORS pre-flight, health, UI, static assets, WebSocket upgrade
+        if (
+            request.method == "OPTIONS"
+            or path in ("/health", "/", "/ui")
+            or path.startswith("/app/")
+            or request.headers.get("upgrade", "").lower() == "websocket"
+        ):
+            return await call_next(request)
+        # No key configured → dev mode, skip auth
+        if not _OPSCLAW_API_KEY:
+            return await call_next(request)
+        # Accept X-API-Key header or Authorization: Bearer <key>
+        key = request.headers.get("X-API-Key", "")
+        if not key:
+            auth = request.headers.get("Authorization", "")
+            if auth.startswith("Bearer "):
+                key = auth[7:]
+        if not key or not secrets.compare_digest(key.encode(), _OPSCLAW_API_KEY.encode()):
+            return JSONResponse(
+                {"error": "Unauthorized", "detail": "Valid X-API-Key header required"},
+                status_code=401,
+            )
+        return await call_next(request)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173", "http://localhost:8000"],
@@ -2303,5 +2332,7 @@ def create_app() -> FastAPI:
 
     return app
 
+
+_OPSCLAW_API_KEY = os.getenv("OPSCLAW_API_KEY", "")
 
 app = create_app()
