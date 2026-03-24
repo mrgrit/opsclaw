@@ -65,7 +65,7 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M21 | Bug Fix Sprint — B-01~B-05 실운영 버그 수정 (PoW 누락, verify_chain, params, stdout, critical dry_run) | ✅ 완료 |
 | M25 | Web UI 정상화 — GET /projects, 응답 key alias, evidence 필드 정규화, Agents 페이지 추가 | ✅ 완료 |
 | M22 | Playbook Engine v2 — 스텝 params override, execute-plan playbook_id 지원, sudo 감지, 버전 관리 | ✅ 완료 |
-| M23 | Async & Multi-Agent — 비동기 장기 태스크 큐, 멀티에이전트 병렬 dispatch | 🔲 예정 |
+| M23 | Async & Multi-Agent — 비동기 태스크 큐(async_mode), 멀티에이전트 병렬 dispatch(parallel) | ✅ 완료 |
 | M24 | Advanced RL & Experience — UCB1 탐색 전략, 자동 경험 승급, Q-table 커버리지 향상 | 🔲 예정 |
 
 ---

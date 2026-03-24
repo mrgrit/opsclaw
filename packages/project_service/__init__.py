@@ -993,3 +993,73 @@ def replan_project(
             )
             row = cur.fetchone()
             return dict(row)
+
+
+# ── Async Jobs (M23) ──────────────────────────────────────────────────────
+
+def create_async_job(
+    project_id: str,
+    job_type: str,
+    payload_json: dict | None = None,
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    import json as _json
+    job_id = f"aj_{uuid.uuid4().hex[:12]}"
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO async_jobs (id, project_id, job_type, status, payload_json)
+                VALUES (%s, %s, %s, 'queued', %s)
+                RETURNING *
+                """,
+                (job_id, project_id, job_type, _json.dumps(payload_json) if payload_json else None),
+            )
+            return dict(cur.fetchone())
+
+
+def get_async_job(
+    job_id: str,
+    database_url: str | None = None,
+) -> dict[str, Any] | None:
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM async_jobs WHERE id = %s", (job_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+
+def update_async_job(
+    job_id: str,
+    status: str,
+    result_json: dict | None = None,
+    error_message: str | None = None,
+    database_url: str | None = None,
+) -> dict[str, Any]:
+    import json as _json
+    ts_field = "started_at" if status == "running" else "completed_at" if status in ("completed", "failed") else None
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            sql = "UPDATE async_jobs SET status=%s, result_json=%s, error_message=%s"
+            params: list = [status, _json.dumps(result_json) if result_json else None, error_message]
+            if ts_field:
+                sql += f", {ts_field}=NOW()"
+            sql += " WHERE id=%s RETURNING *"
+            params.append(job_id)
+            cur.execute(sql, params)
+            row = cur.fetchone()
+            return dict(row) if row else {}
+
+
+def list_async_jobs(
+    project_id: str,
+    limit: int = 20,
+    database_url: str | None = None,
+) -> list[dict[str, Any]]:
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM async_jobs WHERE project_id=%s ORDER BY created_at DESC LIMIT %s",
+                (project_id, limit),
+            )
+            return [dict(r) for r in cur.fetchall()]

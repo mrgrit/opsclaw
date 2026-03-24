@@ -1,5 +1,9 @@
 import asyncio
+import json as _json
+import re as _re_mod
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -52,11 +56,13 @@ from packages.project_service import (
     ProjectServiceError,
     ProjectStageError,
     close_project,
+    create_async_job,
     create_minimal_evidence_record,
     create_project_record,
     execute_project_record,
     finalize_report_stage_record,
     get_assets,
+    get_async_job,
     get_evidence_for_project,
     get_playbooks,
     get_project_assets,
@@ -69,11 +75,13 @@ from packages.project_service import (
     link_playbook_to_project,
     link_target_to_project,
     dispatch_command_to_subagent,
+    list_async_jobs,
     list_projects,
     plan_project_record,
     replan_project,
     select_assets_for_project,
     resolve_targets_for_project,
+    update_async_job,
     update_asset_subagent_status,
     validate_project_record,
 )
@@ -226,11 +234,13 @@ class CompletionReportRequest(BaseModel):
 
 class ExecutePlanRequest(BaseModel):
     """Master /master-plan 결과의 tasks 배열을 받아 순서대로 실행."""
-    tasks: list[dict] = []     # [{order, title, playbook_hint, instruction_prompt, risk_level}]
+    tasks: list[dict] = []     # [{order, title, playbook_hint, instruction_prompt, risk_level, subagent_url?}]
     playbook_id: str | None = None  # M22 A-02: 지정 시 해당 Playbook 직접 실행 (tasks 불필요)
     subagent_url: str | None = None
     dry_run: bool = False
     confirmed: bool = False    # B-05: True면 risk_level=critical 태스크도 실제 실행
+    async_mode: bool = False   # M23 A-04: True면 백그라운드 실행, 즉시 job_id 반환
+    parallel: bool = False     # M23 A-05: True면 병렬 dispatch (ThreadPoolExecutor)
 
 
 class ScheduleCreateRequest(BaseModel):
@@ -665,195 +675,251 @@ def create_project_router() -> APIRouter:
         except Exception as exc:
             raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
 
-    @router.post("/{project_id}/execute-plan")
-    def execute_plan(project_id: str, payload: ExecutePlanRequest) -> dict[str, Any]:
-        """
-        Master /master-plan 결과의 tasks를 순서대로 실행한다.
+    # ── execute-plan 헬퍼 (M23: 순차/병렬/비동기 공용) ─────────────────────
 
-        각 task 처리 순서:
-          1. playbook_hint 있으면 해당 Playbook으로 run_playbook_steps 시도
-          2. 없거나 실패 시 instruction_prompt를 adhoc dispatch로 실행
-          3. 결과를 evidence로 기록하고 다음 task로 이동
-          4. risk_level=critical 이면 실행 전 경고 (dry_run 강제)
-
-        반환: tasks_total, tasks_ok, tasks_failed, task_results
-        """
+    def _dispatch_single_task(
+        project_id: str,
+        task: dict,
+        pb_map: dict[str, str],
+        global_subagent_url: str | None,
+        dry_run: bool,
+        confirmed: bool,
+    ) -> dict[str, Any]:
+        """1개 task 실행 → step_result dict 반환. 순차/병렬 모두에서 호출."""
         from packages.playbook_engine import run_playbook_steps
-        from packages.registry_service import list_playbooks
         from packages.project_service import dispatch_command_to_subagent
 
-        # M22 A-02: playbook_id 직접 지정 시 해당 Playbook 실행 (tasks 불필요)
-        if payload.playbook_id and not payload.tasks:
-            try:
-                result = run_playbook_steps(
+        order = task.get("order", 0)
+        title = task.get("title", f"task-{order}")
+        hint = task.get("playbook_hint")
+        prompt = task.get("instruction_prompt", title)
+        risk = task.get("risk_level", "medium")
+        # M23 A-05: task별 subagent_url (없으면 전역 사용)
+        task_subagent = task.get("subagent_url") or global_subagent_url
+
+        # M22 A-03: sudo 포함 명령은 risk_level 자동 high 상향
+        sudo_elevated = False
+        if _re_mod.search(r'\bsudo\b', prompt or "") and risk in ("low", "medium"):
+            risk = "high"
+            sudo_elevated = True
+
+        # B-05: critical 태스크는 dry_run 강제 (confirmed=True이면 실제 실행)
+        effective_dry_run = dry_run or (risk == "critical" and not confirmed)
+
+        step_result: dict[str, Any] = {
+            "order": order,
+            "title": title,
+            "risk_level": risk,
+            "dry_run": effective_dry_run,
+            "sudo_elevated": sudo_elevated,
+            "method": None,
+            "status": "pending",
+            "detail": {},
+        }
+
+        t0 = time.time()
+        try:
+            pb_id = pb_map.get(hint) if hint else None
+            if pb_id and not effective_dry_run:
+                r = run_playbook_steps(
                     project_id=project_id,
-                    subagent_url=payload.subagent_url,
-                    dry_run=payload.dry_run,
-                    params={"playbook_id": payload.playbook_id},
+                    subagent_url=task_subagent,
+                    dry_run=False,
+                    params={"task_title": title},
                 )
-                if not payload.dry_run:
-                    agent_id = payload.subagent_url or "local"
-                    for sr in result.get("step_results", []):
-                        if sr.get("status") not in ("ok", "failed"):
-                            continue
-                        try:
-                            generate_proof(
-                                project_id=project_id,
-                                agent_id=agent_id,
-                                task_order=sr.get("order", 0),
-                                task_title=sr.get("name", ""),
-                                exit_code=sr.get("exit_code", 0 if sr.get("status") == "ok" else 1),
-                                stdout=sr.get("stdout", ""),
-                                stderr=sr.get("stderr", ""),
-                                duration_s=sr.get("duration_s", 0.0),
-                                risk_level="medium",
-                            )
-                        except Exception:
-                            pass
-                steps_ok = result.get("steps_ok", 0)
-                steps_failed = result.get("steps_failed", 0)
-                return {
-                    "status": "ok",
-                    "project_id": project_id,
-                    "tasks_total": result.get("steps_total", 0),
-                    "tasks_ok": steps_ok,
-                    "tasks_failed": steps_failed,
-                    "overall": result.get("status", "ok"),
-                    "playbook_id": payload.playbook_id,
-                    "result": result,
+                step_result["method"] = f"playbook:{hint}"
+                step_result["status"] = r.get("status", "ok")
+                step_result["detail"] = {
+                    "steps_ok": r.get("steps_ok", 0),
+                    "steps_failed": r.get("steps_failed", 0),
                 }
-            except ProjectNotFoundError as exc:
-                raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
-            except Exception as exc:
-                raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
+            elif effective_dry_run:
+                step_result["method"] = f"playbook:{hint}" if hint else "adhoc"
+                step_result["status"] = "dry_run"
+                step_result["detail"] = {"instruction_prompt": prompt[:200]}
+            else:
+                r = dispatch_command_to_subagent(
+                    project_id=project_id,
+                    command=prompt,
+                    subagent_url=task_subagent,
+                    timeout_s=120,
+                )
+                step_result["method"] = "adhoc"
+                step_result["status"] = "ok" if r.get("exit_code", 1) == 0 else "failed"
+                full_stdout = r.get("stdout") or ""
+                step_result["_full_stdout"] = full_stdout
+                step_result["detail"] = {
+                    "exit_code": r.get("exit_code"),
+                    "stdout": full_stdout[:4096],
+                    "stderr": (r.get("stderr") or "")[:1024],
+                }
+        except Exception as exc:
+            step_result["status"] = "error"
+            step_result["detail"] = {"error": str(exc)}
+
+        step_result["duration_s"] = round(time.time() - t0, 3)
+        return step_result
+
+    def _run_execute_plan_sync(
+        project_id: str,
+        payload: ExecutePlanRequest,
+    ) -> dict[str, Any]:
+        """execute-plan 동기 실행 로직. 순차/병렬 모두 처리. async에서도 호출됨."""
+        from packages.playbook_engine import run_playbook_steps
+        from packages.registry_service import list_playbooks
+
+        # M22 A-02: playbook_id 직접 지정
+        if payload.playbook_id and not payload.tasks:
+            result = run_playbook_steps(
+                project_id=project_id,
+                subagent_url=payload.subagent_url,
+                dry_run=payload.dry_run,
+                params={"playbook_id": payload.playbook_id},
+            )
+            if not payload.dry_run:
+                agent_id = payload.subagent_url or "local"
+                for sr in result.get("step_results", []):
+                    if sr.get("status") not in ("ok", "failed"):
+                        continue
+                    try:
+                        generate_proof(
+                            project_id=project_id, agent_id=agent_id,
+                            task_order=sr.get("order", 0), task_title=sr.get("name", ""),
+                            exit_code=sr.get("exit_code", 0 if sr.get("status") == "ok" else 1),
+                            stdout=sr.get("stdout", ""), stderr=sr.get("stderr", ""),
+                            duration_s=sr.get("duration_s", 0.0), risk_level="medium",
+                        )
+                    except Exception:
+                        pass
+            steps_ok = result.get("steps_ok", 0)
+            steps_failed = result.get("steps_failed", 0)
+            return {
+                "status": "ok", "project_id": project_id,
+                "tasks_total": result.get("steps_total", 0),
+                "tasks_ok": steps_ok, "tasks_failed": steps_failed,
+                "overall": result.get("status", "ok"),
+                "playbook_id": payload.playbook_id, "result": result,
+            }
 
         tasks = sorted(payload.tasks, key=lambda t: t.get("order", 0))
-        task_results: list[dict] = []
-        tasks_ok = tasks_failed = 0
-
-        # Playbook 이름 → id 맵
         pb_map: dict[str, str] = {}
         try:
             pb_map = {pb["name"]: pb["id"] for pb in list_playbooks()}
         except Exception:
             pass
 
-        import re as _re
-        for task in tasks:
-            order = task.get("order", 0)
-            title = task.get("title", f"task-{order}")
-            hint = task.get("playbook_hint")
-            prompt = task.get("instruction_prompt", title)
-            risk = task.get("risk_level", "medium")
+        # ── M23 A-05: parallel=true 시 병렬 dispatch ─────────
+        if payload.parallel and len(tasks) > 1 and not payload.dry_run:
+            task_results: list[dict] = []
+            with ThreadPoolExecutor(max_workers=min(len(tasks), 5)) as pool:
+                futures = {
+                    pool.submit(
+                        _dispatch_single_task, project_id, t, pb_map,
+                        payload.subagent_url, payload.dry_run, payload.confirmed,
+                    ): t
+                    for t in tasks
+                }
+                for future in as_completed(futures):
+                    task_results.append(future.result())
+            # order 순 정렬
+            task_results.sort(key=lambda r: r.get("order", 0))
+        else:
+            # 순차 실행 (기존 동작)
+            task_results = []
+            for task in tasks:
+                sr = _dispatch_single_task(
+                    project_id, task, pb_map,
+                    payload.subagent_url, payload.dry_run, payload.confirmed,
+                )
+                task_results.append(sr)
 
-            # M22 A-03: sudo 포함 명령은 risk_level 자동 high 상향
-            sudo_elevated = False
-            if _re.search(r'\bsudo\b', prompt or "") and risk in ("low", "medium"):
-                risk = "high"
-                sudo_elevated = True
-
-            # B-05: critical 태스크는 dry_run 강제 (confirmed=True이면 실제 실행)
-            effective_dry_run = payload.dry_run or (risk == "critical" and not payload.confirmed)
-
-            step_result: dict[str, Any] = {
-                "order": order,
-                "title": title,
-                "risk_level": risk,
-                "dry_run": effective_dry_run,
-                "sudo_elevated": sudo_elevated,
-                "method": None,
-                "status": "pending",
-                "detail": {},
-            }
-
-            t0 = time.time()
-            try:
-                pb_id = pb_map.get(hint) if hint else None
-                if pb_id and not effective_dry_run:
-                    # Playbook 실행
-                    r = run_playbook_steps(
-                        project_id=project_id,
-                        subagent_url=payload.subagent_url,
-                        dry_run=False,
-                        params={"task_title": title},
-                    )
-                    step_result["method"] = f"playbook:{hint}"
-                    step_result["status"] = r.get("status", "ok")
-                    step_result["detail"] = {
-                        "steps_ok": r.get("steps_ok", 0),
-                        "steps_failed": r.get("steps_failed", 0),
-                    }
-                elif effective_dry_run:
-                    step_result["method"] = f"playbook:{hint}" if hint else "adhoc"
-                    step_result["status"] = "dry_run"
-                    step_result["detail"] = {"instruction_prompt": prompt[:200]}
-                else:
-                    # Adhoc dispatch
-                    r = dispatch_command_to_subagent(
-                        project_id=project_id,
-                        command=prompt,
-                        subagent_url=payload.subagent_url,
-                        timeout_s=120,
-                    )
-                    step_result["method"] = "adhoc"
-                    step_result["status"] = "ok" if r.get("exit_code", 1) == 0 else "failed"
-                    # B-04: full_stdout을 PoW 해시에 사용, 응답은 4096자 제한
-                    full_stdout = r.get("stdout") or ""
-                    step_result["_full_stdout"] = full_stdout  # PoW 생성 시 참조
-                    step_result["detail"] = {
-                        "exit_code": r.get("exit_code"),
-                        "stdout": full_stdout[:4096],
-                        "stderr": (r.get("stderr") or "")[:1024],
-                    }
-
-                if step_result["status"] in ("ok", "dry_run", "success", "partial"):
-                    tasks_ok += 1
-                else:
-                    tasks_failed += 1
-
-            except Exception as exc:
-                step_result["status"] = "error"
-                step_result["detail"] = {"error": str(exc)}
-                tasks_failed += 1
-
-            step_result["duration_s"] = round(time.time() - t0, 3)
-            task_results.append(step_result)
-
+        tasks_ok = sum(1 for r in task_results if r["status"] in ("ok", "dry_run", "success", "partial"))
+        tasks_failed = sum(1 for r in task_results if r["status"] not in ("ok", "dry_run", "success", "partial", "pending"))
         overall = "success" if tasks_failed == 0 else ("partial" if tasks_ok > 0 else "failed")
         if payload.dry_run:
             overall = "dry_run"
 
-        # ── M18: Task 완료 시 PoW 블록 자동 생성 (dry_run 제외) ─────────
+        # PoW 블록 생성 (dry_run 제외)
         if not payload.dry_run:
-            agent_id = payload.subagent_url or "local"
             for sr in task_results:
                 if sr["status"] not in ("ok", "failed"):
                     continue
                 detail = sr.get("detail") or {}
+                agent_id = payload.subagent_url or "local"
                 try:
                     generate_proof(
-                        project_id=project_id,
-                        agent_id=agent_id,
-                        task_order=sr.get("order", 0),
-                        task_title=sr.get("title", ""),
+                        project_id=project_id, agent_id=agent_id,
+                        task_order=sr.get("order", 0), task_title=sr.get("title", ""),
                         exit_code=detail.get("exit_code", 0 if sr["status"] == "ok" else 1),
-                        stdout=sr.pop("_full_stdout", detail.get("stdout", "")),  # B-04: full stdout 사용
+                        stdout=sr.pop("_full_stdout", detail.get("stdout", "")),
                         stderr=detail.get("stderr", ""),
                         duration_s=sr.get("duration_s", 0.0),
                         risk_level=sr.get("risk_level", "low"),
                     )
                 except Exception:
-                    pass  # PoW 실패가 작업 결과에 영향 주지 않음
+                    pass
 
         return {
-            "status": "ok",
-            "project_id": project_id,
-            "tasks_total": len(tasks),
-            "tasks_ok": tasks_ok,
-            "tasks_failed": tasks_failed,
-            "overall": overall,
+            "status": "ok", "project_id": project_id,
+            "tasks_total": len(tasks), "tasks_ok": tasks_ok,
+            "tasks_failed": tasks_failed, "overall": overall,
             "task_results": task_results,
         }
+
+    def _execute_plan_background(job_id: str, project_id: str, payload: ExecutePlanRequest):
+        """백그라운드 스레드에서 실행되는 async execute-plan."""
+        update_async_job(job_id, "running")
+        try:
+            result = _run_execute_plan_sync(project_id, payload)
+            update_async_job(job_id, "completed", result_json=result)
+        except Exception as exc:
+            update_async_job(job_id, "failed", error_message=str(exc))
+
+    @router.post("/{project_id}/execute-plan")
+    def execute_plan(project_id: str, payload: ExecutePlanRequest) -> dict[str, Any]:
+        """
+        Master /master-plan 결과의 tasks를 실행한다.
+
+        옵션:
+          - async_mode=true: 백그라운드 실행, 즉시 job_id 반환 (M23)
+          - parallel=true: 여러 task를 동시 dispatch (M23)
+          - playbook_id: 직접 Playbook 실행 (M22)
+          - task별 subagent_url: 멀티에이전트 지원 (M23)
+        """
+        # M23 A-04: async_mode 시 백그라운드 실행
+        if payload.async_mode:
+            job = create_async_job(project_id, "execute_plan", payload.model_dump())
+            thread = threading.Thread(
+                target=_execute_plan_background,
+                args=(job["id"], project_id, payload),
+                daemon=True,
+            )
+            thread.start()
+            return {"status": "accepted", "job_id": job["id"], "project_id": project_id}
+
+        # 동기 실행
+        try:
+            return _run_execute_plan_sync(project_id, payload)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+        except ProjectServiceError as exc:
+            raise HTTPException(status_code=400, detail={"message": str(exc)}) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
+
+    # ── Async Jobs polling (M23) ──────────────────────────────────────────
+
+    @router.get("/{project_id}/async-jobs")
+    def list_async_jobs_endpoint(project_id: str, limit: int = 20) -> dict[str, Any]:
+        jobs = list_async_jobs(project_id, limit=limit)
+        return {"status": "ok", "project_id": project_id, "jobs": jobs}
+
+    @router.get("/{project_id}/async-jobs/{job_id}")
+    def get_async_job_endpoint(project_id: str, job_id: str) -> dict[str, Any]:
+        job = get_async_job(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail={"message": f"Job not found: {job_id}"})
+        return {"status": "ok", **job}
 
     @router.post("/{project_id}/completion-report")
     def create_completion_report_endpoint(project_id: str, payload: CompletionReportRequest) -> dict[str, Any]:
