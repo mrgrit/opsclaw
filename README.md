@@ -116,7 +116,7 @@ apps/web-ui/ 에서 npm install && npm run build 실행해줘
 
 ---
 
-## 5. 현재 구현 상태 (M20 기준)
+## 5. 현재 구현 상태 (M24 기준)
 
 ### 구현 완료
 
@@ -267,8 +267,32 @@ apps/web-ui/ 에서 npm install && npm run build 실행해줘
 
 **User & Agent Manual (M20)**
 - 사용자 매뉴얼: `docs/manual/user/` (설치~트러블슈팅 7개 파일)
-- 에이전트 매뉴얼: `docs/manual/agent/` (SubAgent 설치~A2A 프로토콜 5개 파일)
+- 에이전트 매뉴얼: `docs/manual/agent/` (SubAgent 설치~A2A 프로토콜 6개 파일, sudo 가이드 포함)
 - AI 에이전트 시스템 프롬프트: `docs/agent-system-prompt.md`
+
+**Bug Fix Sprint (M21)**
+- B-01~B-05: PoW 누락, verify_chain 오검출, params/metadata 키 혼용, stdout 절단(4096자), critical dry_run confirmed 처리
+
+**Playbook Engine v2 (M22)**
+- 스텝별 params override: `step.metadata.params` > 요청 params (3-레이어 병합)
+- execute-plan에 `playbook_id` 직접 지원 (tasks 배열 불필요)
+- sudo 감지: `\bsudo\b` 포함 시 risk_level 자동 high 상향
+- Playbook 버전 관리: snapshot → versions → rollback API
+
+**Async & Multi-Agent (M23)**
+- `async_mode=true`: 백그라운드 실행, 즉시 job_id 반환, polling으로 결과 확인
+- `parallel=true`: ThreadPoolExecutor(max_workers=5) 병렬 dispatch
+- task별 `subagent_url`: 멀티에이전트 동시 dispatch
+- async_jobs 테이블 + polling 엔드포인트
+
+**Advanced RL & Experience (M24)**
+- UCB1 탐색 전략: `Q(s,a) + c√(ln(N)/n(s,a))` — 미방문 state-action 우선 탐색
+- visit count 추적: 48×4 행렬, train() 시 자동 업데이트
+- 자동 경험 승급: execute-plan 완료 시 avg_reward ≥ 1.1 → experience 자동 생성
+
+**Web UI 정상화 (M25)**
+- GET /projects 엔드포인트, 응답 key alias, evidence 필드 정규화
+- Agents 페이지 (PoW leaderboard 기반), Settings 빈화면 수정
 
 ### 아직 남아 있는 것
 
@@ -443,13 +467,18 @@ curl -X POST http://localhost:8000/rl/train
 # 추천 조회 (Q-table 기반 최적 risk_level)
 curl "http://localhost:8000/rl/recommend?agent_id=http://localhost:8002&risk_level=low&task_order=1"
 
-# 현재 정책 상태 (Q-table 통계, 학습 횟수, coverage)
+# UCB1 탐색 추천 (M24: 미방문 state-action 우선 탐색)
+curl "http://localhost:8000/rl/recommend?agent_id=http://localhost:8002&exploration=ucb1&ucb_c=1.5"
+
+# 현재 정책 상태 (Q-table 통계, visit count, coverage)
 curl http://localhost:8000/rl/policy
 ```
 
 **State**: (risk_level, agent 성공률, task 순서) → 48개 이산 상태
 **Action**: risk_level 선택 (low/medium/high/critical)
 **학습 알고리즘**: Q-learning — `Q(s,a) ← Q(s,a) + α × (reward - Q(s,a))`
+**탐색 전략** (M24): greedy / UCB1 (`Q(s,a) + c√(ln(N)/n(s,a))`) / ε-greedy
+**자동 경험 승급** (M24): execute-plan 완료 시 avg_reward ≥ 1.1 → experience 자동 생성
 
 작업을 많이 실행할수록 데이터가 쌓이고, 재학습(`POST /rl/train`)할 때마다 정책이 개선된다.
 
@@ -483,20 +512,21 @@ curl http://localhost:8000/rl/policy
 
 README는 현재 구현 상태를 반영하는 대표 문서다.
 없는 기능을 완성된 것처럼 적지 않는다.
-M0~M20 전 마일스톤이 완료된 상태이며, "아직 남아 있는 것" 항목만 미구현이다.
+M0~M24(+M25) 전 마일스톤이 완료된 상태이며, "아직 남아 있는 것" 항목만 미구현이다.
 
 ---
 
-## 11. 향후 개선 방향 (M21~M24)
+## 11. M21~M24 완료 요약
 
 세부 수행 계획: [`docs/roadmap.md`](docs/roadmap.md)
 
-| 마일스톤 | 핵심 내용 | 포함 항목 |
-|---------|---------|---------|
-| **M21** Bug Fix Sprint | 실운영 버그 5건 즉시 수정 | B-01 PoW 누락, B-02 체인 검증 오류, B-03 params 혼용, B-04 stdout 절단, B-05 critical dry_run |
-| **M22** Playbook Engine v2 | Playbook 실행 엔진 일반화 | A-01 params override, A-02 엔진 통합, A-03 sudo 가이드, A-06 버전 관리 |
-| **M23** Async & Multi-Agent | 병렬/비동기 실행 확장 | A-04 async 태스크 큐, A-05 멀티에이전트 병렬 dispatch |
-| **M24** Advanced RL | RL 정책 품질 향상 | A-07 경험 자동 승급, A-08 UCB1 탐색/Q-table 커버리지 |
+| 마일스톤 | 핵심 내용 | 상태 |
+|---------|---------|------|
+| **M21** Bug Fix Sprint | B-01~B-05 실운영 버그 수정 (PoW 누락, verify_chain, params, stdout, critical dry_run) | ✅ 완료 |
+| **M22** Playbook Engine v2 | 스텝 params override, execute-plan playbook_id, sudo 감지, Playbook 버전 관리 | ✅ 완료 |
+| **M23** Async & Multi-Agent | async_mode 백그라운드 실행, parallel 병렬 dispatch, task별 subagent_url | ✅ 완료 |
+| **M24** Advanced RL | UCB1 탐색 전략, visit count 추적, 자동 경험 승급 (reward threshold) | ✅ 완료 |
+| **M25** Web UI 정상화 | GET /projects, 응답 key alias, evidence 정규화, Agents 페이지 | ✅ 완료 |
 
 ## 12. USER CASE #1
 # OpsClaw RL 시나리오 테스트 결과 보고서
