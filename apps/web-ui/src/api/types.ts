@@ -96,3 +96,43 @@ export interface NotificationRule {
   channel_id: string
   created_at: string
 }
+
+export interface TaskItem {
+  order: number
+  title: string
+  instruction_prompt: string
+  risk_level: string
+  subagent_url?: string
+}
+
+export interface TaskResult {
+  order: number
+  title: string
+  status: string
+  risk_level: string
+  duration_s: number
+  sudo_elevated?: boolean
+  detail: { exit_code?: number; stdout?: string; stderr?: string; error?: string }
+}
+
+export interface ExecutePlanResult {
+  status: string
+  project_id: string
+  tasks_total: number
+  tasks_ok: number
+  tasks_failed: number
+  overall: string
+  task_results: TaskResult[]
+}
+
+export interface DispatchResult {
+  status: string
+  result: {
+    exit_code: number
+    stdout: string
+    stderr: string
+    command: string
+    original_command?: string
+    llm_converted?: boolean
+  }
+}

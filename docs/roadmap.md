@@ -460,6 +460,7 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 | M22 | Playbook Engine v2 | A-01, A-02, A-03, A-06 | ✅ 완료 |
 | M23 | Async & Multi-Agent | A-04, A-05 | ✅ 완료 |
 | M24 | Advanced RL & Experience | A-07, A-08 | ✅ 완료 |
+| M26 | Web Operations Console | dispatch UI, execute-plan 빌더, Step CRUD, RAG 채팅 | ✅ 완료 |
 
 ---
 

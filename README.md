@@ -67,6 +67,7 @@ OpsClaw의 기본 구조는 아래와 같다.
 | M22 | Playbook Engine v2 — 스텝 params override, execute-plan playbook_id 지원, sudo 감지, 버전 관리 | ✅ 완료 |
 | M23 | Async & Multi-Agent — 비동기 태스크 큐(async_mode), 멀티에이전트 병렬 dispatch(parallel) | ✅ 완료 |
 | M24 | Advanced RL & Experience — UCB1 탐색 전략, 자동 경험 승급, Q-table visit count 커버리지 | ✅ 완료 |
+| M26 | Web Operations Console — 명령 실행, 태스크 빌더, Playbook Step CRUD, RAG 채팅 | ✅ 완료 |
 
 ---
 
@@ -294,10 +295,14 @@ apps/web-ui/ 에서 npm install && npm run build 실행해줘
 - GET /projects 엔드포인트, 응답 key alias, evidence 필드 정규화
 - Agents 페이지 (PoW leaderboard 기반), Settings 빈화면 수정
 
+**Web Operations Console (M26)**
+- Projects 페이지: dispatch 명령 실행 (shell/auto/adhoc), execute-plan 태스크 빌더 (병렬/critical 옵션), 실행 결과 펼치기
+- Playbooks 페이지: Step 추가 UI (type, ref, name, metadata JSON)
+- RAG 기반 AI 채팅: Projects/Playbooks/PoW 에이전트 컨텍스트 대화 (evidence+보고서+경험 자동 참조)
+
 ### 아직 남아 있는 것
 
 - CI 파이프라인 확대
-- 인프라 구축 재개 (web/siem enp4s0 케이블 확인 후): Docker+JuiceShop+BunkerWeb(web), Wazuh(siem), Suricata IPS(secu)
 - Deep RL 업그레이드 (Q-learning → PyTorch policy network, 데이터 축적 후)
 
 ---
