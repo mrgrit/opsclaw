@@ -74,6 +74,16 @@ def create_project_record(
             return dict(row)
 
 
+def list_projects(limit: int = 50, database_url: str | None = None) -> list[dict[str, Any]]:
+    with get_connection(database_url) as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM projects ORDER BY created_at DESC LIMIT %s",
+                (limit,),
+            )
+            return [dict(r) for r in cur.fetchall()]
+
+
 def get_project_record(project_id: str, database_url: str | None = None) -> dict[str, Any]:
     sql = "SELECT * FROM projects WHERE id = %s"
     with get_connection(database_url) as conn:

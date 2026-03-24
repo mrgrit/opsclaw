@@ -6,6 +6,7 @@ import Playbooks from './pages/Playbooks'
 import Replay from './pages/Replay'
 import PoW from './pages/PoW'
 import Settings from './pages/Settings'
+import Agents from './pages/Agents'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="playbooks" element={<Playbooks />} />
           <Route path="replay" element={<Replay />} />
           <Route path="pow" element={<PoW />} />
+          <Route path="agents" element={<Agents />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

@@ -14,8 +14,8 @@ export default function Projects() {
   const wsRef = useRef<WebSocket | null>(null)
 
   async function loadProjects() {
-    const r = await api.get<{ projects: Project[] }>('/projects')
-    setProjects(r.projects)
+    const r = await api.get<{ projects: Project[] }>('/projects').catch(() => ({ projects: [] as Project[] }))
+    setProjects(r.projects ?? [])
   }
 
   useEffect(() => { loadProjects() }, [])
@@ -132,7 +132,7 @@ export default function Projects() {
                     <div key={ev.id} style={{ borderLeft: `3px solid ${ev.exit_code === 0 ? '#10b981' : '#ef4444'}`, paddingLeft: 12 }}>
                       <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#374151' }}>{ev.command}</div>
                       <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 2 }}>
-                        exit {ev.exit_code} · {ev.risk_level}
+                        exit {ev.exit_code}
                       </div>
                       {ev.stdout && (
                         <pre style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#6b7280', whiteSpace: 'pre-wrap', maxHeight: 80, overflow: 'hidden' }}>

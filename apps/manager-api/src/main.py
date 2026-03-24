@@ -66,6 +66,7 @@ from packages.project_service import (
     link_playbook_to_project,
     link_target_to_project,
     dispatch_command_to_subagent,
+    list_projects,
     plan_project_record,
     replan_project,
     select_assets_for_project,
@@ -364,6 +365,11 @@ def create_runtime_router() -> APIRouter:
 def create_project_router() -> APIRouter:
     router = APIRouter(prefix="/projects", tags=["projects"])
 
+    @router.get("")
+    def list_projects_endpoint(limit: int = 50) -> dict[str, Any]:
+        items = list_projects(limit)
+        return {"projects": items, "items": items}
+
     @router.post("")
     def create_project(payload: ProjectCreateRequest) -> dict[str, Any]:
         try:
@@ -453,8 +459,24 @@ def create_project_router() -> APIRouter:
     @router.get("/{project_id}/evidence")
     def get_project_evidence_endpoint(project_id: str) -> dict[str, Any]:
         try:
-            items = get_evidence_for_project(project_id)
-            return {"status": "ok", "project_id": project_id, "items": items}
+            raw = get_evidence_for_project(project_id)
+            # Normalize fields for frontend compatibility
+            normalized = []
+            for ev in raw:
+                item = dict(ev)
+                # body_ref → command
+                item["command"] = item.pop("body_ref", "") or ""
+                # stdout_ref: "inline://stdout/ev_xxx:content" → extract content
+                stdout_ref = item.pop("stdout_ref", "") or ""
+                if stdout_ref.startswith("inline://stdout/"):
+                    # format: inline://stdout/ev_id:actual_content
+                    colon_idx = stdout_ref.find(":", len("inline://stdout/"))
+                    item["stdout"] = stdout_ref[colon_idx + 1:] if colon_idx != -1 else stdout_ref
+                else:
+                    item["stdout"] = stdout_ref
+                item["stderr"] = item.pop("stderr_ref", "") or ""
+                normalized.append(item)
+            return {"status": "ok", "project_id": project_id, "evidence": normalized, "items": normalized}
         except ProjectNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
 
@@ -1119,7 +1141,8 @@ def create_registry_router() -> APIRouter:
 
     @router.get("/playbooks")
     def list_playbooks_endpoint(category: str | None = None, enabled: bool | None = None) -> dict[str, Any]:
-        return {"items": list_playbooks(category=category, enabled=enabled)}
+        items = list_playbooks(category=category, enabled=enabled)
+        return {"playbooks": items, "items": items}
 
     @router.post("/playbooks")
     def create_playbook_endpoint(payload: dict) -> dict[str, Any]:
@@ -1233,6 +1256,27 @@ def create_registry_router() -> APIRouter:
             return {"status": "ok", "playbook_id": playbook_id, "explanation": md}
         except RegistryNotFoundError as exc:
             raise HTTPException(status_code=404, detail={"message": str(exc)}) from exc
+
+    @router.post("/playbook/run")
+    def run_playbook_global(payload: dict) -> dict[str, Any]:
+        """
+        Global convenience endpoint for running a playbook on a project.
+        Body: {playbook_id, project_id, subagent_url?, dry_run?, params?}
+        """
+        from packages.playbook_engine import run_playbook_steps
+        project_id = payload.get("project_id")
+        if not project_id:
+            raise HTTPException(status_code=422, detail={"message": "project_id required"})
+        try:
+            result = run_playbook_steps(
+                project_id=project_id,
+                subagent_url=payload.get("subagent_url"),
+                dry_run=payload.get("dry_run", False),
+                params=payload.get("params"),
+            )
+            return {"status": "ok", "overall": result.get("status", "ok"), "result": result}
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail={"message": str(exc)}) from exc
 
     return router
 
@@ -1644,7 +1688,8 @@ def create_notification_router() -> APIRouter:
 
     @router.get("/channels")
     def list_channels_endpoint(enabled_only: bool = False) -> dict[str, Any]:
-        return {"items": list_channels(enabled_only=enabled_only)}
+        items = list_channels(enabled_only=enabled_only)
+        return {"channels": items, "items": items}
 
     @router.get("/channels/{channel_id}")
     def get_channel_endpoint(channel_id: str) -> dict[str, Any]:
@@ -1678,7 +1723,8 @@ def create_notification_router() -> APIRouter:
 
     @router.get("/rules")
     def list_rules_endpoint(event_type: str | None = None, enabled_only: bool = True) -> dict[str, Any]:
-        return {"items": list_rules(event_type=event_type, enabled_only=enabled_only)}
+        items = list_rules(event_type=event_type, enabled_only=enabled_only)
+        return {"rules": items, "items": items}
 
     @router.get("/rules/{rule_id}")
     def get_rule_endpoint(rule_id: str) -> dict[str, Any]:

@@ -456,6 +456,7 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 | 마일스톤 | 핵심 주제 | 포함 항목 | 우선순위 |
 |---------|---------|---------|---------|
 | M21 | Bug Fix Sprint | B-01~B-05 | **1순위** (즉시) |
+| M25 | Web UI 정상화 | GET /projects, key alias, evidence 정규화, Agents 페이지 | 즉시 |
 | M22 | Playbook Engine v2 | A-01, A-02, A-03, A-06 | 2순위 |
 | M23 | Async & Multi-Agent | A-04, A-05 | 3순위 |
 | M24 | Advanced RL & Experience | A-07, A-08 | 4순위 |
@@ -628,6 +629,15 @@ M21~M24는 실운영 및 RL 시나리오 테스트에서 발굴된 버그와 아
 ---
 
 ## 전체 TODO 요약 (M21~M24)
+
+### M25 (Web UI 정상화) — 완료 2026-03-24
+- [x] WORK-101: GET /projects 엔드포인트 + list_projects() 추가
+- [x] WORK-102: evidence 필드 정규화 (body_ref→command, stdout_ref→stdout)
+- [x] WORK-103: 응답 key alias (playbooks/channels/rules)
+- [x] WORK-104: POST /playbook/run 글로벌 엔드포인트
+- [x] WORK-105: Projects.tsx ev.risk_level 제거
+- [x] WORK-106: Agents 페이지 신규 (leaderboard 테이블)
+- [x] WORK-107: 빌드 (npm run build)
 
 ### M21 (Bug Fix Sprint) — 완료 2026-03-24
 - [x] WORK-88: B-01 Playbook run PoW 연동
