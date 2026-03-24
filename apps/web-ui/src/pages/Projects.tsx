@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import type { Project, Evidence } from '../api/types'
 import StageBadge from '../components/StageBadge'
+import ChatPanel from '../components/ChatPanel'
 
 const STAGES = ['plan', 'execute', 'validate', 'close']
 
@@ -151,6 +152,7 @@ export default function Projects() {
           </div>
         )}
       </div>
+      {selected && <ChatPanel contextType="project" contextId={selected.id} contextLabel={selected.name} />}
     </div>
   )
 }

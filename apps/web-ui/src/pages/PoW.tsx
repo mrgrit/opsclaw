@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { PoWBlock, LedgerEntry } from '../api/types'
+import ChatPanel from '../components/ChatPanel'
 
 interface VerifyResult { valid: boolean; blocks: number; tampered: { id: string; reason: string }[] }
 interface TaskDetail { evidence: any[]; report: any; project: any }
@@ -268,6 +269,7 @@ export default function PoW() {
           </div>
         </div>
       )}
+      {selectedAgent && <ChatPanel contextType="agent" contextId={selectedAgent} contextLabel={selectedAgent.replace(/^https?:\/\//, '')} />}
     </div>
   )
 }

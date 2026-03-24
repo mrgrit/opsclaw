@@ -2067,6 +2067,174 @@ def create_rl_router() -> APIRouter:
     return router
 
 
+def create_chat_router() -> APIRouter:
+    """RAG 기반 컨텍스트 대화 라우터 — 프로젝트/에이전트/Playbook."""
+    router = APIRouter(prefix="/chat", tags=["chat"])
+
+    @router.post("")
+    def chat(payload: dict) -> dict[str, Any]:
+        """
+        RAG + LLM 컨텍스트 기반 대화.
+        Body: {message, context_type, context_id, history?}
+        context_type: "project" | "agent" | "playbook"
+
+        1) DB에서 직접 컨텍스트 수집 (evidence, report, reward 등)
+        2) RAG: retrieval_documents FTS 검색으로 관련 경험/지식 보강
+        3) LLM에 컨텍스트 + RAG 결과 + 대화이력 + 질문 전달
+        """
+        message = payload.get("message", "")
+        ctx_type = payload.get("context_type", "")
+        ctx_id = payload.get("context_id", "")
+        history = payload.get("history", [])
+
+        if not message:
+            raise HTTPException(status_code=422, detail={"message": "message required"})
+
+        # ── 1) 직접 컨텍스트 수집 ────────────────────────────────────────
+        context_parts: list[str] = []
+        rag_query_hints: list[str] = [message]  # RAG 검색 키워드
+
+        try:
+            if ctx_type == "project" and ctx_id:
+                prj = get_project_record(ctx_id)
+                context_parts.append(
+                    f"[프로젝트] {prj['name']}\n"
+                    f"요청: {prj['request_text']}\n"
+                    f"단계: {prj['current_stage']} ({prj['status']})"
+                )
+                rag_query_hints.append(prj["name"])
+                ev_list = get_evidence_for_project(ctx_id)
+                if ev_list:
+                    ev_summary = "\n".join(
+                        f"  [{e.get('exit_code','')}] {(e.get('body_ref') or e.get('command_text') or '')[:100]}"
+                        for e in ev_list[:15]
+                    )
+                    context_parts.append(f"[Evidence {len(ev_list)}건]\n{ev_summary}")
+                try:
+                    rpt = get_project_report(ctx_id)
+                    if rpt:
+                        context_parts.append(f"[보고서] {rpt.get('summary','')[:300]}")
+                except Exception:
+                    pass
+                # completion reports
+                try:
+                    cr_list = list_completion_reports(ctx_id)
+                    if cr_list:
+                        for cr in cr_list[:3]:
+                            context_parts.append(
+                                f"[완료보고서] outcome={cr.get('outcome','')} summary={cr.get('summary','')[:200]}"
+                            )
+                except Exception:
+                    pass
+
+            elif ctx_type == "agent" and ctx_id:
+                stats = get_agent_stats(ctx_id)
+                ledger = stats.get("ledger", {})
+                context_parts.append(
+                    f"[에이전트] {ctx_id}\n"
+                    f"잔액: {ledger.get('balance',0):.4f} / 총작업: {ledger.get('total_tasks',0)} "
+                    f"성공: {ledger.get('success_count',0)} 실패: {ledger.get('fail_count',0)}"
+                )
+                recent = stats.get("recent_rewards", [])
+                if recent:
+                    rw_summary = "\n".join(
+                        f"  task#{r.get('task_order',0)} {r.get('task_title','')[:50]} "
+                        f"reward={r.get('total_reward',0)} exit={r.get('exit_code','')}"
+                        for r in recent[:10]
+                    )
+                    context_parts.append(f"[최근 보상 이력]\n{rw_summary}")
+                    rag_query_hints.extend(r.get("task_title", "") for r in recent[:3])
+                # 체인 무결성
+                try:
+                    chain = verify_chain(ctx_id)
+                    context_parts.append(
+                        f"[블록체인] 블록={chain.get('blocks',0)} 무결성={'정상' if chain.get('valid') else '변조감지'}"
+                    )
+                except Exception:
+                    pass
+
+            elif ctx_type == "playbook" and ctx_id:
+                try:
+                    pb = get_playbook(ctx_id)
+                    context_parts.append(
+                        f"[Playbook] {pb.get('name','')} v{pb.get('version','')}\n"
+                        f"설명: {pb.get('description','')}"
+                    )
+                    rag_query_hints.append(pb.get("name", ""))
+                    steps = get_playbook_steps(ctx_id)
+                    if steps:
+                        step_summary = "\n".join(
+                            f"  {s.get('step_order',0)}. [{s.get('step_type','')}] {s.get('name','')} "
+                            f"(ref={s.get('ref_id','')}, on_fail={s.get('on_failure_action','abort')})"
+                            for s in steps
+                        )
+                        context_parts.append(f"[Steps {len(steps)}개]\n{step_summary}")
+                except Exception:
+                    pass
+
+        except Exception as exc:
+            context_parts.append(f"(컨텍스트 로드 실패: {exc})")
+
+        # ── 2) RAG: retrieval_documents FTS 검색 ─────────────────────────
+        rag_parts: list[str] = []
+        try:
+            rag_query = " ".join(rag_query_hints)[:200]
+            rag_results = search_documents(rag_query, limit=5)
+            for doc in rag_results:
+                rag_parts.append(
+                    f"[{doc.get('document_type','')}] {doc.get('title','')}: "
+                    f"{(doc.get('body','') or '')[:200]}"
+                )
+        except Exception:
+            pass  # RAG 실패 시 직접 컨텍스트만으로 진행
+
+        # ── 3) LLM 프롬프트 조립 ─────────────────────────────────────────
+        context_block = "\n\n".join(context_parts) if context_parts else "(컨텍스트 없음)"
+        rag_block = "\n".join(rag_parts) if rag_parts else ""
+
+        history_block = ""
+        if history:
+            history_block = "\n".join(
+                f"{'사용자' if h.get('role')=='user' else 'AI'}: {h.get('content','')}"
+                for h in history[-6:]
+            )
+
+        system_prompt = (
+            "당신은 OpsClaw IT운영·보안 자동화 플랫폼의 AI 어시스턴트입니다. "
+            "아래에 제공된 [직접 컨텍스트]와 [관련 경험/지식(RAG)]를 참고하여 답변하세요. "
+            "한국어로 간결하되 기술적으로 정확하게 답변하세요. "
+            "컨텍스트에 없는 내용은 추측이라고 명시하세요."
+        )
+        prompt_text = f"[직접 컨텍스트]\n{context_block}\n\n"
+        if rag_block:
+            prompt_text += f"[관련 경험/지식 (RAG 검색 결과)]\n{rag_block}\n\n"
+        if history_block:
+            prompt_text += f"[대화 이력]\n{history_block}\n\n"
+        prompt_text += f"[사용자 질문]\n{message}"
+
+        try:
+            pi = PiRuntimeClient(PiRuntimeConfig(default_role="manager"))
+            result = pi.invoke_model(
+                prompt=prompt_text,
+                context={"system_prompt": system_prompt, "role": "manager"},
+            )
+            reply = (result.get("stdout") or result.get("text") or "").strip()
+            if not reply:
+                reply = "응답을 생성하지 못했습니다. 다시 시도해주세요."
+        except Exception as exc:
+            reply = f"LLM 호출 실패: {exc}"
+
+        return {
+            "status": "ok",
+            "reply": reply,
+            "context_type": ctx_type,
+            "context_id": ctx_id,
+            "rag_sources": len(rag_parts),
+        }
+
+    return router
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="OpsClaw Manager API",
@@ -2099,6 +2267,7 @@ def create_app() -> FastAPI:
     app.include_router(create_pow_router())
     app.include_router(create_rewards_router())
     app.include_router(create_rl_router())
+    app.include_router(create_chat_router())
 
     @app.websocket("/ws/projects/{project_id}")
     async def ws_project_status(websocket: WebSocket, project_id: str):

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { Playbook, PlaybookStep } from '../api/types'
+import ChatPanel from '../components/ChatPanel'
 
 export default function Playbooks() {
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
@@ -113,6 +114,7 @@ export default function Playbooks() {
           </div>
         )}
       </div>
+      {selected && <ChatPanel contextType="playbook" contextId={selected.id} contextLabel={selected.name} />}
     </div>
   )
 }
