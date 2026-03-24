@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import type { PoWBlock, LedgerEntry } from '../api/types'
 
 interface VerifyResult { valid: boolean; blocks: number; tampered: { id: string; reason: string }[] }
+interface TaskDetail { evidence: any[]; report: any; project: any }
 
 export default function PoW() {
   const [leaderboard, setLeaderboard] = useState<LedgerEntry[]>([])
@@ -10,6 +11,8 @@ export default function PoW() {
   const [blocks, setBlocks] = useState<PoWBlock[]>([])
   const [verify, setVerify] = useState<VerifyResult | null>(null)
   const [loading, setLoading] = useState(false)
+  const [taskDetail, setTaskDetail] = useState<TaskDetail | null>(null)
+  const [detailBlock, setDetailBlock] = useState<PoWBlock | null>(null)
 
   useEffect(() => {
     api.get<{ leaderboard: LedgerEntry[] }>('/pow/leaderboard?limit=20')
@@ -36,6 +39,20 @@ export default function PoW() {
   }
 
   const selected = leaderboard.find(e => e.agent_id === selectedAgent)
+
+  async function openTaskDetail(b: PoWBlock) {
+    setDetailBlock(b)
+    try {
+      const [ev, rpt, prj] = await Promise.all([
+        api.get<{ evidence: any[] }>(`/projects/${b.project_id}/evidence`).catch(() => ({ evidence: [] })),
+        api.get<{ report: any }>(`/projects/${b.project_id}/report`).catch(() => ({ report: null })),
+        api.get<{ project: any }>(`/projects/${b.project_id}`).catch(() => ({ project: null })),
+      ])
+      setTaskDetail({ evidence: ev.evidence ?? [], report: rpt.report, project: prj.project })
+    } catch {
+      setTaskDetail({ evidence: [], report: null, project: null })
+    }
+  }
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 24, height: '100%' }}>
@@ -140,9 +157,13 @@ export default function PoW() {
                   }}>
                     <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 700 }}>{blocks.length - i}</div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{b.task_title}</div>
+                      <div
+                        onClick={() => openTaskDetail(b)}
+                        style={{ fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', color: '#2563eb', textDecoration: 'underline' }}
+                        title="클릭하면 프로젝트 상세(evidence, 보고서) 확인"
+                      >{b.task_title}</div>
                       <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'monospace' }}>
-                        prev: {b.prev_hash.slice(0, 8)}...
+                        prev: {b.prev_hash.slice(0, 8)}... · {b.project_id}
                       </div>
                     </div>
                     <div style={{
@@ -179,6 +200,74 @@ export default function PoW() {
           </div>
         )}
       </div>
+
+      {/* Task Detail Modal */}
+      {detailBlock && taskDetail && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => { setDetailBlock(null); setTaskDetail(null) }}>
+          <div style={{
+            background: '#fff', borderRadius: 12, padding: 24, maxWidth: 700, width: '90%',
+            maxHeight: '80vh', overflow: 'auto',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>{detailBlock.task_title}</h3>
+              <button onClick={() => { setDetailBlock(null); setTaskDetail(null) }}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>X</button>
+            </div>
+
+            {taskDetail.project && (
+              <div style={{ background: '#f9fafb', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>프로젝트</div>
+                <div style={{ fontSize: '0.85rem' }}>
+                  <div><b>이름:</b> {taskDetail.project.name}</div>
+                  <div><b>요청:</b> {taskDetail.project.request_text}</div>
+                  <div><b>단계:</b> {taskDetail.project.current_stage} ({taskDetail.project.status})</div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ background: '#f0fdf4', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>PoW 블록</div>
+              <div style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                <div>Block Hash: {detailBlock.block_hash}</div>
+                <div>Nonce: {detailBlock.nonce?.toLocaleString()} · Difficulty: {detailBlock.difficulty}</div>
+                <div>Reward: {(detailBlock.total_reward ?? 0).toFixed(4)}</div>
+              </div>
+            </div>
+
+            {taskDetail.evidence.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>Evidence ({taskDetail.evidence.length}건)</div>
+                {taskDetail.evidence.slice(0, 10).map((ev: any, i: number) => (
+                  <div key={ev.id || i} style={{
+                    borderLeft: `3px solid ${(ev.exit_code ?? 0) === 0 ? '#10b981' : '#ef4444'}`,
+                    paddingLeft: 12, marginBottom: 8,
+                  }}>
+                    <div style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{ev.command || ev.body_ref || '-'}</div>
+                    {ev.stdout && (
+                      <pre style={{ fontSize: '0.7rem', color: '#6b7280', margin: '2px 0', whiteSpace: 'pre-wrap', maxHeight: 60, overflow: 'hidden' }}>
+                        {ev.stdout.slice(0, 200)}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {taskDetail.report && (
+              <div style={{ background: '#eff6ff', borderRadius: 8, padding: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>보고서</div>
+                <div style={{ fontSize: '0.85rem' }}>
+                  <div><b>요약:</b> {taskDetail.report.summary || '-'}</div>
+                  <div><b>결과:</b> {taskDetail.report.outcome || '-'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
