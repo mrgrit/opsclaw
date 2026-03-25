@@ -1,11 +1,17 @@
+import json as _json
 import subprocess
+import time
 from dataclasses import asdict, dataclass
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, FastAPI, HTTPException, status
 from pydantic import BaseModel
 
 from packages.pi_adapter.runtime import PiAdapterError, PiRuntimeClient, PiRuntimeConfig
+
+# ── Ollama direct config (for mission autonomous loop) ────────────────────────
+_OLLAMA_BASE = "http://192.168.0.105:11434/v1"
 
 
 @dataclass
@@ -55,6 +61,20 @@ class AnalyzeRequest(BaseModel):
     question: str                     # "이 출력에서 비정상적인 디스크 사용 패턴이 있는가?" 등
     context: dict | None = None
     timeout_s: int = 120
+
+
+# ── 자율 미션 모델 ────────────────────────────────────────────────────────────
+
+class MissionRequest(BaseModel):
+    mission_id: str
+    role: str                            # "red" | "blue"
+    objective: str                       # 미션 목표
+    target: str = ""                     # 공격/모니터링 대상
+    model: str = "gemma3:12b"            # 사용할 Ollama 모델
+    playbook_context: list[dict] = []    # 관련 Playbook steps
+    experience_context: list[str] = []   # 축적된 경험 텍스트
+    max_steps: int = 10
+    timeout_s: int = 180
 
 
 def create_health_router() -> APIRouter:
@@ -223,6 +243,160 @@ def create_a2a_router() -> APIRouter:
             "stdout": stdout,
             "stderr": stderr,
             "exit_code": exit_code,
+        }
+
+    # ── 신규: 자율 미션 루프 ──────────────────────────────────────────────────
+    def _ollama_chat(model: str, messages: list[dict], max_tokens: int = 300) -> str:
+        """Ollama /v1/chat/completions 직접 호출 (pi_adapter 우회)"""
+        try:
+            resp = httpx.post(
+                f"{_OLLAMA_BASE}/chat/completions",
+                json={"model": model, "messages": messages,
+                      "temperature": 0.1, "max_tokens": max_tokens},
+                timeout=60.0,
+            )
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+        except Exception as exc:
+            return _json.dumps({"action": "error", "command": "", "done": True,
+                                "summary": f"LLM call failed: {exc}"})
+
+    def _parse_llm_json(raw: str) -> dict:
+        """LLM 응답에서 JSON 추출 (```json 블록 또는 raw JSON)"""
+        text = raw.strip()
+        if "```json" in text:
+            text = text.split("```json")[-1].split("```")[0].strip()
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0].strip()
+        # 첫 { 부터 마지막 } 까지 추출
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            text = text[start:end+1]
+        try:
+            return _json.loads(text)
+        except _json.JSONDecodeError:
+            return {"action": "parse_error", "command": "", "done": True,
+                    "summary": f"Failed to parse: {raw[:200]}"}
+
+    @router.post("/mission")
+    def run_mission(payload: MissionRequest) -> dict[str, Any]:
+        """
+        자율 미션 루프: 로컬 LLM이 미션 목표를 받고, 자율적으로 명령을 결정·실행·반복한다.
+        Master/Manager를 매번 거치지 않고 SubAgent가 독립 행동.
+        """
+        # 시스템 프롬프트 구성
+        role_desc = {
+            "red": (
+                "You are a Red Team penetration tester. "
+                "Your goal is to find and exploit vulnerabilities on the target. "
+                "You have bash access. Use curl, nmap, or any CLI tools. "
+                "For remote commands: sshpass -p1 ssh -o StrictHostKeyChecking=no <user>@<ip> '<command>'. "
+                "JuiceShop REST API uses JSON: curl -s -X POST <url> -H 'Content-Type: application/json' -d '{...}'."
+            ),
+            "blue": (
+                "You are a Blue Team security analyst monitoring Wazuh SIEM. "
+                "Your goal is to detect attacks and create detection rules. "
+                "You have bash access. To run commands on remote servers, use: "
+                "sshpass -p1 ssh -o StrictHostKeyChecking=no <user>@<ip> '<command>'. "
+                "For sudo commands: sshpass -p1 ssh -o StrictHostKeyChecking=no <user>@<ip> 'echo 1 | sudo -S <command>'. "
+                "SIEM server: siem@10.20.30.100, Web server: web@10.20.30.80, IPS: secu@10.20.30.1."
+            ),
+        }
+        sys_prompt = role_desc.get(payload.role, role_desc["red"])
+        sys_prompt += (
+            f"\n\nObjective: {payload.objective}"
+            f"\nTarget: {payload.target}"
+        )
+        if payload.playbook_context:
+            pb_text = "\n".join(
+                f"  Step {s.get('order',i+1)}: {s.get('instruction_prompt', s.get('name',''))}"
+                for i, s in enumerate(payload.playbook_context)
+            )
+            sys_prompt += f"\n\nReference Playbook:\n{pb_text}"
+        if payload.experience_context:
+            exp_text = "\n".join(f"  - {e}" for e in payload.experience_context[:5])
+            sys_prompt += f"\n\nPast Experience:\n{exp_text}"
+        sys_prompt += (
+            "\n\nEach turn, respond ONLY with JSON (no markdown, no explanation):\n"
+            '{"action":"what you plan to do","command":"bash command to execute","done":false}\n'
+            'When mission is complete: {"action":"done","command":"","done":true,"summary":"results"}\n'
+        )
+
+        messages: list[dict] = [{"role": "system", "content": sys_prompt}]
+        messages.append({"role": "user", "content": "Begin the mission. What is your first action?"})
+
+        results: list[dict] = []
+        mission_start = time.time()
+
+        for step_num in range(1, payload.max_steps + 1):
+            elapsed = time.time() - mission_start
+            if elapsed > payload.timeout_s:
+                results.append({"step": step_num, "action": "timeout",
+                                "command": "", "stdout": "", "stderr": "",
+                                "exit_code": -1, "duration_s": 0,
+                                "llm_reasoning": "Mission timeout"})
+                break
+
+            # LLM에게 다음 행동 요청
+            raw_resp = _ollama_chat(payload.model, messages, max_tokens=300)
+            decision = _parse_llm_json(raw_resp)
+
+            action = decision.get("action", "unknown")
+            command = decision.get("command", "")
+            done = decision.get("done", False)
+
+            if done or not command:
+                results.append({
+                    "step": step_num, "action": action,
+                    "command": "", "stdout": "", "stderr": "",
+                    "exit_code": 0, "duration_s": 0,
+                    "llm_reasoning": decision.get("summary", raw_resp[:300]),
+                })
+                break
+
+            # 명령 실행
+            cmd_start = time.time()
+            stdout, stderr, exit_code = _run_shell(command, min(30, payload.timeout_s - int(elapsed)))
+            cmd_dur = round(time.time() - cmd_start, 3)
+
+            step_result = {
+                "step": step_num,
+                "action": action,
+                "command": command,
+                "stdout": stdout[:2000],
+                "stderr": stderr[:500],
+                "exit_code": exit_code,
+                "duration_s": cmd_dur,
+                "llm_reasoning": raw_resp[:300],
+            }
+            results.append(step_result)
+
+            # LLM에게 실행 결과 전달
+            messages.append({"role": "assistant", "content": raw_resp})
+            messages.append({"role": "user", "content":
+                f"Command executed. exit_code={exit_code}\n"
+                f"stdout:\n{stdout[:1500]}\n"
+                f"stderr:\n{stderr[:300]}\n"
+                f"Decide next action."
+            })
+
+        total_dur = round(time.time() - mission_start, 2)
+        # 마지막 step에서 summary 추출
+        summary = ""
+        if results and results[-1].get("llm_reasoning"):
+            summary = results[-1]["llm_reasoning"]
+
+        return {
+            "mission_id": payload.mission_id,
+            "role": payload.role,
+            "model": payload.model,
+            "status": "completed" if any(r.get("action") == "done" for r in results)
+                      else ("timeout" if total_dur >= payload.timeout_s else "max_steps"),
+            "steps_executed": len(results),
+            "total_duration_s": total_dur,
+            "results": results,
+            "summary": summary,
         }
 
     # ── 신규: bash 출력 LLM 분석 ─────────────────────────────────────────────

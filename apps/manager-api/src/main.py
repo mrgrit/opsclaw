@@ -2333,6 +2333,144 @@ def create_app() -> FastAPI:
     app.include_router(create_rl_router())
     app.include_router(create_chat_router())
 
+    # ── 자율 Purple Team ──────────────────────────────────────────────────────
+    from pydantic import BaseModel as _BM
+
+    class _PurpleAutoRequest(_BM):
+        red_objective: str
+        red_target: str = ""
+        red_subagent_url: str = "http://localhost:8002"
+        red_model: str = "gemma3:12b"
+        blue_objective: str
+        blue_subagent_url: str = "http://10.20.30.100:8002"
+        blue_model: str = "llama3.1:8b"
+        max_steps: int = 10
+        timeout_s: int = 180
+
+    @app.post("/projects/{project_id}/purple-auto")
+    def purple_auto(project_id: str, payload: _PurpleAutoRequest):
+        project = get_project_record(project_id)
+        if not project:
+            raise HTTPException(404, detail={"message": "Project not found"})
+
+        import uuid as _uuid
+        mission_id = _uuid.uuid4().hex[:12]
+
+        # 관련 Playbook/Experience 조회 (지식 전이)
+        playbook_ctx: list[dict] = []
+        experience_ctx: list[str] = []
+        try:
+            from packages.retrieval_service import search_documents
+            # Red용 경험 검색
+            red_docs = search_documents(payload.red_objective, limit=5)
+            experience_ctx_red = [d.get("title", "") + ": " + d.get("body", "")[:200]
+                                  for d in red_docs]
+            # Blue용 경험 검색
+            blue_docs = search_documents(payload.blue_objective, limit=5)
+            experience_ctx_blue = [d.get("title", "") + ": " + d.get("body", "")[:200]
+                                   for d in blue_docs]
+        except Exception:
+            experience_ctx_red = []
+            experience_ctx_blue = []
+
+        # Playbook 검색 (datetime 제거하여 JSON 직렬화 보장)
+        try:
+            from packages.registry_service import list_playbooks, get_playbook_steps
+            pbs = list_playbooks()
+            for pb in pbs[:3]:
+                steps = get_playbook_steps(pb["id"])
+                for s in steps:
+                    playbook_ctx.append({
+                        "order": s.get("step_order", 0),
+                        "name": s.get("name", ""),
+                        "instruction_prompt": str(s.get("params", {}).get("command", s.get("name", ""))),
+                    })
+        except Exception:
+            pass
+
+        # Red + Blue 동시 실행
+        from packages.a2a_protocol import A2AClient, A2AClientConfig
+
+        def _run_red():
+            client = A2AClient(A2AClientConfig(base_url=payload.red_subagent_url))
+            return client.mission(
+                mission_id=f"red-{mission_id}",
+                role="red",
+                objective=payload.red_objective,
+                target=payload.red_target,
+                model=payload.red_model,
+                playbook_context=playbook_ctx,
+                experience_context=experience_ctx_red,
+                max_steps=payload.max_steps,
+                timeout_s=payload.timeout_s,
+            )
+
+        def _run_blue():
+            client = A2AClient(A2AClientConfig(base_url=payload.blue_subagent_url))
+            return client.mission(
+                mission_id=f"blue-{mission_id}",
+                role="blue",
+                objective=payload.blue_objective,
+                target="siem-local",
+                model=payload.blue_model,
+                playbook_context=[],
+                experience_context=experience_ctx_blue,
+                max_steps=payload.max_steps,
+                timeout_s=payload.timeout_s,
+            )
+
+        red_result = blue_result = None
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            red_future = executor.submit(_run_red)
+            blue_future = executor.submit(_run_blue)
+            try:
+                red_result = red_future.result(timeout=payload.timeout_s + 60)
+            except Exception as exc:
+                red_result = {"status": "error", "error": str(exc)}
+            try:
+                blue_result = blue_future.result(timeout=payload.timeout_s + 60)
+            except Exception as exc:
+                blue_result = {"status": "error", "error": str(exc)}
+
+        # Evidence + PoW 기록 (각 step을 evidence로)
+        from packages.pow_service import generate_proof
+        from packages.project_service import create_minimal_evidence_record
+
+        for label, result in [("red", red_result), ("blue", blue_result)]:
+            if not isinstance(result, dict) or "results" not in result:
+                continue
+            for step in result.get("results", []):
+                if not step.get("command"):
+                    continue
+                try:
+                    create_minimal_evidence_record(
+                        project_id, step["command"],
+                        step.get("stdout", ""), step.get("stderr", ""),
+                        step.get("exit_code", -1),
+                    )
+                    generate_proof(
+                        project_id=project_id,
+                        agent_id=payload.red_subagent_url if label == "red"
+                                 else payload.blue_subagent_url,
+                        task_order=step["step"],
+                        task_title=f"{label}-{step.get('action', 'step')}",
+                        stdout=step.get("stdout", ""),
+                        stderr=step.get("stderr", ""),
+                        exit_code=step.get("exit_code", -1),
+                        duration_s=step.get("duration_s", 0),
+                        risk_level="medium",
+                    )
+                except Exception:
+                    pass
+
+        return {
+            "status": "ok",
+            "project_id": project_id,
+            "mission_id": mission_id,
+            "red": red_result,
+            "blue": blue_result,
+        }
+
     @app.websocket("/ws/projects/{project_id}")
     async def ws_project_status(websocket: WebSocket, project_id: str):
         await websocket.accept()

@@ -147,6 +147,40 @@ class A2AClient:
         except httpx.HTTPError as exc:
             raise A2AError(f"A2A install_tool call failed: {exc}") from exc
 
+    def mission(
+        self,
+        mission_id: str,
+        role: str,
+        objective: str,
+        target: str = "",
+        model: str = "gemma3:12b",
+        playbook_context: list[dict] | None = None,
+        experience_context: list[str] | None = None,
+        max_steps: int = 10,
+        timeout_s: int = 180,
+    ) -> dict[str, Any]:
+        """SubAgent에 자율 미션을 전달한다. SubAgent가 로컬 LLM으로 자율 행동."""
+        try:
+            resp = httpx.post(
+                f"{self.config.base_url}/a2a/mission",
+                json={
+                    "mission_id": mission_id,
+                    "role": role,
+                    "objective": objective,
+                    "target": target,
+                    "model": model,
+                    "playbook_context": playbook_context or [],
+                    "experience_context": experience_context or [],
+                    "max_steps": max_steps,
+                    "timeout_s": timeout_s,
+                },
+                timeout=float(timeout_s + 30),
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPError as exc:
+            raise A2AError(f"A2A mission call failed: {exc}") from exc
+
     def analyze(
         self,
         project_id: str,
