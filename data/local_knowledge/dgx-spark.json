@@ -1,0 +1,27 @@
+{
+  "server": "dgx-spark",
+  "role": "gpu-compute / model-training / inference",
+  "ip": "192.168.0.105",
+  "updated_at": "2026-03-26T00:00:00Z",
+  "tools": {
+    "ollama_api": "http://localhost:11434/v1",
+    "ollama_list": "ollama list",
+    "ollama_run": "ollama run <model>",
+    "python": "/home/mrgrit/opsclaw/.venv/bin/python3",
+    "nvidia_smi": "nvidia-smi",
+    "gpu_memory": "cat /proc/driver/nvidia-gpu/0000:09:00.0/information 2>/dev/null || nvidia-smi --query-gpu=memory.total,memory.used --format=csv",
+    "disk_usage": "df -h /",
+    "model_dir": "~/.ollama/models/"
+  },
+  "experiences": [
+    "Ollama 서버 운영 중 — gpt-oss:120b, llama3.3:70b, qwen3:32b, gemma3:12b 등 20개 모델",
+    "DGX Spark: aarch64 아키텍처, 128GB VRAM, 3.6TB NVMe SSD",
+    "Purple Team 실험에서 Red=gemma3:12b, Blue=llama3.1:8b로 자율 공방 수행",
+    "Ollama API: http://localhost:11434/v1/chat/completions 으로 모델 호출"
+  ],
+  "capabilities": [
+    "LLM inference (120B 모델까지)",
+    "LoRA/QLoRA fine-tuning (20B full, 70B QLoRA 가능)",
+    "대용량 모델 저장 (3.6TB SSD)"
+  ]
+}
