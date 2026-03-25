@@ -245,6 +245,70 @@ def create_a2a_router() -> APIRouter:
             "exit_code": exit_code,
         }
 
+    # ── 로컬 지식 관리 ──────────────────────────────────────────────────────────
+    import os as _os
+    _KNOWLEDGE_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "..", "..", "data", "local_knowledge")
+
+    def _load_local_knowledge(server_hint: str = "") -> dict:
+        """로컬 지식 파일 로드. server_hint 또는 hostname 기반."""
+        import socket
+        hostname = server_hint or socket.gethostname()
+        for name in [hostname, hostname.split(".")[0]]:
+            path = _os.path.join(_KNOWLEDGE_DIR, f"{name}.json")
+            if _os.path.exists(path):
+                try:
+                    with open(path) as f:
+                        return _json.load(f)
+                except Exception:
+                    pass
+        return {}
+
+    def _save_mission_learnings(server: str, mission_results: list[dict], role: str):
+        """미션 성공 결과를 로컬 지식에 자동 추가."""
+        knowledge = _load_local_knowledge(server)
+        if not knowledge:
+            knowledge = {"server": server, "role": role, "experiences": [], "tools": {}}
+        existing_exp = knowledge.get("experiences", [])
+        for r in mission_results:
+            if r.get("exit_code") == 0 and r.get("command"):
+                entry = f"[auto] {r.get('action','')}: {r['command'][:120]}"
+                if entry not in existing_exp:
+                    existing_exp.append(entry)
+        knowledge["experiences"] = existing_exp[-30:]  # 최근 30건 유지
+        knowledge["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        path = _os.path.join(_KNOWLEDGE_DIR, f"{server}.json")
+        _os.makedirs(_os.path.dirname(path), exist_ok=True)
+        try:
+            with open(path, "w") as f:
+                _json.dump(knowledge, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def _knowledge_to_prompt(knowledge: dict) -> str:
+        """로컬 지식을 시스템 프롬프트 텍스트로 변환."""
+        if not knowledge:
+            return ""
+        parts = [f"\n\n=== Local Knowledge ({knowledge.get('server','unknown')}) ==="]
+        tools = knowledge.get("tools", {})
+        if tools:
+            parts.append("Available tools/paths:")
+            for k, v in list(tools.items())[:15]:
+                parts.append(f"  {k}: {v}")
+        exps = knowledge.get("experiences", [])
+        if exps:
+            parts.append("Past experiences on this server:")
+            for e in exps[-10:]:
+                parts.append(f"  - {e}")
+        templates = knowledge.get("rule_templates", {})
+        if templates:
+            parts.append(f"Rule templates available: {', '.join(templates.keys())} (use local_rules.xml to deploy)")
+        net = knowledge.get("network_map", {})
+        if net:
+            parts.append("Network map:")
+            for k, v in net.items():
+                parts.append(f"  {k}: {v.get('ip','')} [{', '.join(v.get('services',[]))}]")
+        return "\n".join(parts)
+
     # ── 신규: 자율 미션 루프 ──────────────────────────────────────────────────
     def _ollama_chat(model: str, messages: list[dict], max_tokens: int = 300) -> str:
         """Ollama /v1/chat/completions 직접 호출 (pi_adapter 우회)"""
@@ -285,6 +349,17 @@ def create_a2a_router() -> APIRouter:
         자율 미션 루프: 로컬 LLM이 미션 목표를 받고, 자율적으로 명령을 결정·실행·반복한다.
         Master/Manager를 매번 거치지 않고 SubAgent가 독립 행동.
         """
+        # 로컬 지식 로드 (서버별 축적된 경험)
+        server_hint = "opsclaw"  # 기본값
+        if "siem" in payload.objective.lower() or payload.role == "blue":
+            server_hint = "siem"
+        elif "web" in payload.target.lower() or "10.20.30.80" in payload.target:
+            server_hint = "web"
+        elif "secu" in payload.target.lower() or "10.20.30.1" in payload.target:
+            server_hint = "secu"
+        local_knowledge = _load_local_knowledge(server_hint)
+        knowledge_prompt = _knowledge_to_prompt(local_knowledge)
+
         # 시스템 프롬프트 구성
         role_desc = {
             "red": (
@@ -297,10 +372,11 @@ def create_a2a_router() -> APIRouter:
             "blue": (
                 "You are a Blue Team security analyst monitoring Wazuh SIEM. "
                 "Your goal is to detect attacks and create detection rules. "
-                "You have bash access. To run commands on remote servers, use: "
-                "sshpass -p1 ssh -o StrictHostKeyChecking=no <user>@<ip> '<command>'. "
-                "For sudo commands: sshpass -p1 ssh -o StrictHostKeyChecking=no <user>@<ip> 'echo 1 | sudo -S <command>'. "
-                "SIEM server: siem@10.20.30.100, Web server: web@10.20.30.80, IPS: secu@10.20.30.1."
+                "IMPORTANT: You are running on the opsclaw control server, NOT on the SIEM server. "
+                "ALL commands must be executed via SSH to the target server. "
+                "ALWAYS prefix commands with: sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 '<command>' "
+                "For sudo: sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 'echo 1 | sudo -S <command>' "
+                "NEVER run Wazuh commands locally — they will fail."
             ),
         }
         sys_prompt = role_desc.get(payload.role, role_desc["red"])
@@ -317,6 +393,10 @@ def create_a2a_router() -> APIRouter:
         if payload.experience_context:
             exp_text = "\n".join(f"  - {e}" for e in payload.experience_context[:5])
             sys_prompt += f"\n\nPast Experience:\n{exp_text}"
+        # 로컬 지식 주입
+        if knowledge_prompt:
+            sys_prompt += knowledge_prompt
+
         sys_prompt += (
             "\n\nEach turn, respond ONLY with JSON (no markdown, no explanation):\n"
             '{"action":"what you plan to do","command":"bash command to execute","done":false}\n'
@@ -382,6 +462,10 @@ def create_a2a_router() -> APIRouter:
             })
 
         total_dur = round(time.time() - mission_start, 2)
+
+        # 미션 결과를 로컬 지식에 자동 저장
+        _save_mission_learnings(server_hint, results, payload.role)
+
         # 마지막 step에서 summary 추출
         summary = ""
         if results and results[-1].get("llm_reasoning"):

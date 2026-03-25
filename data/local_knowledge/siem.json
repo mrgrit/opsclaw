@@ -1,0 +1,40 @@
+{
+  "server": "siem",
+  "role": "blue-team-defender / SIEM",
+  "ip": "10.20.30.100",
+  "updated_at": "2026-03-25T14:54:15Z",
+  "tools": {
+    "wazuh_manager_status": "systemctl status wazuh-manager",
+    "wazuh_manager_restart": "echo 1 | sudo -S systemctl restart wazuh-manager",
+    "wazuh_alerts_log": "/var/ossec/logs/alerts/alerts.json",
+    "wazuh_rules_dir": "/var/ossec/etc/rules/",
+    "wazuh_custom_rules": "/var/ossec/etc/rules/local_rules.xml",
+    "wazuh_logtest": "/var/ossec/bin/wazuh-logtest",
+    "wazuh_api": "curl -k -u wazuh-wui:wazuh-wui https://localhost:55000",
+    "suricata_custom_rules": "/var/lib/suricata/rules/custom.rules (on secu server)",
+    "read_recent_alerts": "echo 1 | sudo -S tail -50 /var/ossec/logs/alerts/alerts.json",
+    "grep_sqli_alerts": "echo 1 | sudo -S grep -i 'union\\|select\\|injection\\|100100\\|100101' /var/ossec/logs/alerts/alerts.json | tail -20"
+  },
+  "experiences": [
+    "Blue T1: Wazuh 커스텀 룰 7개 배포 완료 (100100~100106) — local_rules.xml에 직접 추가",
+    "Blue T1: 룰 배포 방법 — echo 1 | sudo -S bash -c 'cat >> /var/ossec/etc/rules/local_rules.xml << EOF\\n<group name=\"custom_web\">\\n<rule id=\"100100\" level=\"12\">\\n<if_sid>31100</if_sid>\\n<match>UNION|SELECT</match>\\n<description>SQL Injection attempt (UNION/SELECT)</description>\\n<mitre><id>T1190</id></mitre>\\n</rule>\\n</group>\\nEOF'",
+    "Blue T1: Suricata 시그니처 sid:1000001 배포 (secu 서버의 /var/lib/suricata/rules/custom.rules)",
+    "Blue T1: logtest 검증 성공 — echo '10.20.30.201 GET /?id=-1+UNION+SELECT+1,2,3--' | /var/ossec/bin/wazuh-logtest → rule=100100 트리거 확인",
+    "Blue T1: Wazuh agent 버전 불일치 이슈 — web agent 4.14.4 > manager → 등록 거부됨",
+    "Blue T1: rsyslog 대안 — web에서 rsyslog로 Apache 로그를 siem으로 전달 설정",
+    "Purple: Wazuh manager는 active (running) 상태, 11시간+ uptime",
+    "[auto] check the available tools/paths on siem@10.20.30.100: sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 'echo 1 | sudo -S ls /var/ossec/logs/alerts/alerts.json'",
+    "[auto] check Wazuh manager status and alerts log: sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 'echo 1 | sudo -S systemctl status wazuh-manager'",
+    "[auto] curl -s -I http://10.20.30.80:3000: curl -s -I http://10.20.30.80:3000",
+    "[auto] Attempt SQL injection via login form, correcting syntax error and escaping quotes: curl -s -X POST http://10.20.30.80:3000/rest/user/login -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\' OR 1=1--\\\"",
+    "[auto] Attempt SQL injection via login form, correcting syntax error and escaping quotes, trying a different payload: curl -s -X POST http://10.20.30.80:3000/rest/user/login -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\'admin\\' OR ",
+    "[auto] Use JWT from step2: curl -s http://10.20.30.80:3000/api/Users: curl -s http://10.20.30.80:3000/api/Users",
+    "[auto] Attempt to retrieve user list with a JWT, noting the previous error: curl -s http://10.20.30.80:3000/api/Users -H 'Authorization: Bearer <token> placeholder'",
+    "[auto] Attempt to retrieve user list with a JWT, correcting the header format: curl -s http://10.20.30.80:3000/api/Users -H 'Authorization: Bearer <token> placeholder'"
+  ],
+  "rule_templates": {
+    "sqli_union": "<rule id=\"100100\" level=\"12\"><if_sid>31100</if_sid><match>UNION|SELECT</match><description>SQL Injection attempt (UNION/SELECT)</description><mitre><id>T1190</id></mitre></rule>",
+    "sqli_or": "<rule id=\"100101\" level=\"12\"><if_sid>31100</if_sid><match>OR 1=1|OR '1'='1</match><description>SQL Injection OR bypass attempt</description><mitre><id>T1190</id></mitre></rule>",
+    "xss_script": "<rule id=\"100102\" level=\"10\"><if_sid>31100</if_sid><match>script|onerror|onload</match><description>XSS attempt detected</description><mitre><id>T1059.007</id></mitre></rule>"
+  }
+}

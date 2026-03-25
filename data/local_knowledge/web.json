@@ -1,0 +1,36 @@
+{
+  "server": "web",
+  "role": "attack-target / web-server",
+  "ip": "10.20.30.80",
+  "updated_at": "2026-03-25T22:00:00Z",
+  "tools": {
+    "juiceshop_url": "http://localhost:3000",
+    "juiceshop_login": "POST http://localhost:3000/rest/user/login Content-Type:application/json",
+    "juiceshop_users": "GET http://localhost:3000/api/Users (requires JWT Authorization header)",
+    "juiceshop_ftp": "GET http://localhost:3000/ftp/",
+    "apache_config": "/etc/apache2/",
+    "bunkerweb_config": "/etc/nginx/",
+    "modsecurity_rules": "/etc/modsecurity/",
+    "wazuh_agent_status": "echo 1 | sudo -S systemctl status wazuh-agent",
+    "crontab_edit": "crontab -e",
+    "suid_search": "find / -perm -4000 -type f 2>/dev/null"
+  },
+  "experiences": [
+    "Red T1: JuiceShop SQLi 취약점 — /rest/user/login에 ' OR 1=1-- 페이로드로 JWT 획득 성공",
+    "Red T1: /ftp/ 디렉토리 리스팅 활성화 — acquisitions.md, coupons_2013.md.bak 노출",
+    "Red T1: /rest/admin/application-configuration → 전체 서버 설정 노출 (Google OAuth clientId 포함)",
+    "Red T1: ModSecurity CRS는 dmshop(:80)에만 적용, JuiceShop(:3000)은 WAF 미적용",
+    "Red T3: CRITICAL — sudo NOPASSWD: ALL — web 사용자가 패스워드 없이 root 동일 권한",
+    "Red T3: SUID 바이너리 15개 발견 (pkexec 포함), kernel 6.8.0-106-generic",
+    "Red T3: cron 지속성 — */15 * * * * /tmp/.health_check.sh 등록 성공",
+    "Red T3: SSH 키 주입 — ~/.ssh/authorized_keys에 공격자 키 추가 성공",
+    "Red T3: PATH 하이잭 — /tmp/ls 생성 후 PATH 우선순위로 실행 성공",
+    "Red T4: Wazuh agent 정지 가능 — sudo systemctl stop wazuh-agent",
+    "Red T4: syslog 차단 가능 — sudo iptables -A OUTPUT -p udp --dport 514 -j DROP"
+  ],
+  "vulnerabilities": [
+    {"severity": "critical", "desc": "sudo NOPASSWD ALL", "impact": "root equivalent"},
+    {"severity": "critical", "desc": "JuiceShop SQLi login bypass", "impact": "admin access"},
+    {"severity": "high", "desc": "FTP directory listing", "impact": "sensitive file exposure"}
+  ]
+}

