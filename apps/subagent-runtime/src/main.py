@@ -483,6 +483,261 @@ def create_a2a_router() -> APIRouter:
             "summary": summary,
         }
 
+    # ── 자율 탐색: 서버 환경 파악 + baseline 설정 ─────────────────────────────
+    class ExploreRequest(BaseModel):
+        server_name: str = ""
+        model: str = "gemma3:12b"
+        ssh_target: str = ""          # "siem@10.20.30.100" — 비어있으면 로컬
+        ssh_password: str = "1"
+        timeout_s: int = 60
+
+    @router.post("/explore")
+    def explore_server(payload: ExploreRequest) -> dict[str, Any]:
+        """서버 환경을 자동 파악하고 watch_targets + baseline을 local_knowledge에 저장."""
+        import socket
+        server = payload.server_name or socket.gethostname()
+        ssh_pre = ""
+        if payload.ssh_target:
+            ssh_pre = f"sshpass -p{payload.ssh_password} ssh -o StrictHostKeyChecking=no {payload.ssh_target} "
+
+        # 탐색 명령 목록
+        probes = [
+            ("hostname", f"{ssh_pre}'hostname' 2>/dev/null" if ssh_pre else "hostname"),
+            ("uptime", f"{ssh_pre}'uptime' 2>/dev/null" if ssh_pre else "uptime"),
+            ("os", f"{ssh_pre}'cat /etc/os-release | head -3' 2>/dev/null" if ssh_pre else "cat /etc/os-release | head -3"),
+            ("disk", f"{ssh_pre}'df -h / | tail -1' 2>/dev/null" if ssh_pre else "df -h / | tail -1"),
+            ("memory", f"{ssh_pre}'free -m | head -2' 2>/dev/null" if ssh_pre else "free -m | head -2"),
+            ("services", f"{ssh_pre}'systemctl list-units --type=service --state=running --no-pager | head -20' 2>/dev/null" if ssh_pre else "systemctl list-units --type=service --state=running --no-pager | head -20"),
+            ("ports", f"{ssh_pre}'ss -tlnp 2>/dev/null | head -20' 2>/dev/null" if ssh_pre else "ss -tlnp 2>/dev/null | head -20"),
+            ("processes", f"{ssh_pre}'ps aux --sort=-rss 2>/dev/null | head -10' 2>/dev/null" if ssh_pre else "ps aux --sort=-rss 2>/dev/null | head -10"),
+            ("crontab", f"{ssh_pre}'crontab -l 2>/dev/null || echo none' 2>/dev/null" if ssh_pre else "crontab -l 2>/dev/null || echo none"),
+            ("security_logs", f"{ssh_pre}'echo {payload.ssh_password} | sudo -S tail -5 /var/log/auth.log 2>/dev/null || echo none' 2>/dev/null" if ssh_pre else "tail -5 /var/log/auth.log 2>/dev/null || echo none"),
+        ]
+
+        results = {}
+        for name, cmd in probes:
+            stdout, stderr, ec = _run_shell(cmd, 15)
+            results[name] = stdout.strip()[:500] if ec == 0 else f"error: {stderr.strip()[:100]}"
+
+        # LLM에게 분석 요청: 감시 대상 + baseline 결정
+        probe_text = "\n".join(f"[{k}]\n{v}" for k, v in results.items())
+        llm_prompt = (
+            f"You are a security-focused sysadmin. Analyze this server ({server}) and determine:\n"
+            f"1. What are the critical services to monitor?\n"
+            f"2. What files/logs should be watched for security events?\n"
+            f"3. What are the normal baseline values (CPU, memory, disk)?\n"
+            f"4. What security risks do you see?\n\n"
+            f"Server probe results:\n{probe_text}\n\n"
+            f"Respond ONLY with JSON:\n"
+            f'{{"watch_targets":[{{"name":"...","command":"...","interval_s":60,"alert_pattern":"..."}}],'
+            f'"baseline":{{"disk_pct":..,"mem_pct":..,"services_count":..}},'
+            f'"security_risks":["..."],'
+            f'"summary":"..."}}'
+        )
+        raw = _ollama_chat(payload.model, [
+            {"role": "system", "content": "You are a security-focused system administrator. Respond only with valid JSON."},
+            {"role": "user", "content": llm_prompt}
+        ], max_tokens=800)
+        analysis = _parse_llm_json(raw)
+
+        # local_knowledge 업데이트
+        knowledge = _load_local_knowledge(server)
+        if not knowledge:
+            knowledge = {"server": server, "role": "auto-explored", "tools": {}, "experiences": []}
+        knowledge["explore_results"] = results
+        knowledge["watch_targets"] = analysis.get("watch_targets", [])
+        knowledge["baseline"] = analysis.get("baseline", {})
+        knowledge["security_risks"] = analysis.get("security_risks", [])
+        knowledge["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        if payload.ssh_target:
+            knowledge["ssh_target"] = payload.ssh_target
+            knowledge["ssh_password"] = payload.ssh_password
+
+        path = _os.path.join(_KNOWLEDGE_DIR, f"{server}.json")
+        _os.makedirs(_os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            _json.dump(knowledge, f, ensure_ascii=False, indent=2)
+
+        return {
+            "server": server,
+            "status": "explored",
+            "probe_results": {k: v[:200] for k, v in results.items()},
+            "watch_targets": analysis.get("watch_targets", []),
+            "baseline": analysis.get("baseline", {}),
+            "security_risks": analysis.get("security_risks", []),
+            "summary": analysis.get("summary", ""),
+        }
+
+    # ── Agent Daemon: 상시 자율 감시 ─────────────────────────────────────────
+    _active_daemons: dict[str, dict] = {}
+
+    class DaemonRequest(BaseModel):
+        daemon_id: str = ""
+        server_name: str = ""
+        model: str = "gemma3:12b"
+        ssh_target: str = ""
+        ssh_password: str = "1"
+        callback_url: str = ""        # Manager callback for VWR
+        max_cycles: int = 50          # 최대 순환 수 (테스트용, 0=무한)
+        base_interval_s: int = 30     # 기본 감시 주기
+
+    class DaemonStopRequest(BaseModel):
+        daemon_id: str
+
+    @router.post("/daemon")
+    def start_daemon(payload: DaemonRequest) -> dict[str, Any]:
+        """Agent Daemon 시작: explore 결과 기반 상시 자율 감시."""
+        import socket, uuid
+        daemon_id = payload.daemon_id or f"daemon-{uuid.uuid4().hex[:8]}"
+        server = payload.server_name or socket.gethostname()
+
+        if daemon_id in _active_daemons:
+            return {"status": "already_running", "daemon_id": daemon_id}
+
+        knowledge = _load_local_knowledge(server)
+        if not knowledge.get("watch_targets"):
+            return {"status": "error", "message": "No watch_targets. Run /a2a/explore first."}
+
+        _active_daemons[daemon_id] = {"status": "running", "server": server, "cycles": 0, "events": []}
+
+        import threading
+        thread = threading.Thread(
+            target=_daemon_loop,
+            args=(daemon_id, server, payload),
+            daemon=True
+        )
+        thread.start()
+
+        return {"status": "started", "daemon_id": daemon_id, "server": server,
+                "watch_targets": len(knowledge.get("watch_targets", []))}
+
+    @router.post("/daemon/stop")
+    def stop_daemon(payload: DaemonStopRequest) -> dict[str, Any]:
+        """Agent Daemon 중지."""
+        if payload.daemon_id in _active_daemons:
+            _active_daemons[payload.daemon_id]["status"] = "stopping"
+            return {"status": "stopping", "daemon_id": payload.daemon_id}
+        return {"status": "not_found", "daemon_id": payload.daemon_id}
+
+    @router.get("/daemon/status")
+    def daemon_status() -> dict[str, Any]:
+        """모든 Daemon 상태 조회."""
+        return {"daemons": {k: {"status": v["status"], "server": v["server"],
+                                "cycles": v["cycles"], "events": len(v["events"])}
+                            for k, v in _active_daemons.items()}}
+
+    def _daemon_loop(daemon_id: str, server: str, payload: DaemonRequest):
+        """OBSERVE → THINK → ACT → REPORT → IMPROVE 루프."""
+        ssh_pre = ""
+        if payload.ssh_target:
+            ssh_pre = f"sshpass -p{payload.ssh_password} ssh -o StrictHostKeyChecking=no {payload.ssh_target} "
+
+        cycle = 0
+        while _active_daemons.get(daemon_id, {}).get("status") == "running":
+            cycle += 1
+            if payload.max_cycles > 0 and cycle > payload.max_cycles:
+                break
+
+            knowledge = _load_local_knowledge(server)
+            watch_targets = knowledge.get("watch_targets", [])
+            interval = payload.base_interval_s
+            events_this_cycle = []
+
+            for target in watch_targets:
+                cmd = target.get("command", "")
+                if not cmd:
+                    continue
+                if ssh_pre and not cmd.startswith("sshpass"):
+                    cmd = f"{ssh_pre}'{cmd}'"
+
+                # OBSERVE
+                stdout, stderr, ec = _run_shell(cmd, 15)
+                output = stdout.strip()
+
+                # 패턴 매칭 (빠른 체크 — LLM 호출 없이)
+                alert_pattern = target.get("alert_pattern", "")
+                severity = "normal"
+                if alert_pattern and alert_pattern.lower() in output.lower():
+                    severity = "investigate"
+                elif ec != 0:
+                    severity = "investigate"
+
+                if severity == "normal":
+                    continue
+
+                # THINK — LLM 판단 (이상 감지 시에만)
+                think_prompt = (
+                    f"Server: {server}, Monitor: {target.get('name','')}\n"
+                    f"Output:\n{output[:1000]}\n\n"
+                    f"Is this a security issue? Respond JSON:\n"
+                    f'{{"severity":"normal|warning|critical","action":"description",'
+                    f'"command":"remediation command or empty","report":"brief summary"}}'
+                )
+                raw = _ollama_chat(payload.model, [
+                    {"role": "system", "content": "You are a security analyst. Assess if this output indicates a security issue. Respond only JSON."},
+                    {"role": "user", "content": think_prompt}
+                ], max_tokens=200)
+                decision = _parse_llm_json(raw)
+
+                event = {
+                    "cycle": cycle,
+                    "target": target.get("name", ""),
+                    "severity": decision.get("severity", "unknown"),
+                    "action": decision.get("action", ""),
+                    "report": decision.get("report", ""),
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                }
+
+                # ACT — 자율 조치 (critical/warning 시)
+                remediation_cmd = decision.get("command", "")
+                if remediation_cmd and decision.get("severity") in ("warning", "critical"):
+                    if ssh_pre and not remediation_cmd.startswith("sshpass"):
+                        remediation_cmd = f"{ssh_pre}'{remediation_cmd}'"
+                    act_stdout, act_stderr, act_ec = _run_shell(remediation_cmd, 15)
+                    event["remediation"] = {
+                        "command": remediation_cmd[:200],
+                        "stdout": act_stdout[:500],
+                        "exit_code": act_ec,
+                    }
+
+                events_this_cycle.append(event)
+
+                # REPORT — Manager 콜백
+                if payload.callback_url and decision.get("severity") in ("warning", "critical"):
+                    try:
+                        httpx.post(payload.callback_url, json={
+                            "daemon_id": daemon_id, "server": server, "event": event
+                        }, timeout=5.0)
+                    except Exception:
+                        pass
+
+                # 적응적 주기
+                if decision.get("severity") == "critical":
+                    interval = min(interval, 5)
+                elif decision.get("severity") == "warning":
+                    interval = min(interval, 15)
+
+            # IMPROVE — 이벤트 기록
+            if events_this_cycle:
+                _active_daemons[daemon_id]["events"].extend(events_this_cycle)
+                # local_knowledge에 이벤트 저장
+                knowledge = _load_local_knowledge(server)
+                daemon_log = knowledge.get("daemon_events", [])
+                daemon_log.extend(events_this_cycle)
+                knowledge["daemon_events"] = daemon_log[-50:]  # 최근 50건
+                knowledge["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                path = _os.path.join(_KNOWLEDGE_DIR, f"{server}.json")
+                try:
+                    with open(path, "w") as f:
+                        _json.dump(knowledge, f, ensure_ascii=False, indent=2)
+                except Exception:
+                    pass
+
+            _active_daemons[daemon_id]["cycles"] = cycle
+            time.sleep(interval)
+
+        _active_daemons[daemon_id]["status"] = "stopped"
+
     # ── 신규: bash 출력 LLM 분석 ─────────────────────────────────────────────
     @router.post("/analyze")
     def analyze(payload: AnalyzeRequest) -> dict[str, Any]:

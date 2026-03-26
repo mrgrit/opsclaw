@@ -2,7 +2,7 @@
   "server": "web",
   "role": "attack-target / web-server",
   "ip": "10.20.30.80",
-  "updated_at": "2026-03-25T22:00:00Z",
+  "updated_at": "2026-03-25T23:53:39Z",
   "tools": {
     "juiceshop_url": "http://localhost:3000",
     "juiceshop_login": "POST http://localhost:3000/rest/user/login Content-Type:application/json",
@@ -29,8 +29,92 @@
     "Red T4: syslog 차단 가능 — sudo iptables -A OUTPUT -p udp --dport 514 -j DROP"
   ],
   "vulnerabilities": [
-    {"severity": "critical", "desc": "sudo NOPASSWD ALL", "impact": "root equivalent"},
-    {"severity": "critical", "desc": "JuiceShop SQLi login bypass", "impact": "admin access"},
-    {"severity": "high", "desc": "FTP directory listing", "impact": "sensitive file exposure"}
-  ]
+    {
+      "severity": "critical",
+      "desc": "sudo NOPASSWD ALL",
+      "impact": "root equivalent"
+    },
+    {
+      "severity": "critical",
+      "desc": "JuiceShop SQLi login bypass",
+      "impact": "admin access"
+    },
+    {
+      "severity": "high",
+      "desc": "FTP directory listing",
+      "impact": "sensitive file exposure"
+    }
+  ],
+  "explore_results": {
+    "hostname": "web",
+    "uptime": "08:53:06 up 6 days, 17:58,  0 users,  load average: 0.07, 0.05, 0.01",
+    "os": "PRETTY_NAME=\"Ubuntu 22.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"22.04\"",
+    "disk": "/dev/nvme0n1p2  468G   15G  430G   4% /",
+    "memory": "total        used        free      shared  buff/cache   available\nMem:           15771        1245        3770           4       10756       14187",
+    "services": "UNIT                          LOAD   ACTIVE SUB     DESCRIPTION\n  accounts-daemon.service       loaded active running Accounts Service\n  acpid.service                 loaded active running ACPI event daemon\n  apache-htcacheclean.service   loaded active running Disk Cache Cleaning Daemon for Apache HTTP Server\n  apache2.service               loaded active running The Apache HTTP Server\n  auditd.service                loaded active running Security Auditing Service\n  avahi-daemon.service          ",
+    "ports": "State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess\nLISTEN 0      2048         0.0.0.0:8002      0.0.0.0:*          \nLISTEN 0      511          0.0.0.0:8082      0.0.0.0:*          \nLISTEN 0      511          0.0.0.0:8081      0.0.0.0:*          \nLISTEN 0      4096   127.0.0.53%lo:53        0.0.0.0:*          \nLISTEN 0      128        127.0.0.1:631       0.0.0.0:*          \nLISTEN 0      4096         0.0.0.0:3000      0.0.0.0:*          \nLISTEN 0      80         127.0.0.1:3306      ",
+    "processes": "USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\n65532     145195  1.7  1.0 1800320 175456 ?      Ssl   3월25  23:25 /nodejs/bin/node /juice-shop/build/app.js\nroot      130120  0.0  0.8 200068 134832 ?       S<s   3월25   0:17 /lib/systemd/systemd-journald\nroot      144722  0.0  0.5 2202200 93000 ?       Ssl   3월25   0:21 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock\nmysql     110569  0.0  0.5 1272960 92856 ?       Ssl   3월24   0:42 /usr/sbin/mari",
+    "crontab": "*/15 * * * * /tmp/.health_check.sh",
+    "security_logs": "Mar 26 08:53:09 web sshd[157713]: Accepted password for web from 10.20.30.201 port 49866 ssh2\nMar 26 08:53:09 web sshd[157713]: pam_unix(sshd:session): session opened for user web(uid=1000) by (uid=0)\nMar 26 08:53:09 web systemd-logind[460]: New session 668 of user web.\nMar 26 08:53:09 web sudo:      web : PWD=/home/web ; USER=root ; COMMAND=/usr/bin/tail -5 /var/log/auth.log\nMar 26 08:53:09 web sudo: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)"
+  },
+  "watch_targets": [
+    {
+      "name": "Apache Access Logs",
+      "command": "/var/log/apache2/access.log",
+      "interval_s": 60,
+      "alert_pattern": "(401|403|500|SQL injection|XSS)"
+    },
+    {
+      "name": "Apache Error Logs",
+      "command": "/var/log/apache2/error.log",
+      "interval_s": 60,
+      "alert_pattern": "(PHP Warning|PHP Error|Connection refused|Timeout)"
+    },
+    {
+      "name": "Node.js Application Logs",
+      "command": "/juice-shop/build/app.js (check application specific logs)",
+      "interval_s": 60,
+      "alert_pattern": "(error|fail|exception)"
+    },
+    {
+      "name": "System Authentication Logs",
+      "command": "/var/log/auth.log",
+      "interval_s": 60,
+      "alert_pattern": "(Failed password|Invalid user)"
+    },
+    {
+      "name": "System Audit Logs",
+      "command": "/var/log/audit/audit.log",
+      "interval_s": 60,
+      "alert_pattern": "(USER_AUTH|LOGIN_FAILURE)"
+    },
+    {
+      "name": "Systemd Journal",
+      "command": "journalctl -u apache2",
+      "interval_s": 60,
+      "alert_pattern": "(error|fail|exception)"
+    },
+    {
+      "name": "Crontab Health Check",
+      "command": "/tmp/.health_check.sh",
+      "interval_s": 60,
+      "alert_pattern": "error"
+    }
+  ],
+  "baseline": {
+    "disk_pct": "4%",
+    "mem_pct": "12%",
+    "services_count": 7
+  },
+  "security_risks": [
+    "Unsecured ports (8002, 8082, 8081, 3000) - investigate purpose and restrict access.",
+    "Password authentication enabled for SSH - strongly recommend disabling and using key-based authentication.",
+    "Node.js application (/juice-shop) - potential vulnerabilities depending on the application's code and dependencies.  Requires thorough security review and vulnerability scanning.",
+    "Crontab script (/tmp/.health_check.sh) -  unclear purpose and origin.  Requires investigation to ensure it's safe and not malicious.",
+    "sudo access for 'web' user - review necessity and restrict privileges.  Consider using more granular sudo rules.",
+    "MariaDB/MySQL database - potential SQL injection vulnerabilities if application code is not properly sanitized.",
+    "Container runtime (dockerd) - ensure proper container isolation and security policies are in place."
+  ],
+  "ssh_target": "web@10.20.30.80",
+  "ssh_password": "1"
 }

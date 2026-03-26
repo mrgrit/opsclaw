@@ -1,0 +1,22 @@
+{
+  "server": "test",
+  "role": "auto-explored",
+  "tools": {},
+  "experiences": [],
+  "explore_results": {
+    "hostname": "opsclaw",
+    "uptime": "01:30:40 up 6 days, 10:36,  1 user,  load average: 0.25, 0.17, 0.15",
+    "os": "PRETTY_NAME=\"Ubuntu 22.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"22.04\"",
+    "disk": "/dev/nvme0n1p2  468G   19G  426G   5% /",
+    "memory": "total        used        free      shared  buff/cache   available\nMem:           15771        1603        5342          19        8825       13815",
+    "services": "UNIT                          LOAD   ACTIVE SUB     DESCRIPTION\n  accounts-daemon.service       loaded active running Accounts Service\n  acpid.service                 loaded active running ACPI event daemon\n  avahi-daemon.service          loaded active running Avahi mDNS/DNS-SD Stack\n  bluetooth.service             loaded active running Bluetooth service\n  colord.service                loaded active running Manage, Install and Generate Color Profiles\n  containerd.service            loaded active",
+    "ports": "State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                                      \nLISTEN 0      128        127.0.0.1:631        0.0.0.0:*                                                \nLISTEN 0      4096   127.0.0.53%lo:53         0.0.0.0:*                                                \nLISTEN 0      128          0.0.0.0:22         0.0.0.0:*                                                \nLISTEN 0      511        127.0.0.1:18792      0.0.0.0:*    users:((\"openclaw-gatewa\"",
+    "processes": "USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\nopsclaw   528539 17.0  3.9 74895444 630428 pts/0 Rl+  01:07   3:54 claude --resume opsclaw-paper-introduction --dangerously-skip-permissions\nopsclaw   105362  0.2  3.4 12237800 553896 ?     Ssl   3월21  12:37 openclaw-gateway\nroot         907  0.0  0.5 2136720 94140 ?       Ssl   3월19   3:28 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock\nopsclaw   529062  1.8  0.3 167964 58268 ?        Ssl  01:30   ",
+    "crontab": "none",
+    "security_logs": "Mar 26 00:17:02 opsclaw CRON[527333]: pam_unix(cron:session): session opened for user root(uid=0) by (uid=0)\nMar 26 00:17:02 opsclaw CRON[527333]: pam_unix(cron:session): session closed for user root\nMar 26 01:17:01 opsclaw CRON[528780]: pam_unix(cron:session): session opened for user root(uid=0) by (uid=0)\nMar 26 01:17:01 opsclaw CRON[528780]: pam_unix(cron:session): session closed for user root\nMar 26 01:23:05 opsclaw systemd-logind[475]: Removed session 273."
+  },
+  "watch_targets": [],
+  "baseline": {},
+  "security_risks": [],
+  "updated_at": "2026-03-25T16:30:40Z"
+}

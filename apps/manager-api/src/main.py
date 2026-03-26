@@ -2471,6 +2471,70 @@ def create_app() -> FastAPI:
             "blue": blue_result,
         }
 
+    # ── 자극 생성기: 보안 이벤트 무작위 발생 ──────────────────────────────────
+    import random as _random
+
+    class _StimulateRequest(_BM):
+        target_url: str = "http://10.20.30.80:3000"  # 자극 대상
+        subagent_url: str = "http://localhost:8002"   # 자극 실행 SubAgent
+        count: int = 5                                 # 자극 횟수
+        types: list[str] = []                          # 비어있으면 전체 유형
+
+    @app.post("/projects/{project_id}/stimulate")
+    def stimulate(project_id: str, payload: _StimulateRequest):
+        """대상 서버에 무작위 보안 이벤트를 발생시켜 Daemon 탐지를 검증한다."""
+        project = get_project_record(project_id)
+        if not project:
+            raise HTTPException(404, detail={"message": "Project not found"})
+
+        stimulus_catalog = {
+            "sqli": f"curl -s -X POST {payload.target_url}/rest/user/login -H 'Content-Type: application/json' -d '{{\"email\":\"\\' OR 1=1--\",\"password\":\"x\"}}'",
+            "xss": f"curl -s '{payload.target_url}/?q=<script>alert(1)</script>'",
+            "port_scan": f"for p in 22 80 443 3000 8080 8443; do echo | timeout 2 bash -c \"echo >/dev/tcp/{payload.target_url.split('//')[1].split(':')[0]}/$p\" 2>/dev/null && echo \"$p open\"; done",
+            "path_traversal": f"curl -s '{payload.target_url}/../../etc/passwd'",
+            "scanner_ua": f"curl -s -H 'User-Agent: sqlmap/1.6' '{payload.target_url}/'",
+            "brute_login": f"for i in $(seq 1 5); do curl -s -X POST {payload.target_url}/rest/user/login -H 'Content-Type: application/json' -d '{{\"email\":\"admin@test.com\",\"password\":\"wrong'$i'\"}}'; done",
+            "ftp_access": f"curl -s '{payload.target_url}/ftp/'",
+            "admin_api": f"curl -s '{payload.target_url}/api/Users'",
+        }
+
+        types = payload.types or list(stimulus_catalog.keys())
+        selected = _random.sample(types, min(payload.count, len(types)))
+
+        from packages.a2a_protocol import A2AClient, A2AClientConfig, A2ARunRequest
+        client = A2AClient(A2AClientConfig(base_url=payload.subagent_url))
+
+        results = []
+        for stype in selected:
+            cmd = stimulus_catalog.get(stype, "echo unknown")
+            try:
+                import uuid as _uuid2
+                resp = client.run_script(A2ARunRequest(
+                    project_id=project_id,
+                    job_run_id=f"stim_{_uuid2.uuid4().hex[:8]}",
+                    script=cmd,
+                    timeout_s=15,
+                ))
+                results.append({
+                    "type": stype,
+                    "command": cmd[:120],
+                    "exit_code": resp.exit_code,
+                    "stdout_preview": resp.stdout[:200],
+                })
+                # evidence 기록
+                from packages.project_service import create_minimal_evidence_record
+                create_minimal_evidence_record(project_id, f"[stimulus:{stype}] {cmd[:100]}",
+                                              resp.stdout, resp.stderr, resp.exit_code)
+            except Exception as exc:
+                results.append({"type": stype, "error": str(exc)[:200]})
+
+        return {
+            "status": "ok",
+            "project_id": project_id,
+            "stimuli_sent": len(results),
+            "results": results,
+        }
+
     @app.websocket("/ws/projects/{project_id}")
     async def ws_project_status(websocket: WebSocket, project_id: str):
         await websocket.accept()
