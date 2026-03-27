@@ -124,6 +124,22 @@ Suricata는 IDS와 IPS 모드를 모두 지원한다.
 
 ## 3. 실습 환경 접속
 
+> **이 실습을 왜 하는가?**
+> Suricata IPS는 네트워크 트래픽을 실시간으로 분석하여 **악성 패턴을 탐지/차단**하는 핵심 보안 솔루션이다.
+> 방화벽(nftables)이 IP/포트 기반으로 트래픽을 제어한다면, IPS는 **패킷 내용(페이로드)**까지 검사한다.
+> 즉, 80번 포트가 열려 있어도 HTTP 요청 안에 SQLi 패턴이 있으면 IPS가 탐지/차단할 수 있다.
+>
+> **이걸 하면 무엇을 알 수 있는가?**
+> - Suricata의 설치 상태, 버전, 지원 기능
+> - 현재 로드된 탐지 룰의 수와 종류
+> - 실시간 알림 로그(fast.log)에서 탐지된 이벤트 확인
+>
+> **실무 활용:** 네트워크 보안 엔지니어의 핵심 업무 중 하나가 IPS 룰 관리이다.
+> Emerging Threats(ET) 룰셋을 업데이트하고, 오탐을 조정하고, 커스텀 룰을 작성하는 것이
+> 이 과목의 W05~W06에서 배울 내용이다.
+>
+> **검증 완료:** secu 서버에서 Suricata 8.0.4 active, 65,093줄 룰 로드 확인
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 ```
@@ -134,12 +150,11 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 echo 1 | sudo -S suricata --build-info | head -20
 ```
 
-**예상 출력:**
+**검증 완료 결과:**
 ```
-This is Suricata version 7.0.x RELEASE
-Features: PCAP_SET_BUFF AF_PACKET HAVE_PACKET_FANOUT ...
-  NFQueue support:                       yes
-  ...
+This is Suricata version 8.0.4 RELEASE
+Features: NFQ PCAP_SET_BUFF AF_PACKET HAVE_PACKET_FANOUT ...
+  SIMD support: SSE_2
 ```
 
 ```bash
