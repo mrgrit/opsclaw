@@ -447,7 +447,7 @@ echo "=== 디스크 ===" && df -h | grep -v tmpfs | grep -v loop
 ip addr show | grep "inet " | grep -v 127.0.0.1
 # 예상 출력:
 #     inet 10.20.30.201/24 brd 10.20.30.255 scope global ens37
-#     inet 10.20.30.201/24 brd 192.168.208.255 scope global ens33
+#     inet 192.168.208.142/24 brd 192.168.208.255 scope global ens33  ← 외부 인터페이스
 
 # 라우팅 테이블
 ip route show

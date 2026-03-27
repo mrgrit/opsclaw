@@ -183,15 +183,22 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep '<location>' /var/ossec/etc/ossec.con
 ### 3.4 Wazuh API 사용
 
 ```bash
-# Wazuh API로 에이전트 목록 조회
-# API: https://10.20.30.100:55000
-# 먼저 토큰 발급
-TOKEN=$(sshpass -p1 ssh siem@10.20.30.100 "curl -s -k -u wazuh:wazuh -X POST 'https://localhost:55000/security/user/authenticate?raw=true' 2>/dev/null")
-echo "Token: ${TOKEN:0:20}..."
+# 방법 1: Wazuh CLI 도구로 에이전트 목록 조회 (권장)
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
+echo 1 | sudo -S /var/ossec/bin/agent_control -l 2>/dev/null
+"
+# 예상 출력:
+# Wazuh agent_control. List of available agents:
+#    ID: 000, Name: siem (server), IP: 127.0.0.1, Active/Local
 
-# 에이전트 목록
-sshpass -p1 ssh siem@10.20.30.100 "curl -s -k -H 'Authorization: Bearer $TOKEN' 'https://localhost:55000/agents?pretty=true' 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30"
+# 방법 2: Wazuh API (인증 필요 — 비밀번호 확인 후 사용)
+# 참고: 기본 인증 정보(wazuh:wazuh)가 변경되었을 수 있음
+# TOKEN=$(sshpass -p1 ssh siem@10.20.30.100 "curl -s -k -u [사용자]:[비밀번호] -X POST 'https://localhost:55000/security/user/authenticate?raw=true' 2>/dev/null")
+# echo "Token: ${TOKEN:0:20}..."
+# sshpass -p1 ssh siem@10.20.30.100 "curl -s -k -H 'Authorization: Bearer $TOKEN' 'https://localhost:55000/agents?pretty=true' 2>/dev/null"
 ```
+
+> **참고:** Wazuh API 인증 정보가 기본값에서 변경된 경우, Dashboard(https://10.20.30.100:443)에서 확인하거나 관리자에게 문의하라. CLI 도구(`/var/ossec/bin/`)는 sudo 권한으로 바로 사용 가능하다.
 
 ---
 
