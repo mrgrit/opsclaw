@@ -1,326 +1,370 @@
 # Week 14: 자동화 관제 - OpsClaw Agent Daemon
 
 ## 학습 목표
-
-- OpsClaw의 자율 보안 관제 아키텍처를 이해한다
-- Agent Daemon의 explore/daemon/stimulate 모드를 실습한다
-- AI 기반 자동 탐지→분석→대응 흐름을 확인한다
-- 자동화 관제의 장점과 한계를 토론한다
-
----
-
-## 1. 왜 자동화 관제가 필요한가?
-
-### 1.1 수동 관제의 한계
-
-| 문제 | 설명 |
-|------|------|
-| 경보 피로 | 하루 수백~수천 건의 경보를 사람이 분석 |
-| 24/7 운영 | SOC 분석원의 야간/주말 근무 부담 |
-| 일관성 | 분석원마다 판단이 다름 |
-| 대응 속도 | 탐지→분석→대응에 수 시간 소요 |
-| 인력 부족 | 보안 인력 수급난 |
-
-### 1.2 자동화의 목표
-
-```
-기존: [경보] → [분석원 확인] → [수동 분석] → [수동 대응]
-자동: [경보] → [AI 자동 분석] → [자동 격리/대응] → [분석원 검토]
-```
+- AI 기반 자율 보안 관제의 개념을 이해한다
+- OpsClaw Agent Daemon의 explore/daemon/stimulate 기능을 사용한다
+- 자율 탐지 에이전트를 구성하고 자극 테스트를 수행한다
+- 자동화 관제의 장점과 한계를 분석한다
 
 ---
 
-## 2. OpsClaw Agent Daemon 아키텍처
+## 1. 자동화 관제 개념
 
-### 2.1 구성 요소
+### 1.1 전통적 관제 vs AI 자동화 관제
 
-```
-[Claude Code / Master]
-        ↓ (오케스트레이션)
-[Manager API :8000]
-        ↓ (태스크 분배)
-[SubAgent :8002] ← 각 서버에서 실행
-        ↓
-[실행 결과 + PoW 블록]
-```
+| 항목 | 전통적 관제 | AI 자동화 관제 |
+|------|-----------|--------------|
+| 탐지 | 시그니처 룰 기반 | 시그니처 + AI 판단 |
+| 분석 | 분석관 수동 분석 | LLM 자동 분석 + 분석관 검증 |
+| 대응 | 매뉴얼 기반 | 자동 대응 + 승인 체계 |
+| 24/7 | 교대 근무 필요 | 에이전트 상시 가동 |
+| 확장성 | 인력 비례 | 에이전트 추가 |
 
-### 2.2 Agent Daemon 3가지 모드
-
-| 모드 | 목적 | 동작 |
-|------|------|------|
-| explore | 환경 탐색 | 서버 상태, 서비스, 설정 수집 |
-| daemon | 상시 감시 | 로그 모니터링, 이상 탐지 |
-| stimulate | 자극 테스트 | 모의 공격으로 탐지 체계 검증 |
-
-### 2.3 실습 환경
+### 1.2 OpsClaw Agent Daemon 아키텍처
 
 ```
-Manager API: http://localhost:8000
-SubAgent: http://localhost:8002 (opsclaw)
-          http://192.168.208.150:8002 (secu)
-          http://192.168.208.151:8002 (web)
-          http://192.168.208.152:8002 (siem)
-API Key: opsclaw-api-key-2026
++---------------------------------------------+
+|              OpsClaw Manager API              |
+|              (http://localhost:8000)           |
++-----------+-----------+-----------------------+
+|           |           |                       |
+|  Explore  |  Daemon   |  Stimulate            |
+|  (탐색)    |  (감시)    |  (자극 테스트)         |
+|           |           |                       |
+|  환경 파악  |  주기적    |  의도적 공격           |
+|  자산 조사  |  로그 조회  |  탐지 능력 검증        |
++-----------+-----------+-----------------------+
+         |           |            |
+         +-----------+------------+
+                     |
+              SubAgent (각 서버)
 ```
 
 ---
 
-## 3. Explore 모드: 환경 탐색
+## 2. Explore: 환경 탐색
 
-### 3.1 프로젝트 생성 및 탐색
+### 2.1 OpsClaw API로 환경 탐색
 
 ```bash
-export OPSCLAW_API_KEY="opsclaw-api-key-2026"
+export OPSCLAW_API_KEY=opsclaw-api-key-2026
 
-# 1. 프로젝트 생성
-curl -s -X POST http://localhost:8000/projects \
+# 프로젝트 생성
+echo "=== Phase 1: 프로젝트 생성 ==="
+PROJECT=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{"name":"explore-lab","request_text":"실습 환경 탐색","master_mode":"external"}' | python3 -m json.tool
-
-# 프로젝트 ID 확인
-PROJECT_ID=$(curl -s http://localhost:8000/projects -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -c "import sys,json; ps=json.load(sys.stdin); print(ps[-1]['id'])" 2>/dev/null)
+  -d '{"name":"soc-explore-demo","request_text":"보안 관제 환경 탐색","master_mode":"external"}')
+PROJECT_ID=$(echo "$PROJECT" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 echo "Project ID: $PROJECT_ID"
+
+# Stage 전환
+curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/plan" \
+  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute" \
+  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+echo "Stage: execute"
 ```
 
-### 3.2 환경 탐색 태스크 실행
+### 2.2 secu 서버 탐색
 
 ```bash
-# stage 전환
-curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/plan" -H "X-API-Key: $OPSCLAW_API_KEY"
-curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute" -H "X-API-Key: $OPSCLAW_API_KEY"
+export OPSCLAW_API_KEY=opsclaw-api-key-2026
 
-# 탐색 태스크 실행
+echo "=== secu 서버 탐색 ==="
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
     "tasks": [
-      {"order":1, "instruction_prompt":"hostname && uname -a && uptime", "risk_level":"low", "subagent_url":"http://localhost:8002"},
-      {"order":2, "instruction_prompt":"ss -tlnp | grep LISTEN", "risk_level":"low", "subagent_url":"http://localhost:8002"},
-      {"order":3, "instruction_prompt":"systemctl list-units --type=service --state=running --no-pager | head -20", "risk_level":"low", "subagent_url":"http://localhost:8002"}
+      {
+        "order": 1,
+        "instruction_prompt": "hostname && uname -a && echo --- && ss -tlnp | head -10 && echo --- && systemctl list-units --type=service --state=running | grep -E \"suricata|nftables|wazuh|ssh\"",
+        "risk_level": "low",
+        "subagent_url": "http://192.168.208.150:8002"
+      }
     ],
-    "subagent_url":"http://localhost:8002"
-  }' | python3 -m json.tool
+    "subagent_url": "http://192.168.208.150:8002"
+  }' | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for r in data.get('results', []):
+    print(f'Task {r.get(\"order\",\"?\")}: {r.get(\"status\",\"?\")}')
+    output = r.get('output','')
+    print(output[:500] if output else '(출력 없음)')
+"
 ```
 
-### 3.3 결과 확인
+### 2.3 siem 서버 탐색
 
 ```bash
-# 실행 결과 확인
-curl -s "http://localhost:8000/projects/$PROJECT_ID/evidence/summary" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool
-```
+export OPSCLAW_API_KEY=opsclaw-api-key-2026
 
----
-
-## 4. Daemon 모드: 상시 감시
-
-### 4.1 감시 태스크 예시
-
-```bash
-# 새 프로젝트 생성 (daemon)
-curl -s -X POST http://localhost:8000/projects \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{"name":"daemon-monitor","request_text":"상시 보안 감시","master_mode":"external"}' | python3 -m json.tool
-
-DAEMON_ID=$(curl -s http://localhost:8000/projects -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -c "import sys,json; ps=json.load(sys.stdin); print(ps[-1]['id'])" 2>/dev/null)
-
-curl -s -X POST "http://localhost:8000/projects/$DAEMON_ID/plan" -H "X-API-Key: $OPSCLAW_API_KEY"
-curl -s -X POST "http://localhost:8000/projects/$DAEMON_ID/execute" -H "X-API-Key: $OPSCLAW_API_KEY"
-
-# 보안 감시 태스크
-curl -s -X POST "http://localhost:8000/projects/$DAEMON_ID/execute-plan" \
+echo "=== siem 서버 탐색 ==="
+curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
     "tasks": [
-      {"order":1, "instruction_prompt":"grep -c \"Failed password\" /var/log/auth.log 2>/dev/null || echo 0", "risk_level":"low", "subagent_url":"http://localhost:8002"},
-      {"order":2, "instruction_prompt":"ss -tnp state established | grep -v \"192.168\\|10.20\\|127.0\" | wc -l", "risk_level":"low", "subagent_url":"http://localhost:8002"},
-      {"order":3, "instruction_prompt":"find /tmp -type f -executable 2>/dev/null | wc -l", "risk_level":"low", "subagent_url":"http://localhost:8002"},
-      {"order":4, "instruction_prompt":"ps aux --sort=-%cpu | head -5", "risk_level":"low", "subagent_url":"http://localhost:8002"}
+      {
+        "order": 1,
+        "instruction_prompt": "hostname && echo --- && systemctl status wazuh-manager 2>/dev/null | head -5 && echo --- && ls -la /var/ossec/logs/alerts/ 2>/dev/null | tail -5",
+        "risk_level": "low",
+        "subagent_url": "http://192.168.208.152:8002"
+      }
     ],
-    "subagent_url":"http://localhost:8002"
-  }' | python3 -m json.tool
-```
-
-### 4.2 다중 서버 감시
-
-```bash
-# secu 서버 감시
-curl -s -X POST "http://localhost:8000/projects/$DAEMON_ID/dispatch" \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{"command":"tail -5 /var/log/suricata/fast.log 2>/dev/null || echo No alerts","subagent_url":"http://192.168.208.150:8002"}' | python3 -m json.tool
-
-# siem 서버 감시
-curl -s -X POST "http://localhost:8000/projects/$DAEMON_ID/dispatch" \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{"command":"systemctl is-active wazuh-manager 2>/dev/null","subagent_url":"http://192.168.208.152:8002"}' | python3 -m json.tool
+    "subagent_url": "http://192.168.208.152:8002"
+  }' | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for r in data.get('results', []):
+    print(f'Task {r.get(\"order\",\"?\")}: {r.get(\"status\",\"?\")}')
+    print(r.get('output','')[:500])
+"
 ```
 
 ---
 
-## 5. Stimulate 모드: 자극 테스트
+## 3. Daemon: 주기적 관제 순환
 
-### 5.1 Purple Team 개념
-
-```
-Red Team (공격)  +  Blue Team (방어)  =  Purple Team (협력)
-```
-
-Stimulate 모드는 **안전한 모의 공격**으로 탐지 체계를 검증한다.
-
-### 5.2 탐지 체계 테스트
+### 3.1 관제 순환 스크립트
 
 ```bash
-# 새 프로젝트 (stimulate)
-curl -s -X POST http://localhost:8000/projects \
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+cat << 'SCRIPT' > /tmp/soc_daemon.sh
+#!/bin/bash
+OLLAMA_URL="http://192.168.0.105:11434/v1/chat/completions"
+
+echo "=== SOC Daemon 시작 ($(date)) ==="
+
+# 1. Suricata 최신 경보 수집
+echo "[1] Suricata 경보 수집"
+SURICATA_ALERTS=$(sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+  "tail -20 /var/log/suricata/fast.log 2>/dev/null" 2>/dev/null)
+echo "  수집: $(echo "$SURICATA_ALERTS" | wc -l)줄"
+
+# 2. Wazuh 최신 경보 수집
+echo "[2] Wazuh 경보 수집"
+WAZUH_ALERTS=$(sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+  "tail -5 /var/ossec/logs/alerts/alerts.json 2>/dev/null" 2>/dev/null)
+echo "  수집: $(echo "$WAZUH_ALERTS" | wc -l)줄"
+
+# 3. LLM 분석
+echo "[3] LLM 분석 요청"
+ANALYSIS=$(curl -s "$OLLAMA_URL" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{"name":"stimulate-test","request_text":"탐지 체계 검증","master_mode":"external"}' | python3 -m json.tool
+  -d "{
+    \"model\": \"gemma3:12b\",
+    \"messages\": [
+      {\"role\": \"system\", \"content\": \"SOC L1 자동 분석 에이전트입니다. 경보를 분석하여 심각도와 대응 필요 여부를 판단합니다. 한국어로 간결하게.\"},
+      {\"role\": \"user\", \"content\": \"보안 경보 분석:\\nSuricata: ${SURICATA_ALERTS:-(없음)}\\nWazuh: ${WAZUH_ALERTS:-(없음)}\\n\\n1) 요약 2) 위험도 3) 대응 필요 여부\"}
+    ],
+    \"temperature\": 0.2
+  }" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['choices'][0]['message']['content'])" 2>/dev/null)
 
-STIM_ID=$(curl -s http://localhost:8000/projects -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -c "import sys,json; ps=json.load(sys.stdin); print(ps[-1]['id'])" 2>/dev/null)
+echo ""
+echo "=== LLM 분석 결과 ==="
+echo "$ANALYSIS"
+SCRIPT
 
-curl -s -X POST "http://localhost:8000/projects/$STIM_ID/plan" -H "X-API-Key: $OPSCLAW_API_KEY"
-curl -s -X POST "http://localhost:8000/projects/$STIM_ID/execute" -H "X-API-Key: $OPSCLAW_API_KEY"
+chmod +x /tmp/soc_daemon.sh
+bash /tmp/soc_daemon.sh
+ENDSSH
+```
 
-# 안전한 테스트 태스크
-curl -s -X POST "http://localhost:8000/projects/$STIM_ID/execute-plan" \
+### 3.2 경보 임계값 기반 에스컬레이션
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+python3 << 'PYEOF'
+alerts = [
+    {"time": "09:01", "source": "suricata", "severity": "low", "desc": "HTTP 스캔 탐지"},
+    {"time": "09:02", "source": "suricata", "severity": "low", "desc": "포트 스캔 탐지"},
+    {"time": "09:03", "source": "suricata", "severity": "medium", "desc": "SQL Injection 시도"},
+    {"time": "09:04", "source": "wazuh", "severity": "medium", "desc": "SSH 인증 실패 (3회)"},
+    {"time": "09:05", "source": "suricata", "severity": "high", "desc": "리버스셸 탐지"},
+    {"time": "09:06", "source": "wazuh", "severity": "high", "desc": "파일 무결성 변경"},
+    {"time": "09:07", "source": "wazuh", "severity": "critical", "desc": "root 계정 로그인"},
+]
+
+THRESHOLDS = {"critical": 1, "high": 2, "medium": 5, "low": 10}
+
+counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+for a in alerts:
+    counts[a["severity"]] += 1
+
+print("=== 경보 에스컬레이션 분석 ===")
+print(f"총 경보: {len(alerts)}건\n")
+
+escalate = False
+for sev in ["critical", "high", "medium", "low"]:
+    t = THRESHOLDS[sev]
+    c = counts[sev]
+    status = "ESCALATE" if c >= t else "OK"
+    if c >= t: escalate = True
+    print(f"  {sev:<10} {c}건 / 임계값 {t} -> [{status}]")
+
+print(f"\n판정: {'에스컬레이션 - SOC L2 호출' if escalate else '정상'}")
+
+if escalate:
+    print("\n에스컬레이션 사유:")
+    for a in alerts:
+        if a["severity"] in ["critical", "high"]:
+            print(f"  [{a['time']}] [{a['severity'].upper()}] {a['desc']}")
+PYEOF
+ENDSSH
+```
+
+---
+
+## 4. Stimulate: 자극 테스트
+
+### 4.1 탐지 능력 검증
+
+```bash
+export OPSCLAW_API_KEY=opsclaw-api-key-2026
+
+echo "=== 자극 테스트: 포트 스캔 ==="
+curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
-    "tasks": [
-      {"order":1, "instruction_prompt":"echo \"Test: SSH failure detection\" && logger -p auth.warning \"Failed password for testuser from 10.99.99.99 port 22 ssh2\"", "risk_level":"low", "subagent_url":"http://localhost:8002"},
-      {"order":2, "instruction_prompt":"echo \"Test: Check if Wazuh detected the test event\" && sleep 5 && tail -3 /var/log/auth.log", "risk_level":"low", "subagent_url":"http://localhost:8002"}
-    ],
-    "subagent_url":"http://localhost:8002"
-  }' | python3 -m json.tool
+    "command": "for port in 22 80 443 3306 5432 8080; do timeout 1 bash -c \"echo > /dev/tcp/10.20.30.1/$port\" 2>/dev/null && echo \"Port $port: OPEN\" || echo \"Port $port: CLOSED\"; done",
+    "subagent_url": "http://192.168.208.151:8002"
+  }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:300])"
 ```
 
----
-
-## 6. PoW (Proof of Work) 확인
-
-### 6.1 작업 증명 블록 조회
+### 4.2 SQL Injection 자극
 
 ```bash
-# PoW 블록 확인
-curl -s "http://localhost:8000/pow/blocks?agent_id=http://localhost:8002" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool | head -30
+export OPSCLAW_API_KEY=opsclaw-api-key-2026
 
-# 체인 무결성 검증
-curl -s "http://localhost:8000/pow/verify?agent_id=http://localhost:8002" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool
-
-# 리더보드 (SubAgent별 작업량)
-curl -s "http://localhost:8000/pow/leaderboard" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool
-```
-
-### 6.2 작업 Replay
-
-```bash
-# 프로젝트 작업 기록 재생
-curl -s "http://localhost:8000/projects/$DAEMON_ID/replay" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool
-```
-
----
-
-## 7. 자동화 관제의 장단점
-
-### 7.1 장점
-
-| 장점 | 설명 |
-|------|------|
-| 속도 | 초 단위 탐지→대응 가능 |
-| 일관성 | 항상 동일한 기준으로 판단 |
-| 확장성 | 서버 수 증가에도 동일 비용 |
-| 24/7 | 사람 없이 상시 운영 |
-| 기록 | 모든 판단과 조치가 PoW로 기록 |
-
-### 7.2 한계
-
-| 한계 | 설명 |
-|------|------|
-| 오탐 대응 | AI도 FP를 생성할 수 있음 |
-| 맥락 이해 | 비즈니스 맥락은 사람이 판단 |
-| 새로운 공격 | 학습 데이터에 없는 공격은 미탐 가능 |
-| 책임 | 자동 조치의 책임 소재 불명확 |
-| 신뢰 | 자동 차단이 정상 트래픽을 막을 위험 |
-
-### 7.3 권장 접근법
-
-```
-Level 1: 자동 탐지 + 사람 분석 (현재 대부분의 SOC)
-Level 2: 자동 탐지 + 자동 분석 + 사람 승인 → 자동 대응
-Level 3: 자동 탐지 + 자동 분석 + 자동 대응 (low risk만)
-         + 사람 감독 (high risk)
-```
-
----
-
-## 8. 실습: 자동화 관제 워크플로우
-
-### 8.1 전체 흐름
-
-```bash
-echo "============================================"
-echo " 자동화 관제 데모"
-echo "============================================"
-
-export OPSCLAW_API_KEY="opsclaw-api-key-2026"
-
-# 1. 환경 탐색
-echo "[1] 환경 탐색"
-curl -s -X POST http://localhost:8000/projects \
+echo "=== 자극: SQLi 시도 ==="
+curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{"name":"auto-soc-demo","request_text":"자동화 관제 데모","master_mode":"external"}' 2>/dev/null | python3 -c "import sys,json; print(f'Project: {json.load(sys.stdin).get(\"id\",\"?\")}')" 2>/dev/null
+  -d '{
+    "command": "curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:3000/rest/products/search?q=test%27+OR+1=1--\" && echo \" (SQLi 전송)\"",
+    "subagent_url": "http://192.168.208.151:8002"
+  }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:200])"
+```
 
-# 2. 결과 확인
-echo ""
-echo "[2] 프로젝트 목록"
-curl -s http://localhost:8000/projects \
-  -H "X-API-Key: $OPSCLAW_API_KEY" 2>/dev/null | python3 -c "
-import sys,json
-ps = json.load(sys.stdin)
-for p in ps[-3:]:
-    print(f'  {p[\"id\"]}: {p[\"name\"]} ({p[\"stage\"]})')
-" 2>/dev/null
+### 4.3 탐지 확인
 
-# 3. PoW 리더보드
-echo ""
-echo "[3] 작업 증명 리더보드"
-curl -s http://localhost:8000/pow/leaderboard \
-  -H "X-API-Key: $OPSCLAW_API_KEY" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -15
+```bash
+export OPSCLAW_API_KEY=opsclaw-api-key-2026
+
+echo "=== 탐지 확인: Suricata ==="
+curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $OPSCLAW_API_KEY" \
+  -d '{
+    "command": "tail -10 /var/log/suricata/fast.log 2>/dev/null | grep -iE \"sql|scan|injection\" || echo \"관련 경보 없음\"",
+    "subagent_url": "http://192.168.208.150:8002"
+  }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:300])"
 ```
 
 ---
 
-## 9. 핵심 정리
+## 5. 자동 대응 파이프라인
 
-1. **자동화 관제** = AI가 탐지→분석→대응을 자동 수행
-2. **OpsClaw** = Manager API를 통한 중앙 오케스트레이션
-3. **3가지 모드** = explore(탐색), daemon(감시), stimulate(테스트)
-4. **PoW** = 모든 작업이 블록체인으로 기록/검증
-5. **인간 감독** = 자동화의 한계를 보완하는 사람의 역할
+### 5.1 탐지-분석-대응 자동화
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+python3 << 'PYEOF'
+def detect(log_entry):
+    keywords = {
+        "critical": ["reverse shell", "root login", "data exfiltration"],
+        "high": ["sql injection", "brute force", "privilege escalation"],
+        "medium": ["port scan", "directory traversal", "xss"],
+        "low": ["404 error", "invalid user agent"],
+    }
+    for severity, patterns in keywords.items():
+        for pattern in patterns:
+            if pattern in log_entry.lower():
+                return severity, pattern
+    return "info", "unknown"
+
+def respond(severity, pattern):
+    if severity == "critical":
+        return f"[AUTO] 즉시 차단 + SOC L2 알림 ({pattern})"
+    elif severity == "high":
+        return f"[MANUAL] SOC L1 분석 필요 ({pattern})"
+    else:
+        return f"[LOG] 기록 ({pattern})"
+
+test_logs = [
+    "192.168.1.100: Reverse Shell connection on port 4444",
+    "10.0.0.5: SQL Injection attempt on /api/login",
+    "172.16.0.1: Port scan detected (SYN, 100 ports)",
+    "192.168.1.50: 404 error on /nonexistent",
+    "10.0.0.10: Root login from unknown IP",
+]
+
+print("=== 탐지-분석-대응 파이프라인 ===\n")
+for log in test_logs:
+    severity, pattern = detect(log)
+    action = respond(severity, pattern)
+    print(f"로그: {log[:60]}...")
+    print(f"  탐지: {severity.upper()} ({pattern})")
+    print(f"  대응: {action}\n")
+PYEOF
+ENDSSH
+```
 
 ---
 
-## 과제
+## 6. 자동화 관제의 한계와 인간 역할
 
-1. OpsClaw API를 사용하여 4개 서버의 보안 상태를 탐색(explore)하시오
-2. daemon 모드 태스크를 설계하여 주요 보안 지표를 수집하시오
-3. 자동화 관제의 장단점을 비교하고, 우리 환경에서의 최적 적용 방안을 제안하시오
+### 6.1 역할 분담
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+python3 << 'PYEOF'
+roles = {
+    "자동화(AI) 담당": [
+        "대량 로그 수집 및 정규화",
+        "알려진 패턴 매칭 (시그니처)",
+        "반복적 1차 분류 (L1 티켓팅)",
+        "IOC 자동 업데이트 및 매칭",
+        "정기 보고서 자동 생성",
+        "규칙 기반 자동 차단",
+    ],
+    "인간(분석관) 담당": [
+        "제로데이 공격 분석",
+        "비즈니스 컨텍스트 판단",
+        "오탐/정탐 최종 판별",
+        "법적/규제 대응 결정",
+        "위협 헌팅 가설 수립",
+        "경영진 커뮤니케이션",
+        "사고 대응 의사결정",
+    ],
+}
+
+for role, tasks in roles.items():
+    print(f"\n{role}")
+    print("=" * 40)
+    for task in tasks:
+        print(f"  - {task}")
+
+print("\n핵심: AI는 인간을 '대체'가 아닌 '증강(augment)'한다")
+PYEOF
+ENDSSH
+```
 
 ---
 
-## 참고 자료
+## 핵심 정리
 
-- OpsClaw API Guide: docs/api/external-master-guide.md
-- SOAR(Security Orchestration, Automation and Response) 개요
-- AI in SOC: Benefits and Challenges
+1. OpsClaw Agent Daemon은 explore/daemon/stimulate 3단계로 자율 관제한다
+2. LLM은 경보 1차 분석과 분류를 자동화하여 분석관 부담을 줄인다
+3. 에스컬레이션 임계값으로 자동 경보 분류와 상위 통보를 구현한다
+4. 자극 테스트로 탐지 능력을 지속적으로 검증해야 한다
+5. 자동 대응 파이프라인은 탐지-분석-대응을 연결한다
+6. AI는 인간을 대체가 아닌 증강하며, 최종 판단은 인간이 수행한다
+
+---
+
+## 다음 주 예고
+- Week 15: 기말 종합 인시던트 대응 훈련 - Red Team vs Blue Team

