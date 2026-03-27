@@ -95,27 +95,35 @@ WAF(Web Application Firewall)는 HTTP/HTTPS 트래픽을 검사하여 웹 공격
 
 ## 2. BunkerWeb 구조
 
-BunkerWeb은 Nginx + ModSecurity 기반의 오픈소스 WAF이다.
+우리 실습 환경에서 WAF는 **Apache + ModSecurity** 모듈로 구성되어 있다.
+(BunkerWeb은 설치되어 있으나 현재 비활성 상태이며, Apache VirtualHost가 ModSecurity CRS를 직접 적용한다.)
 
 ```
     클라이언트 요청
          │
-         ▼
-    ┌──────────┐
-    │ BunkerWeb │ (Nginx + ModSecurity)
-    │   :80     │
-    └────┬─────┘
-         │ ModSecurity CRS 검사
-         │  ├─ 정상 → 통과
-         │  └─ 공격 → 차단 (403)
-         ▼
-    ┌──────────┐
-    │ JuiceShop│ (백엔드 앱)
-    │   :3000  │
-    └──────────┘
+    ┌────┴─────────────────────────────────────────┐
+    │  :80 (Apache 직접)      :8082 (BunkerWeb 프록시)  │
+    │  → WAF 없음             → ModSecurity CRS 검사    │
+    │  → SQLi 통과!           → 정상 → 통과 (200)       │
+    │                         → 공격 → 차단 (403)       │
+    └────┬────────────────────┬────────────────────┘
+         ▼                    ▼
+    ┌──────────┐         ┌──────────┐
+    │ Apache   │         │ JuiceShop│ (백엔드 앱)
+    │   :80    │         │   :3000  │
+    └──────────┘         └──────────┘
 ```
 
-실습 환경: web 서버(10.20.30.80)
+**실습 환경 포트 정리:** web 서버(10.20.30.80)
+
+| 포트 | 서비스 | WAF 적용 | 비고 |
+|------|--------|:---:|------|
+| :80 | Apache 직접 | ✗ | SQLi/XSS 통과됨 |
+| :3000 | JuiceShop 직접 | ✗ | 의도적 취약 앱 |
+| **:8082** | **BunkerWeb → JuiceShop** | **✓** | **SQLi → 403 차단** |
+| :8081 | BunkerWeb → Apache | ✓ | dmshop용 (PHP 에러) |
+
+> **핵심:** WAF 효과를 테스트하려면 **:8082**로 접속해야 한다. :3000이나 :80은 WAF를 거치지 않는다.
 
 ---
 
@@ -125,22 +133,48 @@ BunkerWeb은 Nginx + ModSecurity 기반의 오픈소스 WAF이다.
 sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80
 ```
 
-### 3.1 BunkerWeb 상태 확인
+### 3.1 WAF 상태 확인
 
 ```bash
-echo 1 | sudo -S docker ps | grep bunkerweb
+# Apache + ModSecurity 상태 확인
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
+echo '=== Apache 상태 ===' && systemctl is-active apache2
+echo '=== ModSecurity 모듈 ===' && echo 1 | sudo -S apache2ctl -M 2>/dev/null | grep security
+echo '=== VirtualHost (WAF 적용 포트) ===' && echo 1 | sudo -S apache2ctl -S 2>/dev/null | grep -E '808[12]|:80 '
+"
 ```
 
 **예상 출력:**
 ```
-abc123  bunkerio/bunkerweb:1.5  ...  Up 2 days  0.0.0.0:80->8080/tcp  bunkerweb
+=== Apache 상태 ===
+active
+=== ModSecurity 모듈 ===
+ security2_module (shared)
+=== VirtualHost (WAF 적용 포트) ===
+*:80    dmshop.local (/etc/apache2/sites-enabled/dmshop.conf:1)
+*:8082  127.0.1.1 (/etc/apache2/sites-enabled/juiceshop.conf:1)
+*:8081  univ.local (/etc/apache2/sites-enabled/univ.conf:1)
 ```
 
-### 3.2 ModSecurity 활성화 확인
+> **해석:**
+> - `security2_module` = ModSecurity v2 모듈이 로드됨
+> - :8082 = JuiceShop 프록시 (ModSecurity CRS 적용됨)
+> - :80 = dmshop (ModSecurity 미적용 또는 약한 설정)
+
+### 3.2 WAF 차단 테스트
 
 ```bash
-echo 1 | sudo -S docker exec bunkerweb cat /etc/nginx/modsecurity.conf 2>/dev/null | head -10
+# :8082 (WAF 적용) vs :3000 (WAF 미적용) 비교
+echo "=== :8082 (WAF ON) SQLi 테스트 ==="
+curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:8082/?id=1'+OR+1=1--"
+echo " ← 403이면 WAF가 차단"
+
+echo "=== :3000 (WAF OFF) SQLi 테스트 ==="
+curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/?id=1'+OR+1=1--"
+echo " ← 200이면 WAF 미적용 (통과)"
 ```
+
+**예상 결과:** :8082 → **403** (차단), :3000 → **200** (통과)
 
 또는 환경 변수 확인:
 

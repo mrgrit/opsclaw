@@ -210,17 +210,21 @@ curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   | python3 -m json.tool
 ```
 
-**예상 출력:**
-```json
-{
-    "error": {
-        "message": "SQLITE_ERROR: unrecognized token: ...",
-        "stack": "SequelizeDatabaseError: ..."
-    }
-}
+**예상 출력:** (HTML 에러 페이지)
+```
+OWASP Juice Shop (Express ^4.22.1)
+500 Error
+  at Database.<anonymous> (/juice-shop/node_modules/sequelize/lib/dialects/sqlite/query.js:185:27)
+  at /juice-shop/node_modules/sequelize/lib/dialects/sqlite/query.js:183:50
+  ...
 ```
 
-> **분석**: 오류 메시지에서 **SQLite** 데이터베이스를 사용한다는 것과, **Sequelize** ORM을 사용한다는 것을 알 수 있다. 이 정보만으로도 공격에 큰 도움이 된다.
+> **분석**: 에러 페이지에서 다음 정보를 추출할 수 있다:
+> - **Express ^4.22.1** → Node.js Express 프레임워크 버전
+> - **sequelize/lib/dialects/sqlite** → SQLite 데이터베이스, Sequelize ORM 사용
+> - **/juice-shop/** → 앱 설치 경로
+> 이 정보만으로 공격자는 DB 종류(SQLite)와 프레임워크를 파악하여 공격을 최적화할 수 있다.
+> 실무에서는 이런 에러 정보가 외부에 노출되지 않도록 커스텀 에러 페이지를 설정한다.
 
 ### 4.2 UNION-based SQLi
 
@@ -331,11 +335,20 @@ print(json.dumps(json.loads(decoded), indent=2, ensure_ascii=False))
   "status": "success",
   "data": {
     "id": 1,
+    "username": "",
     "email": "admin@juice-sh.op",
-    "role": "admin"
+    "password": "0192023a7bbd73250516f069df18b500",
+    "role": "admin",
+    "isActive": true,
+    "createdAt": "2026-03-25 01:13:41.120 +00:00"
   },
-  "iat": 1711526400
+  "iat": 1774623850
 }
+```
+
+> **주의!** JWT 페이로드에 **패스워드 해시**(`0192023a7bbd73250516f069df18b500`)까지 포함되어 있다.
+> 이것은 JuiceShop의 의도적 취약점이다. 실무에서 JWT에 패스워드를 넣으면 심각한 보안 사고이다.
+> 이 해시는 MD5이며, 크래킹하면 원래 비밀번호를 알 수 있다.
 ```
 
 ### 5.2 관리자 토큰으로 API 접근

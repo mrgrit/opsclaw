@@ -156,7 +156,16 @@ curl -s "http://10.20.30.80:3000/rest/products/search?q=%3Cscript%3Ealert('XSS')
 curl -s "http://10.20.30.80:3000/#/search?q=%3Cscript%3Ealert('XSS')%3C/script%3E" | head -20
 ```
 
-> **참고**: JuiceShop은 SPA(Single Page Application)이므로 검색이 클라이언트 측에서 처리된다. Reflected XSS는 주로 서버 사이드 렌더링에서 발생한다.
+> **참고**: JuiceShop은 SPA(Single Page Application)이므로 검색 API(`/rest/products/search`)는 JSON을 반환한다.
+> curl로는 XSS 실행을 확인할 수 없으며, **브라우저에서 직접 URL을 입력**해야 DOM XSS를 확인할 수 있다.
+> 브라우저에서 `http://10.20.30.80:3000/#/search?q=<iframe src="javascript:alert(1)">` 을 입력하면
+> JuiceShop의 DOM XSS 챌린지를 풀 수 있다.
+>
+> **실습 방법:**
+> 1. 브라우저에서 `http://10.20.30.80:3000` 접속
+> 2. 검색창에 `<iframe src="javascript:alert(1)">` 입력
+> 3. alert(1) 팝업이 뜨면 XSS 성공 (DOM-based XSS)
+> 4. 이것은 curl이 아닌 **브라우저에서만** 동작한다 (JavaScript 실행 필요)
 
 ### 2.2 Stored XSS (저장형)
 
