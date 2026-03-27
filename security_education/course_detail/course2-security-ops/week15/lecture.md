@@ -68,7 +68,7 @@
 
 - **유형**: 종합 실기 시험 (hands-on practical exam)
 - **시간**: 120분
-- **범위**: Week 02~14 전체 (nftables, Suricata, BunkerWeb, Wazuh, OpenCTI)
+- **범위**: Week 02~14 전체 (nftables, Suricata, Apache+ModSecurity, Wazuh, OpenCTI)
 - **환경**: secu(10.20.30.1), web(10.20.30.80), siem(10.20.30.100)
 - **배점**: 총 100점
 
@@ -466,7 +466,7 @@ curl -s --connect-timeout 3 "http://198.51.100.10/" > /dev/null 2>&1
 | nftables 로그에 C2 IP 차단 기록 | 2점 |
 | Suricata fast.log에 SQL Injection 탐지 | 2점 |
 | Suricata fast.log에 XSS 탐지 | 2점 |
-| BunkerWeb 403 응답 확인 | 2점 |
+| Apache+ModSecurity 403 응답 확인 | 2점 |
 | Wazuh 알림에 탐지 기록 | 2점 |
 
 ### 문제 5-2: 인시던트 대응 보고서 (5점)
@@ -505,7 +505,7 @@ cat << 'REPORTEOF' > /tmp/final_incident_report.txt
 3. 탐지 결과
    - nftables: C2 IP(198.51.100.10) 차단 확인 ☑
    - Suricata: SQL Injection(SID:9500001), XSS(SID:9500002) 탐지 ☑
-   - BunkerWeb: 403 Forbidden 응답으로 공격 차단 ☑
+   - Apache+ModSecurity: 403 Forbidden 응답으로 공격 차단 ☑
    - Wazuh: 알림 생성 확인, Level [X] ☑
 
 4. 대응 조치
@@ -581,7 +581,7 @@ CLEANUP2
 |------|------|-----------|
 | 02-03 | nftables 방화벽 | 테이블/체인/룰, NAT, 화이트리스트 |
 | 04-06 | Suricata IPS | NFQUEUE, 룰 작성, 운영/튜닝 |
-| 07 | BunkerWeb WAF | ModSecurity CRS, 커스텀 룰 |
+| 07 | Apache+ModSecurity WAF | ModSecurity CRS, 커스텀 룰 |
 | 08 | 중간고사 | FW + IPS 종합 |
 | 09-11 | Wazuh SIEM | 룰/디코더, FIM, SCA, Active Response |
 | 12-13 | OpenCTI | STIX/TAXII, IOC 관리, 위협 헌팅 |

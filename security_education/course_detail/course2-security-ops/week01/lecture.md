@@ -104,7 +104,7 @@
 │         ↓                                          │
 │  ┌──────────────┐                                  │
 │  │  WAF         │ ← 건물 입구 금속탐지기            │
-│  │  (BunkerWeb) │   웹 공격 전문 차단               │
+│  │  (Apache+ModSecurity) │   웹 공격 전문 차단               │
 │  └──────┬───────┘                                  │
 │         ↓                                          │
 │  ┌──────────────┐                                  │
@@ -221,7 +221,7 @@ alert http any any -> any any (
 | 차단 예시 | 특정 IP 차단 | `' OR 1=1--` 차단 |
 | 배치 위치 | 네트워크 경계 | 웹 서버 앞단 |
 
-**우리 실습 환경**: web 서버의 **BunkerWeb**
+**우리 실습 환경**: web 서버의 **Apache+ModSecurity**
 - Nginx 기반 오픈소스 WAF
 - ModSecurity Core Rule Set (CRS) 내장
 - OWASP Top 10 공격 자동 차단
@@ -311,7 +311,7 @@ GET /file?name=../../../../etc/passwd
 │  secu    │ │  web   │ │  siem   │
 │10.20.30.1│ │ .30.80 │ │ .30.100 │
 │          │ │        │ │         │
-│ nftables │ │BunkerWeb│ │ Wazuh  │
+│ nftables │ │Apache+ModSecurity│ │ Wazuh  │
 │(방화벽)  │ │ (WAF)  │ │ (SIEM) │
 │          │ │        │ │         │
 │ Suricata │ │JuiceShop│ │OpenCTI │
@@ -454,7 +454,7 @@ exit
 
 ---
 
-## 6. 실습 3: WAF(BunkerWeb) 상태 확인 (20분)
+## 6. 실습 3: WAF(Apache+ModSecurity) 상태 확인 (20분)
 
 ### 6.1 web 서버 접속
 
@@ -462,24 +462,24 @@ exit
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 ```
 
-### 6.2 BunkerWeb 서비스 상태 확인
+### 6.2 Apache+ModSecurity 서비스 상태 확인
 
 ```bash
-# BunkerWeb 관련 프로세스 확인
-sudo systemctl status bunkerweb 2>/dev/null || sudo docker ps --filter "name=bunkerweb" 2>/dev/null
+# Apache+ModSecurity 관련 프로세스 확인
+sudo systemctl status apache2 2>/dev/null || sudo systemctl is-active apache2 2>/dev/null
 
-# Nginx 프로세스 확인 (BunkerWeb은 Nginx 기반)
-ps aux | grep -i "nginx\|bunkerweb" | grep -v grep
+# Nginx 프로세스 확인 (Apache+ModSecurity은 Nginx 기반)
+ps aux | grep -i "nginx\|apache2" | grep -v grep
 ```
 
-### 6.3 BunkerWeb/ModSecurity 설정 확인
+### 6.3 Apache+ModSecurity 설정 확인
 
 ```bash
 # ModSecurity 관련 설정 확인
-sudo find /etc/bunkerweb /etc/nginx -name "*.conf" -exec grep -l "ModSecurity\|modsecurity" {} \; 2>/dev/null
+sudo find /etc/apache2 /etc/nginx -name "*.conf" -exec grep -l "ModSecurity\|modsecurity" {} \; 2>/dev/null
 
 # WAF 모드 확인 (On = 차단, DetectionOnly = 탐지만)
-sudo grep -ri "SecRuleEngine" /etc/bunkerweb/ /etc/nginx/ 2>/dev/null | head -5
+sudo grep -ri "SecRuleEngine" /etc/apache2/ /etc/nginx/ 2>/dev/null | head -5
 ```
 
 ### 6.4 JuiceShop 실행 확인
@@ -703,7 +703,7 @@ active
 |--------|----------|----------|----------|----------|
 | **nftables** | L3-L4 | 패킷 필터링 | 규칙 기반 | secu |
 | **Suricata** | L3-L7 | 트래픽 분석, 침입 탐지/차단 | 시그니처 기반 | secu |
-| **BunkerWeb** | L7 | 웹 공격 차단 | 시그니처 + CRS | web |
+| **Apache+ModSecurity** | L7 | 웹 공격 차단 | 시그니처 + CRS | web |
 | **Wazuh** | 전 계층 | 로그 수집/분석/알림 | 규칙 기반 상관분석 | siem |
 | **OpenCTI** | 위협 인텔리전스 | IOC 관리/공유 | 위협 정보 매칭 | siem:9400 |
 
@@ -750,7 +750,7 @@ active
 - [ ] Suricata 서비스 `active (running)` 상태 확인
 - [ ] Suricata EVE 로그 파일 확인
 - [ ] web 서버에 SSH 접속 성공
-- [ ] BunkerWeb/Nginx 프로세스 실행 확인
+- [ ] Apache+ModSecurity/Nginx 프로세스 실행 확인
 - [ ] JuiceShop HTTP 200 응답 확인
 - [ ] siem 서버에 SSH 접속 성공
 - [ ] Wazuh Manager 서비스 `active` 상태 확인

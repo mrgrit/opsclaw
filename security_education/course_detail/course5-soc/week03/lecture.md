@@ -121,16 +121,16 @@
 
 ```bash
 # web 서버의 웹 로그 확인
-sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/nginx/ /var/log/apache2/ /var/log/bunkerweb/ 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/nginx/ /var/log/apache2/ /var/log/apache2/ 2>/dev/null"
 
 # 접근 로그 최근 내용
 sshpass -p1 ssh web@10.20.30.80 "tail -20 /var/log/nginx/access.log 2>/dev/null || \
-  tail -20 /var/log/bunkerweb/access.log 2>/dev/null || \
+  tail -20 /var/log/apache2/access.log 2>/dev/null || \
   echo '웹 로그 경로 확인 필요'"
 
 # 에러 로그 확인
 sshpass -p1 ssh web@10.20.30.80 "tail -10 /var/log/nginx/error.log 2>/dev/null || \
-  tail -10 /var/log/bunkerweb/error.log 2>/dev/null"
+  tail -10 /var/log/apache2/error.log 2>/dev/null"
 ```
 
 ### 1.4 실습: 웹 공격 패턴 식별
@@ -288,15 +288,15 @@ sshpass -p1 ssh secu@10.20.30.1 "grep 'iptables\|nftables' /var/log/syslog 2>/de
 
 ## 4. 웹 WAF 로그
 
-### 4.1 BunkerWeb WAF 로그
+### 4.1 Apache+ModSecurity WAF 로그
 
 ```bash
-# BunkerWeb 로그 확인
-sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/bunkerweb/ 2>/dev/null"
-sshpass -p1 ssh web@10.20.30.80 "docker logs bunkerweb 2>/dev/null | tail -20 || echo 'docker 로그 확인 필요'"
+# Apache+ModSecurity 로그 확인
+sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/apache2/ 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "journalctl -u apache2 --no-pager | tail -20 2>/dev/null | tail -20 || echo 'docker 로그 확인 필요'"
 
 # WAF에 의해 차단된 요청
-sshpass -p1 ssh web@10.20.30.80 "grep ' 403 ' /var/log/bunkerweb/access.log 2>/dev/null | tail -10 || \
+sshpass -p1 ssh web@10.20.30.80 "grep ' 403 ' /var/log/apache2/access.log 2>/dev/null | tail -10 || \
   grep ' 403 ' /var/log/nginx/access.log 2>/dev/null | tail -10"
 ```
 

@@ -1,4 +1,4 @@
-# Week 07: BunkerWeb WAF — 웹 애플리케이션 방화벽 (상세 버전)
+# Week 07: Apache+ModSecurity WAF — 웹 애플리케이션 방화벽 (상세 버전)
 
 ## 학습 목표
 - WAF의 역할과 동작 원리를 이해한다
@@ -66,7 +66,7 @@
 
 ---
 
-# Week 07: BunkerWeb WAF — 웹 애플리케이션 방화벽
+# Week 07: Apache+ModSecurity WAF — 웹 애플리케이션 방화벽
 
 ## 학습 목표
 
@@ -84,7 +84,7 @@ WAF(Web Application Firewall)는 HTTP/HTTPS 트래픽을 검사하여 웹 공격
 
 **네트워크 방화벽 vs WAF:**
 
-| 구분 | 네트워크 방화벽 (nftables) | WAF (BunkerWeb) |
+| 구분 | 네트워크 방화벽 (nftables) | WAF (Apache+ModSecurity) |
 |------|---------------------------|-----------------|
 | 계층 | L3/L4 (IP, 포트) | **L7 (HTTP 내용)** |
 | 검사 대상 | IP, 포트, 프로토콜 | URL, 헤더, 쿠키, 본문 |
@@ -93,16 +93,16 @@ WAF(Web Application Firewall)는 HTTP/HTTPS 트래픽을 검사하여 웹 공격
 
 ---
 
-## 2. BunkerWeb 구조
+## 2. Apache+ModSecurity 구조
 
 우리 실습 환경에서 WAF는 **Apache + ModSecurity** 모듈로 구성되어 있다.
-(BunkerWeb은 설치되어 있으나 현재 비활성 상태이며, Apache VirtualHost가 ModSecurity CRS를 직접 적용한다.)
+(Apache+ModSecurity은 설치되어 있으나 현재 비활성 상태이며, Apache VirtualHost가 ModSecurity CRS를 직접 적용한다.)
 
 ```
     클라이언트 요청
          │
     ┌────┴─────────────────────────────────────────┐
-    │  :80 (Apache 직접)      :8082 (BunkerWeb 프록시)  │
+    │  :80 (Apache 직접)      :8082 (Apache+ModSecurity 프록시)  │
     │  → WAF 없음             → ModSecurity CRS 검사    │
     │  → SQLi 통과!           → 정상 → 통과 (200)       │
     │                         → 공격 → 차단 (403)       │
@@ -120,8 +120,8 @@ WAF(Web Application Firewall)는 HTTP/HTTPS 트래픽을 검사하여 웹 공격
 |------|--------|:---:|------|
 | :80 | Apache 직접 | ✗ | SQLi/XSS 통과됨 |
 | :3000 | JuiceShop 직접 | ✗ | 의도적 취약 앱 |
-| **:8082** | **BunkerWeb → JuiceShop** | **✓** | **SQLi → 403 차단** |
-| :8081 | BunkerWeb → Apache | ✓ | dmshop용 (PHP 에러) |
+| **:8082** | **Apache+ModSecurity → JuiceShop** | **✓** | **SQLi → 403 차단** |
+| :8081 | Apache+ModSecurity → Apache | ✓ | dmshop용 (PHP 에러) |
 
 > **핵심:** WAF 효과를 테스트하려면 **:8082**로 접속해야 한다. :3000이나 :80은 WAF를 거치지 않는다.
 
@@ -179,7 +179,7 @@ echo " ← 200이면 WAF 미적용 (통과)"
 또는 환경 변수 확인:
 
 ```bash
-echo 1 | sudo -S docker inspect bunkerweb | python3 -c "
+echo 1 | sudo -S docker inspect apache2 | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 env = data[0]['Config']['Env']
@@ -323,22 +323,22 @@ curl -s "http://10.20.30.80/?id=1%20UNION%20SELECT%201"
 ### 6.1 ModSecurity 감사 로그
 
 ```bash
-# BunkerWeb 컨테이너 내 로그 확인
-echo 1 | sudo -S docker exec bunkerweb cat /var/log/bunkerweb/error.log | \
+# Apache+ModSecurity 컨테이너 내 로그 확인
+echo 1 | sudo -S docker exec apache2 cat /var/log/apache2/error.log | \
   grep "ModSecurity" | tail -10
 ```
 
 ### 6.2 Nginx 접근 로그
 
 ```bash
-echo 1 | sudo -S docker exec bunkerweb cat /var/log/bunkerweb/access.log | tail -20
+echo 1 | sudo -S docker exec apache2 cat /var/log/apache2/access.log | tail -20
 ```
 
 ### 6.3 차단된 요청 필터링
 
 ```bash
 # 403 응답만 추출
-echo 1 | sudo -S docker exec bunkerweb cat /var/log/bunkerweb/access.log | \
+echo 1 | sudo -S docker exec apache2 cat /var/log/apache2/access.log | \
   awk '$9 == 403' | tail -10
 ```
 
@@ -360,7 +360,7 @@ SecRule VARIABLES "OPERATOR" "ACTIONS"
 
 ### 7.2 커스텀 룰 작성
 
-BunkerWeb에서 커스텀 ModSecurity 룰을 추가하는 방법:
+Apache+ModSecurity에서 커스텀 ModSecurity 룰을 추가하는 방법:
 
 ```bash
 # 커스텀 룰 파일 생성
@@ -383,14 +383,14 @@ SecRule REQUEST_BODY_LENGTH "@gt 10485760" \
 EOF
 ```
 
-### 7.3 BunkerWeb에 룰 적용
+### 7.3 Apache+ModSecurity에 룰 적용
 
-BunkerWeb은 Docker 환경 변수 또는 설정 파일로 커스텀 룰을 적용한다:
+Apache+ModSecurity은 Docker 환경 변수 또는 설정 파일로 커스텀 룰을 적용한다:
 
 ```bash
-# BunkerWeb 설정 디렉터리 확인
-echo 1 | sudo -S ls /opt/bunkerweb/configs/ 2>/dev/null || \
-echo 1 | sudo -S ls /etc/bunkerweb/ 2>/dev/null || \
+# Apache+ModSecurity 설정 디렉터리 확인
+echo 1 | sudo -S ls /opt/apache2/configs/ 2>/dev/null || \
+echo 1 | sudo -S ls /etc/apache2/ 2>/dev/null || \
 echo "설정 디렉터리를 확인하세요"
 ```
 
@@ -438,7 +438,7 @@ EOF
 
 ```bash
 # 임계값을 10으로 높이기 (더 관대하게)
-# BunkerWeb 환경 변수 방식:
+# Apache+ModSecurity 환경 변수 방식:
 # MODSECURITY_INBOUND_ANOMALY_SCORE_THRESHOLD=10
 ```
 
@@ -572,7 +572,7 @@ Week 08은 **중간고사**이다:
 
 이번 주차의 핵심 내용을 점검한다. 8/10 이상 정답을 목표로 한다.
 
-**Q1.** 이번 주차 "Week 07: BunkerWeb WAF — 웹 애플리케이션 방화벽"의 핵심 목적은 무엇인가?
+**Q1.** 이번 주차 "Week 07: Apache+ModSecurity WAF — 웹 애플리케이션 방화벽"의 핵심 목적은 무엇인가?
 - (a) 네트워크 속도 향상  (b) **보안 솔루션 기법/개념의 이해와 실습**  (c) 데이터베이스 관리  (d) UI 디자인
 
 **Q2.** 이 주제에서 방화벽/IPS의 역할은?

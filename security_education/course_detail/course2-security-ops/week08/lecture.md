@@ -68,7 +68,7 @@
 
 - **유형**: 실기 시험 (hands-on practical exam)
 - **시간**: 90분
-- **범위**: Week 02~07 (nftables, Suricata IPS, BunkerWeb WAF)
+- **범위**: Week 02~07 (nftables, Suricata IPS, Apache+ModSecurity WAF)
 - **환경**: secu(10.20.30.1), web(10.20.30.80)
 - **배점**: 총 100점
 
@@ -269,7 +269,7 @@ echo 1 | sudo -S tail -10 /var/log/suricata/fast.log
 
 다음 질문에 답하라 (텍스트 파일 작성):
 
-1. (3점) nftables, Suricata IPS, BunkerWeb WAF 각각의 역할과 보호 범위를 설명하라
+1. (3점) nftables, Suricata IPS, Apache+ModSecurity WAF 각각의 역할과 보호 범위를 설명하라
 2. (3점) 패킷이 외부에서 web 서버에 도달하기까지 거치는 보안 장비의 순서를 설명하라
 3. (4점) SQL Injection 공격이 각 보안 장비에서 어떻게 처리되는지 설명하라
 
@@ -282,19 +282,19 @@ cat << 'EOF' > /tmp/exam_answer.txt
   허용된 IP/포트만 통과시키고 나머지 차단.
 - Suricata IPS: L3~L7 침입방지. 패킷 내용(페이로드)을 검사하여
   알려진 공격 패턴을 탐지/차단. NFQUEUE 모드로 인라인 동작.
-- BunkerWeb WAF: L7 웹 방화벽. HTTP 요청/응답을 파싱하여
+- Apache+ModSecurity WAF: L7 웹 방화벽. HTTP 요청/응답을 파싱하여
   SQL Injection, XSS 등 웹 공격을 차단.
 
 2. 트래픽 경로
   외부 → nftables(L3/L4 필터링) → Suricata IPS(페이로드 검사)
-  → BunkerWeb WAF(HTTP 검사) → 백엔드 웹 앱(JuiceShop)
+  → Apache+ModSecurity WAF(HTTP 검사) → 백엔드 웹 앱(JuiceShop)
 
 3. SQL Injection 처리
 - nftables: 80/tcp 포트만 허용하므로, HTTP를 통한 접근은 통과됨.
   nftables는 페이로드를 검사하지 않으므로 SQL Injection 자체는 탐지 불가.
 - Suricata IPS: HTTP URI에서 "union select", "OR 1=1" 등
   SQL Injection 패턴을 content 매칭으로 탐지. alert 또는 drop.
-- BunkerWeb WAF: ModSecurity CRS 942xxx 룰이 HTTP 파라미터를
+- Apache+ModSecurity WAF: ModSecurity CRS 942xxx 룰이 HTTP 파라미터를
   파싱하여 SQL 구문을 탐지. Anomaly Score 5점 이상이면 403 차단.
 EOF
 ```
@@ -309,7 +309,7 @@ EOF
 
 1. nftables에서 80번 포트가 허용되어 있는지 확인
 2. Suricata가 정상 동작 중인지 확인 (패킷 드롭 없는지)
-3. BunkerWeb이 정상 동작 중인지 확인
+3. Apache+ModSecurity이 정상 동작 중인지 확인
 
 **정답 예시:**
 
@@ -324,11 +324,13 @@ echo 1 | sudo -S grep "kernel_drops" /var/log/suricata/stats.log | tail -1
 # drops이 급증하면 → Suricata 성능 문제
 # fail-open이 아니면 → Suricata 정지 시 트래픽 차단
 
-# 3. BunkerWeb 확인
+# 3. Apache+ModSecurity 확인
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
-echo 1 | sudo -S docker ps | grep bunkerweb
-echo 1 | sudo -S docker logs bunkerweb --tail 20
-# 컨테이너가 멈춰있으면 → docker restart bunkerweb
+systemctl is-active apache2
+echo 1 | sudo -S apache2ctl -M 2>/dev/null | grep security
+# security2_module이 로드되어 있으면 ModSecurity 정상
+# WAF 테스트: curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:8082/?id=1'+OR+1=1--"
+# 403이면 WAF 정상 동작
 ```
 
 ---

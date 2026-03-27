@@ -97,7 +97,7 @@
                │
                ▼
 ┌──────────────────────────────────────┐
-│  Layer 3: WAF (BunkerWeb)            │  ← HTTP 공격 검사 (L7)
+│  Layer 3: WAF (Apache+ModSecurity)            │  ← HTTP 공격 검사 (L7)
 │  web (10.20.30.80)                   │
 └──────────────┬───────────────────────┘
                │
@@ -143,7 +143,7 @@
           ┌────────────┴──────┐  ┌──────────┴────────────┐
           │ web (10.20.30.80)  │  │ siem (10.20.30.100)    │
           │ ┌───────────────┐  │  │ ┌──────────────────┐   │
-          │ │ BunkerWeb WAF │  │  │ │ Wazuh Manager    │   │
+          │ │ Apache+ModSecurity WAF │  │  │ │ Wazuh Manager    │   │
           │ │ JuiceShop App │  │  │ │ Wazuh Indexer    │   │
           │ │ Wazuh Agent   │  │  │ │ Wazuh Dashboard  │   │
           │ └───────────────┘  │  │ │ OpenCTI          │   │
@@ -184,8 +184,8 @@ echo "--- web (10.20.30.80) ---"
 echo -n "  SSH: "
 sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 web@10.20.30.80 "echo OK" 2>/dev/null || echo "FAIL"
 
-echo -n "  BunkerWeb: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S docker ps --format '{{.Status}}' --filter name=bunkerweb 2>/dev/null" 2>/dev/null
+echo -n "  Apache+ModSecurity: "
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S systemctl is-active apache2 2>/dev/null" 2>/dev/null
 
 echo -n "  HTTP: "
 curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://10.20.30.80/ 2>/dev/null || echo "FAIL"
@@ -230,7 +230,7 @@ bash /tmp/check_all.sh
 
 --- web (10.20.30.80) ---
   SSH: OK
-  BunkerWeb: Up 3 days
+  Apache+ModSecurity: Up 3 days
   HTTP: 200
   Wazuh Agent: active
 
@@ -250,7 +250,7 @@ bash /tmp/check_all.sh
 ### 4.1 정상 HTTP 요청의 경로
 
 ```
-클라이언트 → [nftables] → [Suricata] → [BunkerWeb WAF] → [JuiceShop]
+클라이언트 → [nftables] → [Suricata] → [Apache+ModSecurity WAF] → [JuiceShop]
                  ↓              ↓              ↓               ↓
              방화벽 로그     eve.json       access.log      app.log
                  └──────────────┴──────────────┴───────────────┘
@@ -266,9 +266,9 @@ bash /tmp/check_all.sh
 
 1. nftables → 80/tcp 허용 → 통과
 2. Suricata → content:"union select" 매칭 → alert (또는 drop)
-3. BunkerWeb → CRS 942xxx 룰 매칭 → 403 Forbidden
-4. JuiceShop → (BunkerWeb에서 차단되어 도달하지 않음)
-5. Wazuh → Suricata alert + BunkerWeb 403 수집 → 상관분석 → 알림
+3. Apache+ModSecurity → CRS 942xxx 룰 매칭 → 403 Forbidden
+4. JuiceShop → (Apache+ModSecurity에서 차단되어 도달하지 않음)
+5. Wazuh → Suricata alert + Apache+ModSecurity 403 수집 → 상관분석 → 알림
 6. OpenCTI → 공격자 IP를 IOC로 등록
 ```
 
@@ -288,7 +288,7 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
 
 # 3. WAF 로그 확인 (web)
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
-  "echo 1 | sudo -S docker exec bunkerweb tail -5 /var/log/bunkerweb/error.log" 2>/dev/null
+  "echo 1 | sudo -S tail -5 /var/log/apache2/error.log" 2>/dev/null
 
 # 4. Wazuh 알림 확인 (siem)
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
@@ -312,7 +312,7 @@ for line in sys.stdin:
 |------|-----------|-----------|
 | nftables | 비인가 IP/포트 접근 | 허용된 포트의 악성 페이로드 |
 | Suricata | 알려진 공격 패턴 (시그니처) | 제로데이, 암호화 트래픽 |
-| BunkerWeb | SQL Injection, XSS 등 웹 공격 | HTTP 외 프로토콜 공격 |
+| Apache+ModSecurity | SQL Injection, XSS 등 웹 공격 | HTTP 외 프로토콜 공격 |
 | Wazuh | 호스트 이상 행위, 파일 변조 | 네트워크 공격 (Agent 없는 호스트) |
 | OpenCTI | 알려진 위협 행위자/IOC | 미등록 위협 |
 
@@ -327,7 +327,7 @@ for line in sys.stdin:
 ```
 nftables 로그   ──┐
 Suricata eve.json ┤
-BunkerWeb 로그  ──┼──→ Wazuh Agent ──→ Wazuh Manager
+Apache+ModSecurity 로그  ──┼──→ Wazuh Agent ──→ Wazuh Manager
 시스템 로그     ──┤                      ↓
 인증 로그       ──┘                   상관분석 + 알림
                                         ↓
@@ -375,7 +375,7 @@ BunkerWeb 로그  ──┼──→ Wazuh Agent ──→ Wazuh Manager
 |------|------|-----------|
 | 방화벽 차단 수/시간 | nftables | 기준선 대비 ±20% |
 | IPS 알림 수/시간 | Suricata | 환경에 따라 다름 |
-| WAF 차단 수/시간 | BunkerWeb | 환경에 따라 다름 |
+| WAF 차단 수/시간 | Apache+ModSecurity | 환경에 따라 다름 |
 | 인증 실패 수/시간 | Wazuh | < 10/시간 |
 | FIM 변경 수/일 | Wazuh | 계획된 변경만 |
 | High severity 알림 | Wazuh | 0에 가까워야 함 |
@@ -543,7 +543,7 @@ bash /tmp/daily_check.sh
 ### 과제 2: 통합 공격 탐지
 
 1. 인시던트 시뮬레이션 스크립트를 실행
-2. 각 보안 계층(nftables, Suricata, BunkerWeb, Wazuh)에서 로그를 수집
+2. 각 보안 계층(nftables, Suricata, Apache+ModSecurity, Wazuh)에서 로그를 수집
 3. 공격 타임라인을 재구성하라
 
 ### 과제 3: 대응 보고서 작성

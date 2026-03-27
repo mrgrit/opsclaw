@@ -551,10 +551,10 @@ curl -sI "http://localhost:3000/rest/products/search?q=' OR 1=1--" | head -3
 echo "--- XSS 페이로드 ---"
 curl -sI "http://localhost:3000/rest/products/search?q=<script>alert(1)</script>" | head -3
 
-# 2. BunkerWeb WAF 시그니처 확인
+# 2. Apache+ModSecurity WAF 시그니처 확인
 echo "---"
-echo "=== BunkerWeb 응답 헤더 ==="
-curl -sI http://localhost:3000/ | grep -iE "server|x-bunkerweb|modsecurity|x-waf"
+echo "=== Apache+ModSecurity 응답 헤더 ==="
+curl -sI http://localhost:3000/ | grep -iE "server|x-apache2|modsecurity|x-waf"
 ENDSSH
 ```
 

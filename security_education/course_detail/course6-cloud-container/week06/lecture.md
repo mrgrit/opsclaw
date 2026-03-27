@@ -343,8 +343,8 @@ secrets:
 ```bash
 ssh web@10.20.30.80
 
-# BunkerWeb Compose 파일 확인
-cat /opt/bunkerweb/docker-compose.yaml
+# Apache+ModSecurity Compose 파일 확인
+cat /etc/apache2/sites-enabled/ (VirtualHost 설정)
 
 # 보안 점검 항목 확인
 # 1. 환경변수에 비밀정보가 있는가?

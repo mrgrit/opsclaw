@@ -262,7 +262,7 @@ docker network inspect bridge
 
 # 실행 중인 컨테이너의 네트워크 확인
 docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' \
-  bunkerweb-juiceshop-1
+  juice-shop
 ```
 
 ### 실습 2: 격리된 네트워크 구성

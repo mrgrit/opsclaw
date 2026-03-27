@@ -302,7 +302,7 @@ Docker는 컨테이너 간 통신을 위해 여러 네트워크 드라이버를 
 ### 실습 환경 안내
 
 우리 실습 인프라에서 Docker를 사용하는 서버는 다음과 같다:
-- **web (10.20.30.80)**: BunkerWeb WAF + JuiceShop이 Docker로 실행 중
+- **web (10.20.30.80)**: Apache+ModSecurity WAF + JuiceShop이 Docker로 실행 중
 - **siem (10.20.30.100)**: OpenCTI 및 관련 서비스가 Docker Compose로 실행 중
 
 ### 실습 5.1: web 서버 Docker 확인
@@ -335,7 +335,7 @@ docker --version
 docker ps
 # 예상 출력 (예시):
 # CONTAINER ID   IMAGE              COMMAND      STATUS        PORTS                   NAMES
-# a1b2c3d4e5f6   bunketweb:latest   ...          Up 2 hours    0.0.0.0:80->8080/tcp    bunkerweb
+# a1b2c3d4e5f6   juice-shop (Docker)   ...          Up 2 hours    0.0.0.0:80->8080/tcp    apache2
 # f6e5d4c3b2a1   bwapp/juiceshop    ...          Up 2 hours    0.0.0.0:3000->3000/tcp  juiceshop
 ```
 
@@ -396,7 +396,7 @@ docker port <컨테이너이름>
 docker stats --no-stream
 # 예상 출력:
 # CONTAINER ID   NAME        CPU %   MEM USAGE / LIMIT     MEM %
-# a1b2c3d4e5f6   bunkerweb   0.50%   128MiB / 4GiB         3.13%
+# a1b2c3d4e5f6   juice-shop   0.50%   128MiB / 4GiB         3.13%
 # (Ctrl+C 없이 --no-stream으로 1회만 출력)
 ```
 

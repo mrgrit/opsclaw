@@ -557,7 +557,7 @@ for line in sys.stdin:
 
 ## 다음 주 예고
 
-Week 07에서는 BunkerWeb WAF를 다룬다:
+Week 07에서는 Apache+ModSecurity WAF를 다룬다:
 - ModSecurity Core Rule Set (CRS)
 - 커스텀 WAF 룰
 - 예외 처리

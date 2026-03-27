@@ -94,7 +94,7 @@ done
 |------|----|-----------------|
 | opsclaw | 10.20.30.201 | Manager API, PostgreSQL, SubAgent |
 | secu | 10.20.30.1 | nftables 방화벽, Suricata IPS |
-| web | 10.20.30.80 | BunkerWeb WAF, JuiceShop |
+| web | 10.20.30.80 | Apache+ModSecurity WAF, JuiceShop |
 | siem | 10.20.30.100 | Wazuh Dashboard, OpenCTI |
 
 ---

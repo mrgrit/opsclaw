@@ -83,13 +83,13 @@
 ### 1.1 환경
 
 - **대상**: web 서버 (10.20.30.80) - OWASP JuiceShop
-- **방어**: BunkerWeb WAF, Suricata IPS (secu), Wazuh SIEM
+- **방어**: Apache+ModSecurity WAF, Suricata IPS (secu), Wazuh SIEM
 - JuiceShop은 **의도적으로 취약한** 웹 애플리케이션이다
 
 ### 1.2 공격 시나리오
 
 ```
-공격자 → [Suricata IPS] → [BunkerWeb WAF] → [JuiceShop]
+공격자 → [Suricata IPS] → [Apache+ModSecurity WAF] → [JuiceShop]
                   ↓                ↓                ↓
               fast.log        access.log        app.log
                   ↓                ↓                ↓
@@ -130,7 +130,7 @@ for line in sys.stdin:
 ```bash
 # WAF 차단 로그 (403 응답)
 sshpass -p1 ssh web@10.20.30.80 "grep ' 403 ' /var/log/nginx/access.log 2>/dev/null | tail -10"
-sshpass -p1 ssh web@10.20.30.80 "grep ' 403 ' /var/log/bunkerweb/access.log 2>/dev/null | tail -10"
+sshpass -p1 ssh web@10.20.30.80 "grep ' 403 ' /var/log/apache2/access.log 2>/dev/null | tail -10"
 
 # WAF 에러 로그
 sshpass -p1 ssh web@10.20.30.80 "tail -10 /var/log/nginx/error.log 2>/dev/null"
@@ -233,9 +233,9 @@ sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep 'drop'
 ### 4.2 WAF 규칙 강화
 
 ```bash
-# BunkerWeb/nginx WAF 설정 확인
+# Apache+ModSecurity/nginx WAF 설정 확인
 sshpass -p1 ssh web@10.20.30.80 "cat /etc/nginx/conf.d/*.conf 2>/dev/null | head -20"
-sshpass -p1 ssh web@10.20.30.80 "ls /etc/bunkerweb/ 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "ls /etc/apache2/ 2>/dev/null"
 ```
 
 ### 4.3 웹 서비스 상태 확인
@@ -264,7 +264,7 @@ sshpass -p1 ssh web@10.20.30.80 "ps aux | grep -E 'nc |ncat |python.*http|perl.*
 
 ```bash
 # 서비스 상태 확인
-sshpass -p1 ssh web@10.20.30.80 "systemctl status nginx bunkerweb 2>/dev/null | grep Active"
+sshpass -p1 ssh web@10.20.30.80 "systemctl status apache2 2>/dev/null | grep Active"
 
 # 로그 수집 정상 확인
 sshpass -p1 ssh web@10.20.30.80 "systemctl is-active wazuh-agent 2>/dev/null"

@@ -252,7 +252,7 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "cat /var/log/apt/history.log 2>/dev/null |
 sshpass -p1 ssh secu@10.20.30.1 "systemctl status suricata 2>/dev/null | head -5"
 
 # WAF 상태 확인
-sshpass -p1 ssh web@10.20.30.80 "systemctl status bunkerweb 2>/dev/null | head -5 || docker ps 2>/dev/null | grep bunkerweb"
+sshpass -p1 ssh web@10.20.30.80 "systemctl status apache2 2>/dev/null | head -5 || systemctl is-active apache2"
 
 # SIEM 상태 확인
 sshpass -p1 ssh siem@10.20.30.100 "systemctl status wazuh-manager 2>/dev/null | head -5"

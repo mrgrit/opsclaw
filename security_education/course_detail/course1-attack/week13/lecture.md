@@ -499,7 +499,7 @@ ATT&CK을 방어자 관점에서 활용하는 방법이다.
 
 | ATT&CK 기법 | 탐지 데이터 소스 | 실습 환경의 탐지 도구 |
 |-------------|-----------------|---------------------|
-| T1190 (웹 공격) | HTTP 로그, WAF 로그 | BunkerWeb (web), Suricata (secu) |
+| T1190 (웹 공격) | HTTP 로그, WAF 로그 | Apache+ModSecurity (web), Suricata (secu) |
 | T1046 (포트 스캔) | 네트워크 플로우, IDS | Suricata (secu) |
 | T1548 (권한 상승) | sudo 로그, 프로세스 모니터링 | Wazuh (siem) |
 | T1053 (Cron) | 파일 변경 감시 | Wazuh FIM (siem) |

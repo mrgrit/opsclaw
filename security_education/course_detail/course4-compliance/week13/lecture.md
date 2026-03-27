@@ -152,7 +152,7 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "lastlog 2>/dev/null | head -10"
 # CC6.6: 외부 위협으로부터 보호
 echo "=== 보안 시스템 ==="
 sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata nftables 2>/dev/null"
-sshpass -p1 ssh web@10.20.30.80 "docker ps 2>/dev/null | grep bunkerweb || systemctl is-active bunkerweb 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "systemctl is-active apache2 || systemctl is-active apache2 2>/dev/null"
 ```
 
 ### 2.4 실습: CC7 (시스템 운영) 점검

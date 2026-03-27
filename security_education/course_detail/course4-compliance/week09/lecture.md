@@ -220,7 +220,7 @@ done
 sshpass -p1 ssh secu@10.20.30.1 "tail -20 /var/log/suricata/fast.log 2>/dev/null"
 
 # 웹 로그에서 사용자 정보 확인
-sshpass -p1 ssh web@10.20.30.80 "tail -10 /var/log/nginx/access.log 2>/dev/null || tail -10 /var/log/bunkerweb/access.log 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "tail -10 /var/log/nginx/access.log 2>/dev/null || tail -10 /var/log/apache2/access.log 2>/dev/null"
 ```
 
 ---
