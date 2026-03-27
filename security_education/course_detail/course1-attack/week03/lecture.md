@@ -693,12 +693,3 @@ curl -s -X POST http://localhost:8000/projects/{프로젝트ID}/execute-plan \
 **정답:** Q1:b, Q2:c, Q3:b, Q4:c, Q5:b, Q6:d, Q7:b, Q8:c, Q9:c, Q10:b
 
 ---
-
-## 과제 (다음 주까지)
-
-
-## 검증 체크리스트
-
-이번 주차의 학습을 완료하려면 다음 항목을 모두 확인하라:
-
-
