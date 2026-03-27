@@ -150,10 +150,10 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
         "order": 1,
         "instruction_prompt": "hostname && uname -a && echo --- && ss -tlnp | head -10 && echo --- && systemctl list-units --type=service --state=running | grep -E \"suricata|nftables|wazuh|ssh\"",
         "risk_level": "low",
-        "subagent_url": "http://192.168.208.150:8002"
+        "subagent_url": "http://10.20.30.1:8002"
       }
     ],
-    "subagent_url": "http://192.168.208.150:8002"
+    "subagent_url": "http://10.20.30.1:8002"
   }' | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
@@ -179,10 +179,10 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
         "order": 1,
         "instruction_prompt": "hostname && echo --- && systemctl status wazuh-manager 2>/dev/null | head -5 && echo --- && ls -la /var/ossec/logs/alerts/ 2>/dev/null | tail -5",
         "risk_level": "low",
-        "subagent_url": "http://192.168.208.152:8002"
+        "subagent_url": "http://10.20.30.100:8002"
       }
     ],
-    "subagent_url": "http://192.168.208.152:8002"
+    "subagent_url": "http://10.20.30.100:8002"
   }' | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
@@ -199,7 +199,7 @@ for r in data.get('results', []):
 ### 3.1 관제 순환 스크립트
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 cat << 'SCRIPT' > /tmp/soc_daemon.sh
 #!/bin/bash
 OLLAMA_URL="http://192.168.0.105:11434/v1/chat/completions"
@@ -208,13 +208,13 @@ echo "=== SOC Daemon 시작 ($(date)) ==="
 
 # 1. Suricata 최신 경보 수집
 echo "[1] Suricata 경보 수집"
-SURICATA_ALERTS=$(sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+SURICATA_ALERTS=$(sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "tail -20 /var/log/suricata/fast.log 2>/dev/null" 2>/dev/null)
 echo "  수집: $(echo "$SURICATA_ALERTS" | wc -l)줄"
 
 # 2. Wazuh 최신 경보 수집
 echo "[2] Wazuh 경보 수집"
-WAZUH_ALERTS=$(sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+WAZUH_ALERTS=$(sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "tail -5 /var/ossec/logs/alerts/alerts.json 2>/dev/null" 2>/dev/null)
 echo "  수집: $(echo "$WAZUH_ALERTS" | wc -l)줄"
 
@@ -244,7 +244,7 @@ ENDSSH
 ### 3.2 경보 임계값 기반 에스컬레이션
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 alerts = [
     {"time": "09:01", "source": "suricata", "severity": "low", "desc": "HTTP 스캔 탐지"},
@@ -299,7 +299,7 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
     "command": "for port in 22 80 443 3306 5432 8080; do timeout 1 bash -c \"echo > /dev/tcp/10.20.30.1/$port\" 2>/dev/null && echo \"Port $port: OPEN\" || echo \"Port $port: CLOSED\"; done",
-    "subagent_url": "http://192.168.208.151:8002"
+    "subagent_url": "http://10.20.30.80:8002"
   }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:300])"
 ```
 
@@ -314,7 +314,7 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
     "command": "curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:3000/rest/products/search?q=test%27+OR+1=1--\" && echo \" (SQLi 전송)\"",
-    "subagent_url": "http://192.168.208.151:8002"
+    "subagent_url": "http://10.20.30.80:8002"
   }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:200])"
 ```
 
@@ -329,7 +329,7 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
     "command": "tail -10 /var/log/suricata/fast.log 2>/dev/null | grep -iE \"sql|scan|injection\" || echo \"관련 경보 없음\"",
-    "subagent_url": "http://192.168.208.150:8002"
+    "subagent_url": "http://10.20.30.1:8002"
   }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:300])"
 ```
 
@@ -340,7 +340,7 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
 ### 5.1 탐지-분석-대응 자동화
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 def detect(log_entry):
     keywords = {
@@ -389,7 +389,7 @@ ENDSSH
 ### 6.1 역할 분담
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 roles = {
     "자동화(AI) 담당": [

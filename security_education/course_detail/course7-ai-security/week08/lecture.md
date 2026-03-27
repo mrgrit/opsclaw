@@ -388,7 +388,7 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
     "tasks": [
       {"order":1,"title":"secu 방화벽 점검","instruction_prompt":"nft list ruleset 2>/dev/null | head -30 || echo no-nftables","risk_level":"low","subagent_url":"http://10.20.30.1:8002"},
       {"order":2,"title":"web 사용자/포트 점검","instruction_prompt":"last -5 && ss -tlnp | head -15 && sudo -l 2>/dev/null","risk_level":"low","subagent_url":"http://10.20.30.80:8002"},
-      {"order":3,"title":"siem Wazuh 상태","instruction_prompt":"systemctl is-active wazuh-manager 2>/dev/null && curl -sk -u wazuh-wui:MyS3cr37P450r.*- https://localhost:55000/security/user/authenticate 2>/dev/null | head -1 || echo wazuh-check-failed","risk_level":"low","subagent_url":"http://10.20.30.100:8002"}
+      {"order":3,"title":"siem Wazuh 상태","instruction_prompt":"systemctl is-active wazuh-manager 2>/dev/null && curl -sk -u wazuh-wui:PASSWORD https://localhost:55000/security/user/authenticate 2>/dev/null | head -1 || echo wazuh-check-failed","risk_level":"low","subagent_url":"http://10.20.30.100:8002"}
     ],
     "subagent_url":"http://localhost:8002",
     "parallel":true

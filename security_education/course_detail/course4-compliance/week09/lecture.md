@@ -180,34 +180,34 @@ GDPR은 다음 기술적 조치를 요구한다:
 
 ```bash
 # PostgreSQL 접속하여 암호화 확인
-sshpass -p1 ssh user@192.168.208.142 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"SHOW ssl;\" 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"SHOW ssl;\" 2>/dev/null"
 
 # DB 접근 권한 확인
-sshpass -p1 ssh user@192.168.208.142 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"\\du\" 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"\\du\" 2>/dev/null"
 
 # DB 접근 로그 설정 확인
-sshpass -p1 ssh user@192.168.208.142 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"SHOW log_connections;\" 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.142 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"SHOW log_disconnections;\" 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"SHOW log_connections;\" 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"SHOW log_disconnections;\" 2>/dev/null"
 ```
 
 ### 5.3 실습: 전송 구간 암호화
 
 ```bash
 # 웹 서비스의 TLS 설정 확인
-sshpass -p1 ssh user@192.168.208.151 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep -E 'Protocol|Cipher'"
+sshpass -p1 ssh web@10.20.30.80 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep -E 'Protocol|Cipher'"
 
 # Wazuh API TLS
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:55000 2>/dev/null | grep Protocol"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:55000 2>/dev/null | grep Protocol"
 
 # Wazuh Dashboard TLS
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
 ```
 
 ### 5.4 실습: 접근 통제
 
 ```bash
 # 개인정보가 포함될 수 있는 로그 파일의 접근 권한
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "ls -la /var/log/auth.log /var/log/syslog 2>/dev/null"
 done
@@ -217,10 +217,10 @@ done
 
 ```bash
 # 로그에 IP 주소(개인정보 해당 가능)가 기록되는지 확인
-sshpass -p1 ssh user@192.168.208.150 "tail -20 /var/log/suricata/fast.log 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "tail -20 /var/log/suricata/fast.log 2>/dev/null"
 
 # 웹 로그에서 사용자 정보 확인
-sshpass -p1 ssh user@192.168.208.151 "tail -10 /var/log/nginx/access.log 2>/dev/null || tail -10 /var/log/bunkerweb/access.log 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "tail -10 /var/log/nginx/access.log 2>/dev/null || tail -10 /var/log/bunkerweb/access.log 2>/dev/null"
 ```
 
 ---
@@ -264,7 +264,7 @@ sshpass -p1 ssh user@192.168.208.151 "tail -10 /var/log/nginx/access.log 2>/dev/
 
 ```bash
 # 대량 데이터 외부 전송 시도 탐지 (Wazuh 알림)
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 for line in sys.stdin:
     try:
@@ -276,7 +276,7 @@ for line in sys.stdin:
 \" 2>/dev/null | head -10"
 
 # auth.log에서 대량 접근 시도 확인
-sshpass -p1 ssh user@192.168.208.142 "grep 'session opened' /var/log/auth.log 2>/dev/null | wc -l"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'session opened' /var/log/auth.log 2>/dev/null | wc -l"
 ```
 
 ---
@@ -296,13 +296,13 @@ sshpass -p1 ssh user@192.168.208.142 "grep 'session opened' /var/log/auth.log 2>
 
 ```bash
 # 로그에서 IP 주소를 해시로 가명처리하는 예시
-sshpass -p1 ssh user@192.168.208.142 "echo '192.168.208.150 tried SSH login' | \
+sshpass -p1 ssh opsclaw@10.20.30.201 "echo '10.20.30.1 tried SSH login' | \
   sed -E 's/([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/[MASKED]/g'"
 
 # Python으로 가명처리
-sshpass -p1 ssh user@192.168.208.142 "python3 -c \"
+sshpass -p1 ssh opsclaw@10.20.30.201 "python3 -c \"
 import hashlib
-ip = '192.168.208.150'
+ip = '10.20.30.1'
 pseudo = hashlib.sha256(ip.encode()).hexdigest()[:8]
 print(f'원본: {ip}')
 print(f'가명: user_{pseudo}')
@@ -318,19 +318,19 @@ print(f'가명: user_{pseudo}')
 echo "=== 개인정보보호 기술적 점검 ==="
 
 echo "[1] DB 암호화 설정:"
-sshpass -p1 ssh user@192.168.208.142 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c 'SHOW ssl;' 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c 'SHOW ssl;' 2>/dev/null"
 
 echo "[2] 전송 암호화 (TLS):"
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
 
 echo "[3] 접근 로그 활성화:"
-sshpass -p1 ssh user@192.168.208.142 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c 'SHOW log_statement;' 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c 'SHOW log_statement;' 2>/dev/null"
 
 echo "[4] 로그 파일 권한:"
-sshpass -p1 ssh user@192.168.208.142 "stat -c '%a' /var/log/auth.log 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "stat -c '%a' /var/log/auth.log 2>/dev/null"
 
 echo "[5] 백업 암호화:"
-sshpass -p1 ssh user@192.168.208.142 "ls /backup/*.gpg 2>/dev/null || echo '암호화된 백업 없음'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls /backup/*.gpg 2>/dev/null || echo '암호화된 백업 없음'"
 ```
 
 ---

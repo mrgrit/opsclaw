@@ -269,7 +269,7 @@ echo "=== 점검 완료 ==="
 ### 실습 1: Docker Bench 실행
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # Docker Bench 실행
 docker run --rm --net host --pid host --userns host \

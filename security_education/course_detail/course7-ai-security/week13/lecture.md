@@ -99,7 +99,7 @@
 
 ```json
 {
-  "agent_id": "http://192.168.208.150:8002",
+  "agent_id": "http://10.20.30.1:8002",
   "hostname": "secu",
   "role": "nftables + Suricata IPS",
   "last_updated": "2026-03-27T10:00:00Z",
@@ -158,7 +158,7 @@ SubAgent A (secu)          Manager            SubAgent B (web)
 ```bash
 # secu에서 공격 패턴 발견
 KNOWLEDGE='{
-  "source": "http://192.168.208.150:8002",
+  "source": "http://10.20.30.1:8002",
   "type": "threat_intelligence",
   "data": {
     "attack_type": "SSH brute force",
@@ -255,7 +255,7 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
   -d '{
     "tasks": [
       {"order":1, "instruction_prompt":"hostname && uname -r && ss -tlnp | grep LISTEN | wc -l", "risk_level":"low", "subagent_url":"http://localhost:8002"},
-      {"order":2, "instruction_prompt":"hostname && uname -r && ss -tlnp | grep LISTEN | wc -l", "risk_level":"low", "subagent_url":"http://192.168.208.150:8002"}
+      {"order":2, "instruction_prompt":"hostname && uname -r && ss -tlnp | grep LISTEN | wc -l", "risk_level":"low", "subagent_url":"http://10.20.30.1:8002"}
     ],
     "subagent_url":"http://localhost:8002"
   }' | python3 -m json.tool

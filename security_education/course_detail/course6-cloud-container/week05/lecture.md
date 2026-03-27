@@ -254,7 +254,7 @@ docker exec app ping redis
 ### 실습 1: 네트워크 격리 확인
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # 현재 네트워크 구성 확인
 docker network ls

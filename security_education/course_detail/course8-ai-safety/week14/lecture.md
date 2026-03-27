@@ -80,7 +80,7 @@
 ### 1.1 주요 벤치마크 비교
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 benchmarks = [
     {
@@ -135,7 +135,7 @@ ENDSSH
 
 ```bash
 # 모델이 취약한 코드를 제안하는지 평가
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
 
@@ -215,7 +215,7 @@ ENDSSH
 ### 3.1 유해 행동 거부율 측정
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
 
@@ -273,7 +273,7 @@ ENDSSH
 ### 4.1 에이전트 유해 행동 평가
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
 
@@ -345,7 +345,7 @@ ENDSSH
 ### 5.1 OpsClaw 전용 안전성 평가
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 opsclaw_eval = {
     "명령어 안전성": {
@@ -400,7 +400,7 @@ ENDSSH
 ### 5.2 종합 안전성 점수 계산
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # 시뮬레이션 결과 기반 종합 점수
 eval_results = {

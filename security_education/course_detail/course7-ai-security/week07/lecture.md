@@ -212,7 +212,7 @@ curl -X POST http://localhost:8000/projects/{id}/dispatch \
   -H "Content-Type: application/json" \
   -d '{
     "command": "uname -a",
-    "subagent_url": "http://192.168.208.150:8002"
+    "subagent_url": "http://10.20.30.1:8002"
   }'
 ```
 

@@ -124,40 +124,40 @@
 ```bash
 # 1단계: 정찰 (Reconnaissance) - TA0043
 # 포트 스캔 흔적
-sshpass -p1 ssh user@192.168.208.150 "grep -i 'scan' /var/log/suricata/fast.log 2>/dev/null | tail -5"
+sshpass -p1 ssh secu@10.20.30.1 "grep -i 'scan' /var/log/suricata/fast.log 2>/dev/null | tail -5"
 
 # 2단계: 초기 접근 (Initial Access) - TA0001
 # SSH 무차별 대입 공격
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
   awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -5"
 
 # 무차별 대입 후 성공 여부
-sshpass -p1 ssh user@192.168.208.142 "grep 'Accepted password' /var/log/auth.log 2>/dev/null | tail -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Accepted password' /var/log/auth.log 2>/dev/null | tail -5"
 
 # 3단계: 실행 (Execution) - TA0002
 # 로그인 후 실행된 명령 (auth.log에서 sudo 사용 확인)
-sshpass -p1 ssh user@192.168.208.142 "grep 'sudo:' /var/log/auth.log 2>/dev/null | tail -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'sudo:' /var/log/auth.log 2>/dev/null | tail -10"
 
 # 4단계: 권한 상승 (Privilege Escalation) - TA0004
 # sudo를 통한 root 권한 획득
-sshpass -p1 ssh user@192.168.208.142 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -10"
 ```
 
 ### 2.2 시나리오: 웹 공격 체인
 
 ```bash
 # 1단계: 정찰 - 디렉토리 스캐닝
-sshpass -p1 ssh user@192.168.208.151 "grep ' 404 ' /var/log/nginx/access.log 2>/dev/null | \
+sshpass -p1 ssh web@10.20.30.80 "grep ' 404 ' /var/log/nginx/access.log 2>/dev/null | \
   awk '{print \$1}' | sort | uniq -c | sort -rn | head -5"
 
 # 2단계: 초기 접근 - SQL Injection 시도
-sshpass -p1 ssh user@192.168.208.151 "grep -iE 'union|select.*from|or.1=1' /var/log/nginx/access.log 2>/dev/null | tail -5"
+sshpass -p1 ssh web@10.20.30.80 "grep -iE 'union|select.*from|or.1=1' /var/log/nginx/access.log 2>/dev/null | tail -5"
 
 # 3단계: Suricata에서 웹 공격 탐지
-sshpass -p1 ssh user@192.168.208.150 "grep -i 'SQL\|XSS\|injection\|web' /var/log/suricata/fast.log 2>/dev/null | tail -10"
+sshpass -p1 ssh secu@10.20.30.1 "grep -i 'SQL\|XSS\|injection\|web' /var/log/suricata/fast.log 2>/dev/null | tail -10"
 
 # 4단계: Wazuh에서 웹 공격 경보
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 for line in sys.stdin:
     try:
@@ -180,7 +180,7 @@ Wazuh는 일부 규칙에 MITRE ATT&CK ID를 포함하고 있다.
 
 ```bash
 # ATT&CK 매핑이 있는 경보 확인
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 from collections import Counter
 techniques = Counter()
@@ -241,31 +241,31 @@ else:
 
 echo "=== 1. 정찰 단계 ==="
 echo "포트 스캔 흔적:"
-sshpass -p1 ssh user@192.168.208.150 "grep -i 'scan' /var/log/suricata/fast.log 2>/dev/null | wc -l"
+sshpass -p1 ssh secu@10.20.30.1 "grep -i 'scan' /var/log/suricata/fast.log 2>/dev/null | wc -l"
 
 echo ""
 echo "=== 2. 초기 접근 시도 ==="
 echo "SSH 무차별 대입:"
-sshpass -p1 ssh user@192.168.208.142 "grep -c 'Failed password' /var/log/auth.log 2>/dev/null || echo '0'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -c 'Failed password' /var/log/auth.log 2>/dev/null || echo '0'"
 echo "웹 공격 시도:"
-sshpass -p1 ssh user@192.168.208.151 "grep -cE 'union|select|script' /var/log/nginx/access.log 2>/dev/null || echo '0'"
+sshpass -p1 ssh web@10.20.30.80 "grep -cE 'union|select|script' /var/log/nginx/access.log 2>/dev/null || echo '0'"
 
 echo ""
 echo "=== 3. 초기 접근 성공 ==="
 echo "외부IP SSH 로그인 성공:"
-sshpass -p1 ssh user@192.168.208.142 "grep 'Accepted' /var/log/auth.log 2>/dev/null | grep -v '192.168.208' | head -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Accepted' /var/log/auth.log 2>/dev/null | grep -v '192.168.208' | head -5"
 
 echo ""
 echo "=== 4. 권한 상승 ==="
 echo "sudo 사용:"
-sshpass -p1 ssh user@192.168.208.142 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -5"
 
 echo ""
 echo "=== 5. 지속성 확보 (의심) ==="
 echo "cron 변경:"
-sshpass -p1 ssh user@192.168.208.142 "ls -la /var/spool/cron/crontabs/ 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /var/spool/cron/crontabs/ 2>/dev/null"
 echo "SSH authorized_keys:"
-sshpass -p1 ssh user@192.168.208.142 "ls -la ~/.ssh/authorized_keys 2>/dev/null || echo '없음'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la ~/.ssh/authorized_keys 2>/dev/null || echo '없음'"
 ```
 
 ---

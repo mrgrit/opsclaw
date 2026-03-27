@@ -272,7 +272,7 @@ prowler aws --severity critical high
 ### 실습 1: Docker 환경에서 설정 오류 시뮬레이션
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # "S3 공개 노출"을 Docker 볼륨으로 시뮬레이션
 # 민감 데이터가 있는 컨테이너를 외부에 노출

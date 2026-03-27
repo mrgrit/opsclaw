@@ -179,7 +179,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 3.2 간접 인젝션 시뮬레이션
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
 
@@ -261,7 +261,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 5.1 보고서 템플릿
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 report_template = """
 ================================================================

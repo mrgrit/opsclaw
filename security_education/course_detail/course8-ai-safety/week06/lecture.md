@@ -103,7 +103,7 @@ LLM: 프롬프트 변형 -> 안전 장치 우회
 ### 2.1 문자 레벨 공격
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import random
 
@@ -168,7 +168,7 @@ ENDSSH
 ### 2.2 단어 레벨 공격
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # 동의어 치환으로 의미 보존 + 탐지 우회
 synonym_map = {
@@ -238,7 +238,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 3.1 의미 보존 변형 테스트
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
 
@@ -279,7 +279,7 @@ ENDSSH
 ### 3.2 안전 분류 일관성 테스트
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
 
@@ -328,7 +328,7 @@ ENDSSH
 ### 4.1 입력 정규화
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import unicodedata, re
 
@@ -372,7 +372,7 @@ ENDSSH
 ### 5.1 자동 강건성 테스트 프레임워크
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # 강건성 테스트 결과 시뮬레이션
 results = {

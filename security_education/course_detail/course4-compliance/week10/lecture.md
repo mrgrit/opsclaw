@@ -124,7 +124,7 @@
 
 ```bash
 # 하드웨어 자산 정보 수집
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
   sshpass -p1 ssh user@$ip "
     echo '[호스트명]' && hostname
@@ -139,7 +139,7 @@ done
 
 ```bash
 # 소프트웨어 자산 수집
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip: 실행 서비스 =========="
   sshpass -p1 ssh user@$ip "systemctl list-units --type=service --state=running --no-pager | grep -v 'loaded units' | tail -n +2 | head -15"
 done
@@ -147,7 +147,7 @@ done
 
 ```bash
 # 네트워크 자산 (열린 포트 = 서비스)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip: 열린 포트 =========="
   sshpass -p1 ssh user@$ip "ss -tlnp 2>/dev/null | grep LISTEN"
 done
@@ -191,15 +191,15 @@ done
 
 ```bash
 # SSH 무차별 대입 시도 (외부 위협)
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | wc -l"
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | wc -l"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -5"
 
 # Suricata 탐지 이벤트 (네트워크 위협)
-sshpass -p1 ssh user@192.168.208.150 "wc -l /var/log/suricata/fast.log 2>/dev/null || echo '0'"
-sshpass -p1 ssh user@192.168.208.150 "tail -5 /var/log/suricata/fast.log 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "wc -l /var/log/suricata/fast.log 2>/dev/null || echo '0'"
+sshpass -p1 ssh secu@10.20.30.1 "tail -5 /var/log/suricata/fast.log 2>/dev/null"
 
 # Wazuh 고위험 알림 (복합 위협)
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 levels = {}
 for line in sys.stdin:
@@ -229,25 +229,25 @@ for l in sorted(levels.keys(), reverse=True)[:5]:
 
 ```bash
 # 취약점 1: 비밀번호 정책 미설정
-sshpass -p1 ssh user@192.168.208.142 "grep PASS_MAX_DAYS /etc/login.defs | grep -v '^#'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep PASS_MAX_DAYS /etc/login.defs | grep -v '^#'"
 
 # 취약점 2: root 로그인 허용
-sshpass -p1 ssh user@192.168.208.142 "grep PermitRootLogin /etc/ssh/sshd_config | grep -v '^#'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep PermitRootLogin /etc/ssh/sshd_config | grep -v '^#'"
 
 # 취약점 3: 불필요한 포트 개방
-sshpass -p1 ssh user@192.168.208.142 "ss -tlnp | grep LISTEN | wc -l"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ss -tlnp | grep LISTEN | wc -l"
 
 # 취약점 4: 패치 미적용
-sshpass -p1 ssh user@192.168.208.142 "apt list --upgradable 2>/dev/null | wc -l"
+sshpass -p1 ssh opsclaw@10.20.30.201 "apt list --upgradable 2>/dev/null | wc -l"
 
 # 취약점 5: auditd 미설치
-sshpass -p1 ssh user@192.168.208.142 "systemctl is-active auditd 2>/dev/null || echo '미설치'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "systemctl is-active auditd 2>/dev/null || echo '미설치'"
 
 # 취약점 6: TMOUT 미설정
-sshpass -p1 ssh user@192.168.208.142 "grep TMOUT /etc/profile /etc/bash.bashrc 2>/dev/null || echo '미설정'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep TMOUT /etc/profile /etc/bash.bashrc 2>/dev/null || echo '미설정'"
 
 # 취약점 7: 커널 보안 파라미터
-sshpass -p1 ssh user@192.168.208.142 "sysctl net.ipv4.conf.all.accept_redirects 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "sysctl net.ipv4.conf.all.accept_redirects 2>/dev/null"
 ```
 
 ---
@@ -322,21 +322,21 @@ sshpass -p1 ssh user@192.168.208.142 "sysctl net.ipv4.conf.all.accept_redirects 
 
 ```bash
 # 1단계: 자산 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "hostname; ss -tlnp 2>/dev/null | grep LISTEN | wc -l; echo '서비스 수'"
 done
 
 # 2단계: 위협 증거
 echo "=== SSH 공격 시도 ==="
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed' /var/log/auth.log 2>/dev/null | wc -l"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed' /var/log/auth.log 2>/dev/null | wc -l"
 
 echo "=== IPS 탐지 ==="
-sshpass -p1 ssh user@192.168.208.150 "wc -l /var/log/suricata/fast.log 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "wc -l /var/log/suricata/fast.log 2>/dev/null"
 
 # 3단계: 취약점 확인
 echo "=== 미패치 현황 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "$ip: $(sshpass -p1 ssh user@$ip 'apt list --upgradable 2>/dev/null | wc -l') 패키지"
 done
 ```

@@ -161,16 +161,16 @@
 
 ```bash
 # 정책 4.2: root 직접 로그인 금지 — 현재 설정 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "grep '^PermitRootLogin' /etc/ssh/sshd_config || echo 'PermitRootLogin: 기본값'"
 done
 
 # 정책 4.1: 미사용 계정 확인
-sshpass -p1 ssh user@192.168.208.142 "lastlog 2>/dev/null | awk 'NR>1 && \$2==\"Never\" {print \$1}'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "lastlog 2>/dev/null | awk 'NR>1 && \$2==\"Never\" {print \$1}'"
 
 # 정책 4.4: 방화벽 기본 정책 확인
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | grep 'policy'"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep 'policy'"
 ```
 
 ---
@@ -214,10 +214,10 @@ sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | grep '
 
 ```bash
 # 현재 설정 확인
-sshpass -p1 ssh user@192.168.208.142 "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs | grep -v '^#'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs | grep -v '^#'"
 
 # pwquality 설정 확인
-sshpass -p1 ssh user@192.168.208.142 "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$'"
 
 # 정책에 맞게 설정하려면 (예시 - 실제 변경은 주의):
 # /etc/login.defs:
@@ -235,10 +235,10 @@ sshpass -p1 ssh user@192.168.208.142 "cat /etc/security/pwquality.conf 2>/dev/nu
 #   maxrepeat = 3
 
 # PAM 계정 잠금 설정 확인
-sshpass -p1 ssh user@192.168.208.142 "grep -E 'pam_faillock|pam_tally' /etc/pam.d/common-auth 2>/dev/null || echo '계정 잠금 미설정'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'pam_faillock|pam_tally' /etc/pam.d/common-auth 2>/dev/null || echo '계정 잠금 미설정'"
 
 # 비밀번호 해시 알고리즘 확인
-sshpass -p1 ssh user@192.168.208.142 "grep '^ENCRYPT_METHOD' /etc/login.defs"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep '^ENCRYPT_METHOD' /etc/login.defs"
 ```
 
 ---
@@ -299,10 +299,10 @@ sshpass -p1 ssh user@192.168.208.142 "grep '^ENCRYPT_METHOD' /etc/login.defs"
 ```bash
 # 탐지 체계 확인 (Wazuh)
 echo "=== Wazuh Manager 상태 ==="
-sshpass -p1 ssh user@192.168.208.152 "systemctl is-active wazuh-manager 2>/dev/null"
+sshpass -p1 ssh siem@10.20.30.100 "systemctl is-active wazuh-manager 2>/dev/null"
 
 echo "=== 최근 고위험 알림 ==="
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 for line in sys.stdin:
     try:
@@ -315,11 +315,11 @@ for line in sys.stdin:
 
 # 격리 능력 확인 (방화벽으로 IP 차단 가능 여부)
 echo "=== 방화벽 차단 가능 ==="
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | head -5 && echo 'nftables 사용 가능'"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | head -5 && echo 'nftables 사용 가능'"
 
 # 증거 보존 확인 (로그 보관 기간)
 echo "=== 로그 보관 설정 ==="
-sshpass -p1 ssh user@192.168.208.142 "cat /etc/logrotate.conf 2>/dev/null | grep -E 'rotate|weekly|monthly'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/logrotate.conf 2>/dev/null | grep -E 'rotate|weekly|monthly'"
 ```
 
 ---
@@ -340,7 +340,7 @@ sshpass -p1 ssh user@192.168.208.142 "cat /etc/logrotate.conf 2>/dev/null | grep
 ### 5.2 실습: 패치 현황 점검
 
 ```bash
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 패치 현황 ==="
   sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null | head -5"
   echo "보안 패치:"
@@ -368,7 +368,7 @@ done
 ```bash
 # 정책 준수 여부 일괄 확인
 echo "=== 정책 준수 점검 ==="
-ip=192.168.208.142
+ip=10.20.30.201
 
 echo "[1] root 로그인:"
 sshpass -p1 ssh user@$ip "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'"

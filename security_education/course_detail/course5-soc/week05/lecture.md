@@ -125,7 +125,7 @@ SOC 분석원은 경보를 분석하여 **실제 위협인지 판별**한다.
 
 ```bash
 # 경보 샘플 추출
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 alerts = []
 for line in sys.stdin:
@@ -202,7 +202,7 @@ for i, a in enumerate(alerts[-10:], 1):
 
 ```bash
 # 오늘의 경보 현황
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 from collections import Counter
 levels = Counter()
@@ -237,7 +237,7 @@ for agent, cnt in agents.most_common():
 
 ```bash
 # Level 8 이상 경보 상세 분석
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 for line in sys.stdin:
     try:
@@ -267,7 +267,7 @@ for line in sys.stdin:
 # 특정 규칙 ID에 대한 모든 경보
 RULE_ID="5710"  # SSH authentication failed (예시)
 
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 from collections import Counter
 sources = Counter()
@@ -323,7 +323,7 @@ for user, cnt in targets.most_common(5):
 
 ```bash
 # SSH 실패 경보 중 TP/FP 판별
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
   awk '{
     # IP 추출
     for(i=1;i<=NF;i++) if($i==\"from\") ip=$(i+1)
@@ -347,7 +347,7 @@ sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2
 
 ```bash
 # 반복되는 FP 경보 확인
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 from collections import Counter
 rules = Counter()
@@ -369,7 +369,7 @@ for desc, cnt in rules.most_common(10):
 <!-- 예시: 모니터링 서버의 SSH 접근은 제외 -->
 <rule id="100001" level="0">
   <if_sid>5710</if_sid>
-  <srcip>192.168.208.142</srcip>
+  <srcip>10.20.30.201</srcip>
   <description>SSH failure from monitoring server - whitelisted</description>
 </rule>
 ```

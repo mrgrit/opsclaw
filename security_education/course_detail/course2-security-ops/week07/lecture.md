@@ -130,7 +130,7 @@ WAF(Web Application Firewall)는 HTTP/HTTPS 트래픽을 검사하여 웹 공격
 ## 3. 실습 환경 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 ```
 
 ### 3.1 WAF 상태 확인

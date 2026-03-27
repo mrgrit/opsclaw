@@ -225,7 +225,7 @@ ENV DB_PASSWORD=mysecret123
 
 ```bash
 # web 서버 접속 후 실행 중인 컨테이너 확인
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 docker ps
 
 # JuiceShop 컨테이너 확인

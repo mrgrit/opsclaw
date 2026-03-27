@@ -174,7 +174,7 @@ OpenCTI는 오픈소스 위협 인텔리전스 플랫폼이다.
 ## 4. 실습 환경 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 ```
 
 ### 4.1 OpenCTI 상태 확인

@@ -110,7 +110,7 @@
 
 ```bash
 # Wazuh SIEM에서 파일 무결성 변경 알림 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
 echo "=== Wazuh FIM 경보 확인 ==="
 
 # FIM 관련 경보 (rule.group: syscheck)
@@ -152,7 +152,7 @@ ENDSSH
 
 ```bash
 # 의심 프로세스 탐색
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 의심 프로세스 탐색 ==="
 
 # 1. 비정상 네트워크 연결 프로세스
@@ -189,7 +189,7 @@ ENDSSH
 ### 2.3 cron/systemd 백도어 탐색
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== cron 백도어 탐색 ==="
 
 # 모든 사용자 crontab
@@ -238,7 +238,7 @@ ENDSSH
 
 ```bash
 # 의심 파일이 발견되었다고 가정하고 분석 절차 실습
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 파일 분석 시뮬레이션 ==="
 
 # 분석용 샘플 파일 생성 (교육용)
@@ -279,7 +279,7 @@ ENDSSH
 ### 3.2 네트워크 IOC 분석
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 네트워크 IOC 분석 ==="
 
 # 1. DNS 쿼리 로그 (의심 도메인)
@@ -328,7 +328,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 4.1 네트워크 격리
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 네트워크 격리 시뮬레이션 ==="
 
 # 실제 격리는 수행하지 않음 - 규칙 예시만 표시
@@ -352,7 +352,7 @@ ENDSSH
 ### 4.2 프로세스 격리
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 프로세스 격리 절차 (교육용) ==="
 
 cat << 'PROCEDURE'
@@ -391,7 +391,7 @@ ENDSSH
 ### 5.1 시스템 무결성 검증
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 시스템 무결성 검증 ==="
 
 # 1. 패키지 무결성 확인
@@ -430,7 +430,7 @@ ENDSSH
 ### 5.2 Wazuh SCA 활용
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
 echo "=== Wazuh SCA 결과 확인 ==="
 
 cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
@@ -477,7 +477,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 6.2 ATT&CK 매핑 실습
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 attack_mapping = [
     ("Initial Access", "T1190", "Exploit Public-Facing App", "웹 취약점으로 초기 침입"),

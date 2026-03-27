@@ -78,8 +78,8 @@
 
 | 서버 | IP | 역할 | 접속 |
 |------|-----|------|------|
-| secu | 10.20.30.1 | 방화벽 + IPS | `sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1` |
-| web | 10.20.30.80 | WAF + 웹 앱 | `sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80` |
+| secu | 10.20.30.1 | 방화벽 + IPS | `sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1` |
+| web | 10.20.30.80 | WAF + 웹 앱 | `sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80` |
 
 ---
 
@@ -107,7 +107,7 @@ secu 서버에 다음 조건의 방화벽을 구성하라.
 **정답 예시:**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # 테이블 및 체인 생성
 echo 1 | sudo -S nft add table inet exam_filter
@@ -217,7 +217,7 @@ echo 1 | sudo -S sysctl -w net.ipv4.ip_forward=1
 **정답 예시:**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 echo 1 | sudo -S tee /etc/suricata/rules/local.rules << 'EOF'
 # 1. 디렉터리 트래버설
@@ -325,7 +325,7 @@ echo 1 | sudo -S grep "kernel_drops" /var/log/suricata/stats.log | tail -1
 # fail-open이 아니면 → Suricata 정지 시 트래픽 차단
 
 # 3. BunkerWeb 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 echo 1 | sudo -S docker ps | grep bunkerweb
 echo 1 | sudo -S docker logs bunkerweb --tail 20
 # 컨테이너가 멈춰있으면 → docker restart bunkerweb
@@ -350,7 +350,7 @@ echo 1 | sudo -S docker logs bunkerweb --tail 20
 
 ```bash
 # 시험 설정 제거
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 echo 1 | sudo -S nft delete table inet exam_filter 2>/dev/null
 echo 1 | sudo -S nft delete table inet exam_nat 2>/dev/null
 echo 1 | sudo -S sed -i '/EXAM/d' /etc/suricata/rules/local.rules 2>/dev/null

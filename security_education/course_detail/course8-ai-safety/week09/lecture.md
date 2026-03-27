@@ -111,7 +111,7 @@
 ### 2.1 API 기반 모델 추출
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
 
@@ -156,7 +156,7 @@ ENDSSH
 ### 2.2 모델 추출 탐지
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 from collections import Counter
 from datetime import datetime, timedelta
@@ -203,7 +203,7 @@ ENDSSH
 ### 3.1 멤버십 추론 원리
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 print("=== 멤버십 추론 공격 ===\n")
 
@@ -242,7 +242,7 @@ ENDSSH
 ### 3.2 멤버십 추론 방어
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 defenses = [
     {
@@ -284,7 +284,7 @@ ENDSSH
 ### 4.1 텍스트 워터마킹
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import hashlib
 
@@ -335,7 +335,7 @@ ENDSSH
 ### 5.1 보안 체크리스트
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 checklist = {
     "접근 제어": [

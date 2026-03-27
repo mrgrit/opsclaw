@@ -126,16 +126,16 @@ Part A에서 작성한 체크리스트를 실제 4개 서버에서 실행하고 
 
 ```bash
 # opsclaw (Control Plane)
-sshpass -p1 ssh user@192.168.208.142
+sshpass -p1 ssh opsclaw@10.20.30.201
 
 # secu (방화벽/IPS)
-sshpass -p1 ssh user@192.168.208.150
+sshpass -p1 ssh secu@10.20.30.1
 
 # web (WAF/웹앱)
-sshpass -p1 ssh user@192.168.208.151
+sshpass -p1 ssh web@10.20.30.80
 
 # siem (SIEM)
-sshpass -p1 ssh user@192.168.208.152
+sshpass -p1 ssh siem@10.20.30.100
 ```
 
 ### 필수 점검 항목 (최소 이것은 수행할 것)
@@ -144,7 +144,7 @@ sshpass -p1 ssh user@192.168.208.152
 
 ```bash
 # 각 서버에서 실행
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
 
   echo "[1] 일반 사용자 계정 목록:"
@@ -161,7 +161,7 @@ done
 #### 2. 인증 설정 (A.8.5)
 
 ```bash
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
 
   echo "[4] 비밀번호 정책:"
@@ -178,7 +178,7 @@ done
 #### 3. 로깅 (A.8.15)
 
 ```bash
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
 
   echo "[7] syslog 서비스:"
@@ -200,33 +200,33 @@ done
 ```bash
 # secu 서버 방화벽
 echo "[11] 방화벽 기본 정책:"
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | grep policy"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep policy"
 
 echo "[12] 열린 포트:"
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
   sshpass -p1 ssh user@$ip "ss -tlnp 2>/dev/null | grep LISTEN"
 done
 
 # IPS 상태
 echo "[13] Suricata IPS:"
-sshpass -p1 ssh user@192.168.208.150 "systemctl is-active suricata 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata 2>/dev/null"
 ```
 
 #### 5. 암호화 (A.8.24)
 
 ```bash
 echo "[14] TLS 버전 (Wazuh Dashboard):"
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
 
 echo "[15] SSH 프로토콜 버전:"
-sshpass -p1 ssh user@192.168.208.142 "ssh -V 2>&1"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ssh -V 2>&1"
 ```
 
 #### 6. 시스템 설정 (A.8.9)
 
 ```bash
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
 
   echo "[16] 커널 보안 파라미터:"
@@ -322,7 +322,7 @@ done
 
 ```bash
 # 서버 접속 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 user@$ip "hostname" 2>/dev/null \
     && echo "$ip: OK" || echo "$ip: FAIL"
 done

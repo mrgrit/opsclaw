@@ -115,19 +115,19 @@ Phase 6: Lessons Learned (15분)
 echo "=== Blue Team: 방어 환경 점검 ==="
 
 echo "--- [1] Suricata IPS (secu) ---"
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "systemctl is-active suricata 2>/dev/null && echo 'Suricata: OK' || echo 'Suricata: DOWN'"
 
 echo "--- [2] nftables (secu) ---"
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "echo 1 | sudo -S nft list tables 2>/dev/null | wc -l | xargs -I{} echo 'nftables 테이블: {}'"
 
 echo "--- [3] Wazuh SIEM (siem) ---"
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "systemctl is-active wazuh-manager 2>/dev/null && echo 'Wazuh: OK' || echo 'Wazuh: DOWN'"
 
 echo "--- [4] JuiceShop (web) ---"
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/ | xargs -I{} echo 'JuiceShop: HTTP {}'"
 ```
 
@@ -136,11 +136,11 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
 ```bash
 echo "=== 기준선 확보 ==="
 
-SURICATA_COUNT=$(sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+SURICATA_COUNT=$(sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "wc -l /var/log/suricata/fast.log 2>/dev/null | awk '{print \$1}'" 2>/dev/null)
 echo "Suricata 기준선: ${SURICATA_COUNT:-0}줄"
 
-WAZUH_COUNT=$(sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+WAZUH_COUNT=$(sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "wc -l /var/ossec/logs/alerts/alerts.json 2>/dev/null | awk '{print \$1}'" 2>/dev/null)
 echo "Wazuh 기준선: ${WAZUH_COUNT:-0}줄"
 
@@ -156,7 +156,7 @@ echo "기준선 시간: $(date '+%Y-%m-%d %H:%M:%S')"
 ```bash
 echo "=== Red Team: 정찰 ==="
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "--- 포트 스캔 ---"
 for port in 22 80 443 3000 8000 8080 3306 5432; do
   (echo > /dev/tcp/10.20.30.1/$port) 2>/dev/null && echo "secu:$port OPEN" &
@@ -182,7 +182,7 @@ ENDSSH
 ```bash
 echo "=== Red Team: 초기 침투 ==="
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "--- SQL Injection ---"
 RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
   -H "Content-Type: application/json" \
@@ -218,10 +218,10 @@ ENDSSH
 ```bash
 echo "=== Red Team: SSH 무차별 대입 시뮬레이션 ==="
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 for i in 1 2 3; do
   sshpass -p"wrong${i}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 \
-    baduser@10.20.30.1 echo "success" 2>/dev/null || echo "시도 $i: 실패"
+    badsecu@10.20.30.1 echo "success" 2>/dev/null || echo "시도 $i: 실패"
 done
 echo "공격 완료. Blue Team 차례."
 ENDSSH
@@ -237,12 +237,12 @@ ENDSSH
 echo "=== Blue Team: 경보 수집 ==="
 
 echo "--- Suricata ---"
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "tail -20 /var/log/suricata/fast.log 2>/dev/null"
 
 echo ""
 echo "--- Wazuh ---"
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
 tail -10 /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
 import sys, json
 for line in sys.stdin:
@@ -260,7 +260,7 @@ ENDSSH
 ### 4.2 ATT&CK 매핑
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 attacks = [
     ("Reconnaissance", "T1046", "Network Service Discovery", "포트 스캔"),
@@ -315,7 +315,7 @@ echo "  JuiceShop 관리자 세션 토큰 갱신 필요"
 ### 5.2 취약점 재점검
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "--- SQL Injection 재시도 ---"
 RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
   -H "Content-Type: application/json" \
@@ -339,7 +339,7 @@ ENDSSH
 ### 6.1 인시던트 대응 보고서
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 from datetime import datetime
 

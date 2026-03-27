@@ -100,7 +100,7 @@ FIM은 중요 파일의 변경(생성, 수정, 삭제)을 실시간으로 감지
 ## 2. 실습 환경 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 ```
 
 ---
@@ -151,7 +151,7 @@ ossec.conf 내 `<syscheck>` 섹션:
 
 ```bash
 # secu 서버 Agent 설정에 추가
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 echo 1 | sudo -S cat >> /var/ossec/etc/ossec.conf << 'FIMEOF'
 <ossec_config>
@@ -182,7 +182,7 @@ echo 1 | sudo -S systemctl restart wazuh-agent
 
 ```bash
 # secu 서버에서 테스트
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # 테스트 디렉터리 생성
 echo 1 | sudo -S mkdir -p /tmp/fim_test
@@ -204,7 +204,7 @@ echo 1 | sudo -S bash -c 'echo "suspicious" > /tmp/fim_test/webshell.php'
 
 ```bash
 # siem 서버에서 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json | \
   python3 -c "
@@ -489,11 +489,11 @@ echo 1 | sudo -S cat /var/ossec/logs/active-responses.log | tail -10
 # 1단계: 브루트포스 시뮬레이션 (secu에서 siem으로)
 for i in $(seq 1 10); do
   sshpass -p wrong ssh -o StrictHostKeyChecking=no -o ConnectTimeout=2 \
-    wronguser@10.20.30.100 2>/dev/null
+    wrongsiem@10.20.30.100 2>/dev/null
 done
 
 # 2단계: 정상 로그인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 # 3단계: 파일 변조
 echo 1 | sudo -S bash -c 'echo "hacked" >> /tmp/fim_test/test.txt'

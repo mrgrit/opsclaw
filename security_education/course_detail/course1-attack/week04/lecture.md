@@ -490,7 +490,7 @@ SQL Injection 공격이 발생하면 SIEM에서 탐지할 수 있다.
 
 ```bash
 # siem 서버에서 Wazuh 알림 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo cat /var/ossec/logs/alerts/alerts.json | tail -5 | python3 -m json.tool" 2>/dev/null
 ```
 

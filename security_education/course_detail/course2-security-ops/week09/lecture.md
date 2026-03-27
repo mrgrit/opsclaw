@@ -150,7 +150,7 @@ Wazuh 4.11.2는 3개 컴포넌트로 구성된다:
 ### 3.1 siem 서버 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 ```
 
 ### 3.2 Wazuh 서비스 상태 확인
@@ -346,7 +346,7 @@ curl -s -k -X POST "https://10.20.30.100:55000/agents" \
 secu 서버에 접속하여 Agent를 설정:
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # Agent 설치 확인
 echo 1 | sudo -S /var/ossec/bin/wazuh-control info
@@ -379,7 +379,7 @@ echo 1 | sudo -S systemctl status wazuh-agent
 
 ```bash
 # siem 서버에서
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 echo 1 | sudo -S /var/ossec/bin/agent_control -l
 ```
@@ -493,7 +493,7 @@ Suricata의 eve.json을 Wazuh가 수집하도록 설정:
 ### 10.1 Agent 측 설정 (secu 서버)
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # ossec.conf에 Suricata 로그 수집 추가
 echo 1 | sudo -S tee -a /var/ossec/etc/ossec.conf << 'XMLEOF'
@@ -513,7 +513,7 @@ echo 1 | sudo -S systemctl restart wazuh-agent
 
 ```bash
 # siem 서버에서 Suricata 알림 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json | \
   python3 -c "

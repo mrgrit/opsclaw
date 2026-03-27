@@ -105,7 +105,7 @@
 ### 2.1 Tool 남용 시나리오
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # OpsClaw 도구 남용 시나리오
 tool_abuse_scenarios = [
@@ -187,7 +187,7 @@ echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(json
 ### 3.1 에이전트 권한 체계
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # 최소 권한 원칙 적용 예시
 agent_roles = {
@@ -242,7 +242,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 4.1 자율성 수준별 위험
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 autonomy_levels = [
     {
@@ -294,7 +294,7 @@ ENDSSH
 ### 4.2 에이전트 안전 설계 원칙
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 principles = [
     ("최소 권한", "에이전트에게 작업에 필요한 최소한의 권한만 부여"),
@@ -322,7 +322,7 @@ ENDSSH
 ### 5.1 안전 장치 매핑
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 opsclaw_safety = {
     "최소 권한": "SubAgent에 직접 접근 금지, Manager API 통해서만",

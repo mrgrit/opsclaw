@@ -319,7 +319,7 @@ echo "cGFzc3dvcmQxMjM=" | base64 -d
 ### 실습 1: RBAC 개념을 Docker 환경에서 이해
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # Docker에서의 접근 제어 = docker.sock 접근 권한
 # K8s에서의 접근 제어 = RBAC
@@ -332,7 +332,7 @@ groups  # docker 그룹 확인
 
 ```bash
 # secu 서버에서 Pod 간 통신 제어 개념 이해
-ssh student@10.20.30.1
+ssh secu@10.20.30.1
 
 # web(10.20.30.80)에서 siem(10.20.30.100)으로의 특정 포트만 허용
 # 이것이 K8s NetworkPolicy의 원리

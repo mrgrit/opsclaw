@@ -355,12 +355,12 @@ curl -s "http://10.20.30.80:3000/ftp/../../etc/passwd" | head -5
 # 5. web 서버 권한 확인
 echo ""
 echo "===== 서버 권한 확인 ====="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 "echo 1 | sudo -S -l 2>/dev/null"
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S -l 2>/dev/null"
 
 # 6. SUID 검사
 echo ""
 echo "===== SUID 바이너리 ====="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "find / -perm -4000 -type f 2>/dev/null"
 
 # === 방화벽/IPS 분석 ===
@@ -368,7 +368,7 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
 # 7. secu 규칙 확인
 echo ""
 echo "===== nftables 규칙 ====="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo nft list ruleset 2>/dev/null | head -30"
 ```
 
@@ -589,7 +589,7 @@ curl -s -H "X-API-Key: $OPSCLAW_API_KEY" \
 
 ```bash
 # SSH 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # 포트 스캔
 nmap -sT -F 10.20.30.80

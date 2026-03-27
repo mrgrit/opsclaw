@@ -253,7 +253,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 실습 2: Docker 이미지 취약점 분석
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # Trivy 스캔 결과를 LLM으로 분석
 TRIVY_OUT=$(trivy image --severity CRITICAL nginx:latest -f json 2>/dev/null | head -500)

@@ -328,7 +328,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 실습 3: Docker 환경에서 컨테이너 탈출 체험
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # privileged 컨테이너에서 호스트 정보 접근 (교육 목적)
 docker run --rm --privileged alpine sh -c '

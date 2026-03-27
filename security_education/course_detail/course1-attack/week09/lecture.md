@@ -355,7 +355,7 @@ secu 서버에 SSH 접속 후 패킷 캡처를 시작한다.
 
 ```bash
 # 터미널 1: secu 서버 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # 네트워크 인터페이스 확인
 ip addr show
@@ -440,7 +440,7 @@ nmap -sV -p 22,80,3000 10.20.30.80
 
 ```bash
 # secu에서 SYN 패킷만 캡처
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo tcpdump -i eth0 'tcp[tcpflags] & tcp-syn != 0' -nn -c 30"
 
 # 동시에 opsclaw에서 스캔 실행
@@ -458,7 +458,7 @@ ip neigh show
 # 10.20.30.80 dev eth0 lladdr yy:yy:yy:yy:yy:yy STALE
 
 # web 서버에서도 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 "ip neigh show"
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "ip neigh show"
 ```
 
 ### 실습 6: OpsClaw로 스캔 자동화

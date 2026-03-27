@@ -311,7 +311,7 @@ web 서버에 접속하여 실행 중인 컨테이너를 확인한다.
 
 ```bash
 # opsclaw 서버에서 web 서버로 SSH 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 ```
 
 접속 후 Docker 상태를 확인한다:
@@ -440,7 +440,7 @@ siem 서버에는 OpenCTI(위협 인텔리전스 플랫폼)가 Docker Compose로
 
 ```bash
 # opsclaw 서버에서 siem 서버로 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 ```
 
 ```bash
@@ -484,7 +484,7 @@ docker network inspect <opencti_네트워크_이름>
 
 ```bash
 # web 서버에서 (다시 접속 필요 시)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # 컨테이너 로그 확인 (최근 20줄)
 docker logs --tail 20 <컨테이너이름>

@@ -113,7 +113,7 @@
 ### 2.1 대상 시스템 정보 수집
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== 점검 대상 시스템 정보 ==="
 
 echo "--- 서비스 상태 ---"
@@ -145,7 +145,7 @@ ENDSSH
 ### 2.2 점검 계획서 작성
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 from datetime import datetime
 
@@ -190,7 +190,7 @@ ENDSSH
 ### 3.1 보안 헤더 및 설정 점검
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== 보안 헤더 점검 ==="
 HEADERS=$(curl -sI http://localhost:3000/)
 
@@ -219,7 +219,7 @@ ENDSSH
 ### 3.2 HTTP 메서드 및 서버 정보
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== HTTP 메서드 점검 ==="
 for method in GET POST PUT DELETE OPTIONS TRACE PATCH; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" -X $method http://localhost:3000/api/Products)
@@ -249,7 +249,7 @@ ENDSSH
 ### 4.1 SQL Injection 점검
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== SQL Injection 점검 ==="
 
 echo "--- 로그인 SQLi ---"
@@ -281,7 +281,7 @@ ENDSSH
 ### 4.2 XSS 및 접근제어 점검
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== XSS 점검 ==="
 XSS_PAYLOADS=("<script>alert(1)</script>" "<img src=x onerror=alert(1)>" "<svg onload=alert(1)>")
 
@@ -320,7 +320,7 @@ ENDSSH
 ### 4.3 인증 및 세션 점검
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== 계정 잠금 정책 점검 ==="
 echo "5회 연속 실패 시도..."
 for i in $(seq 1 5); do
@@ -383,7 +383,7 @@ ENDSSH
 ### 5.2 종합 보고서 자동 생성
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 from datetime import datetime
 
@@ -492,7 +492,7 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
       {"order":1,"instruction_prompt":"curl -sI http://localhost:3000/ | head -15","risk_level":"low"},
       {"order":2,"instruction_prompt":"curl -s -X POST http://localhost:3000/rest/user/login -H \"Content-Type: application/json\" -d \"{\\\"email\\\":\\\"'"'"' OR 1=1--\\\",\\\"password\\\":\\\"x\\\"}\" | head -5","risk_level":"low"}
     ],
-    "subagent_url": "http://192.168.208.151:8002"
+    "subagent_url": "http://10.20.30.80:8002"
   }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'결과: {len(d.get(\"results\",[]))}건')" 2>/dev/null
 
 # 4. evidence 확인

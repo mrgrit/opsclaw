@@ -90,7 +90,7 @@
 ### 1.2 AI 윤리 5대 원칙
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 principles = [
     ("공정성 (Fairness)", "AI가 특정 집단을 차별하지 않아야 한다", "편향 감사, 공정성 메트릭"),
@@ -117,7 +117,7 @@ ENDSSH
 ### 2.1 위험 기반 분류 체계
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 risk_levels = [
     {
@@ -155,7 +155,7 @@ ENDSSH
 ### 2.2 고위험 AI 의무사항
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 obligations = [
     ("리스크 관리 시스템", "AI 시스템 생애주기 전반의 리스크 관리"),
@@ -186,7 +186,7 @@ ENDSSH
 ### 3.1 AI RMF 구조
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 nist_ai_rmf = {
     "GOVERN (관리)": [
@@ -229,7 +229,7 @@ ENDSSH
 ### 4.1 주요 법안/정책
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 korea_ai_policy = [
     {
@@ -283,7 +283,7 @@ ENDSSH
 ### 5.1 AI 시스템 윤리 체크리스트
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 checklist = {
     "개발 단계": [

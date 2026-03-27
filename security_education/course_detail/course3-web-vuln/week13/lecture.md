@@ -119,7 +119,7 @@
 
 ```bash
 # web 서버에서 ZAP 컨테이너 상태 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "docker ps -a | grep zap 2>/dev/null; echo '---'; which zaproxy 2>/dev/null || echo 'ZAP not installed locally'"
 
 # ZAP이 없는 경우 Python ZAP 클라이언트로 API 모드 사용
@@ -130,7 +130,7 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
 
 ```bash
 # JuiceShop 엔드포인트 자동 수집 (API 기반 스파이더링)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== JuiceShop 엔드포인트 수집 ==="
 
 # 메인 페이지에서 링크 추출
@@ -157,7 +157,7 @@ ENDSSH
 
 ```bash
 # 일반적인 관리 경로 점검
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== 디렉토리/파일 존재 점검 ==="
 
 PATHS=(
@@ -187,7 +187,7 @@ ENDSSH
 # nikto가 설치된 환경에서 실행 (또는 Docker)
 # 여기서는 nikto 대체로 수동 헤더/설정 점검 수행
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== 웹서버 보안 헤더 점검 (nikto 스타일) ==="
 
 # 응답 헤더 전체 수집
@@ -213,7 +213,7 @@ ENDSSH
 ### 3.2 서버 정보 노출 점검
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== 서버 정보 노출 점검 ==="
 
 # Server 헤더
@@ -245,7 +245,7 @@ ENDSSH
 ### 3.3 HTTP 메서드 점검
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== HTTP 메서드 점검 ==="
 
 # OPTIONS 메서드로 허용 메서드 확인
@@ -268,7 +268,7 @@ ENDSSH
 
 ```bash
 # SQL Injection 점검 자동화 (sqlmap 스타일의 수동 점검)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== SQL Injection 자동 점검 ==="
 
 # 1. 검색 파라미터 테스트
@@ -314,7 +314,7 @@ ENDSSH
 
 ```bash
 # 종합 자동 점검 스크립트
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 cat << 'SCRIPT' > /tmp/auto_scan.sh
 #!/bin/bash
 TARGET="http://localhost:3000"
@@ -394,7 +394,7 @@ ENDSSH
 ### 5.2 오탐 검증 실습
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== 오탐 검증: 시간 기반 SQLi ==="
 
 # 정상 요청 응답 시간 측정
@@ -425,7 +425,7 @@ ENDSSH
 
 ```bash
 # 스캔 결과를 CVSS 기반으로 분류
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 findings = [
     {"id": "V-001", "name": "SQL Injection (로그인)", "cvss": 9.8, "severity": "Critical"},
@@ -459,7 +459,7 @@ ENDSSH
 
 ```bash
 # Nuclei YAML 템플릿 스타일의 점검 스크립트
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, subprocess, urllib.request, urllib.parse
 
@@ -538,7 +538,7 @@ ENDSSH
 ### 7.1 WAF 존재 여부 확인
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== WAF 탐지 점검 ==="
 
 # 1. 일반 요청 vs 악성 요청 응답 비교

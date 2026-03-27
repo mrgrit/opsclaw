@@ -114,7 +114,7 @@
 ### 2.1 악성 문서 삽입
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json
 
@@ -156,7 +156,7 @@ ENDSSH
 ### 2.2 검색 결과 조작 (SEO Poisoning 유사)
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # 악성 문서가 검색 랭킹을 조작하는 기법
 manipulation_techniques = [
@@ -213,7 +213,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 3.2 간접 인젝션 탐지
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import re
 
@@ -260,7 +260,7 @@ ENDSSH
 ### 4.1 문서 검증 파이프라인
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 rag_security = {
     "문서 수집": [
@@ -321,7 +321,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 5.1 분산 지식 아키텍처 보안 분석
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 print("=== OpsClaw 분산 지식 아키텍처 보안 ===\n")
 

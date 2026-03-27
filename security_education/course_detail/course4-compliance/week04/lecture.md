@@ -82,7 +82,7 @@
 
 ```bash
 # 모든 서버 접속 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh -o StrictHostKeyChecking=no user@$ip "hostname" 2>/dev/null || echo "접속 실패"
 done
@@ -92,10 +92,10 @@ done
 
 | 서버 | IP | 점검 대상 서비스 |
 |------|----|-----------------|
-| opsclaw | 192.168.208.142 | Manager API, PostgreSQL, SubAgent |
-| secu | 192.168.208.150 | nftables 방화벽, Suricata IPS |
-| web | 192.168.208.151 | BunkerWeb WAF, JuiceShop |
-| siem | 192.168.208.152 | Wazuh Dashboard, OpenCTI |
+| opsclaw | 10.20.30.201 | Manager API, PostgreSQL, SubAgent |
+| secu | 10.20.30.1 | nftables 방화벽, Suricata IPS |
+| web | 10.20.30.80 | BunkerWeb WAF, JuiceShop |
+| siem | 10.20.30.100 | Wazuh Dashboard, OpenCTI |
 
 ---
 
@@ -105,7 +105,7 @@ done
 
 ```bash
 # 자동 로그아웃 설정 확인 (TMOUT)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "grep TMOUT /etc/profile /etc/bash.bashrc /etc/environment 2>/dev/null || echo 'TMOUT 미설정'"
 done
@@ -121,7 +121,7 @@ done
 
 ```bash
 # 각 서버의 sudo 사용자 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "getent group sudo 2>/dev/null; getent group wheel 2>/dev/null"
 done
@@ -130,7 +130,7 @@ done
 ### 3.2 root 직접 로그인 차단 확인
 
 ```bash
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "grep '^PermitRootLogin' /etc/ssh/sshd_config || echo '기본값 사용 중'"
 done
@@ -142,7 +142,7 @@ done
 
 ```bash
 # SUID 비트가 설정된 파일 확인 (권한 상승 위험)
-sshpass -p1 ssh user@192.168.208.142 "find /usr -perm -4000 -type f 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "find /usr -perm -4000 -type f 2>/dev/null"
 ```
 
 ---
@@ -153,16 +153,16 @@ sshpass -p1 ssh user@192.168.208.142 "find /usr -perm -4000 -type f 2>/dev/null"
 
 ```bash
 # 비밀번호 복잡도 정책
-sshpass -p1 ssh user@192.168.208.142 "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$' || echo 'pwquality 미설정'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$' || echo 'pwquality 미설정'"
 
 # 비밀번호 만료 기본 정책
-sshpass -p1 ssh user@192.168.208.142 "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs"
 ```
 
 ### 4.2 SSH 인증 방식 점검
 
 ```bash
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "grep -E 'PasswordAuthentication|PubkeyAuthentication|MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#'"
 done
@@ -177,8 +177,8 @@ done
 
 ```bash
 # PAM 기반 계정 잠금 설정 확인
-sshpass -p1 ssh user@192.168.208.142 "grep pam_faillock /etc/pam.d/common-auth 2>/dev/null || echo 'faillock 미설정'"
-sshpass -p1 ssh user@192.168.208.142 "grep pam_tally /etc/pam.d/common-auth 2>/dev/null || echo 'tally 미설정'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep pam_faillock /etc/pam.d/common-auth 2>/dev/null || echo 'faillock 미설정'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep pam_tally /etc/pam.d/common-auth 2>/dev/null || echo 'tally 미설정'"
 ```
 
 ---
@@ -189,13 +189,13 @@ sshpass -p1 ssh user@192.168.208.142 "grep pam_tally /etc/pam.d/common-auth 2>/d
 
 ```bash
 # 실행 중인 서비스 중 불필요한 것이 있는지 확인
-sshpass -p1 ssh user@192.168.208.142 "systemctl list-units --type=service --state=running --no-pager | grep -E 'cups|avahi|bluetooth|rpcbind'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "systemctl list-units --type=service --state=running --no-pager | grep -E 'cups|avahi|bluetooth|rpcbind'"
 ```
 
 ### 5.2 커널 보안 파라미터 확인
 
 ```bash
-sshpass -p1 ssh user@192.168.208.142 "sysctl net.ipv4.ip_forward net.ipv4.conf.all.accept_redirects net.ipv4.conf.all.accept_source_route net.ipv4.conf.all.log_martians 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "sysctl net.ipv4.ip_forward net.ipv4.conf.all.accept_redirects net.ipv4.conf.all.accept_source_route net.ipv4.conf.all.log_martians 2>/dev/null"
 ```
 
 **권장 설정**:
@@ -212,27 +212,27 @@ sshpass -p1 ssh user@192.168.208.142 "sysctl net.ipv4.ip_forward net.ipv4.conf.a
 
 ```bash
 # rsyslog 설정 확인
-sshpass -p1 ssh user@192.168.208.142 "cat /etc/rsyslog.conf | grep -v '^#' | grep -v '^$' | head -20"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/rsyslog.conf | grep -v '^#' | grep -v '^$' | head -20"
 
 # 주요 로그 파일 존재 및 크기 확인
-sshpass -p1 ssh user@192.168.208.142 "ls -lh /var/log/syslog /var/log/auth.log /var/log/kern.log 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -lh /var/log/syslog /var/log/auth.log /var/log/kern.log 2>/dev/null"
 ```
 
 ### 6.2 감사 로그 (auditd) 확인
 
 ```bash
 # auditd 설치 및 실행 여부
-sshpass -p1 ssh user@192.168.208.142 "systemctl status auditd 2>/dev/null | head -5 || echo 'auditd 미설치'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "systemctl status auditd 2>/dev/null | head -5 || echo 'auditd 미설치'"
 
 # audit 규칙 확인
-sshpass -p1 ssh user@192.168.208.142 "sudo auditctl -l 2>/dev/null || echo 'audit 규칙 없음'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "sudo auditctl -l 2>/dev/null || echo 'audit 규칙 없음'"
 ```
 
 ### 6.3 Wazuh 에이전트 로그 수집 확인
 
 ```bash
 # Wazuh 에이전트 상태
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "systemctl status wazuh-agent 2>/dev/null | grep Active || echo 'Wazuh Agent 미설치'"
 done
@@ -246,14 +246,14 @@ done
 
 ```bash
 # secu 서버의 nftables 규칙 확인
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset"
 ```
 
 ### 7.2 열린 포트 점검
 
 ```bash
 # 각 서버에서 열려 있는 포트 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "ss -tlnp 2>/dev/null | grep LISTEN"
 done
@@ -265,7 +265,7 @@ done
 
 ```bash
 # secu 서버의 네트워크 인터페이스 확인 (DMZ 분리)
-sshpass -p1 ssh user@192.168.208.150 "ip addr show | grep 'inet '"
+sshpass -p1 ssh secu@10.20.30.1 "ip addr show | grep 'inet '"
 ```
 
 ---
@@ -276,23 +276,23 @@ sshpass -p1 ssh user@192.168.208.150 "ip addr show | grep 'inet '"
 
 ```bash
 # Wazuh 대시보드 TLS 확인
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | head -20"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | head -20"
 
 # TLS 버전 확인 (TLS 1.2 이상이어야 함)
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep 'Protocol'"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep 'Protocol'"
 ```
 
 ### 8.2 SSH 암호화 알고리즘 확인
 
 ```bash
-sshpass -p1 ssh user@192.168.208.142 "grep -E 'Ciphers|MACs|KexAlgorithms' /etc/ssh/sshd_config | grep -v '^#'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'Ciphers|MACs|KexAlgorithms' /etc/ssh/sshd_config | grep -v '^#'"
 ```
 
 ### 8.3 디스크 암호화 확인
 
 ```bash
-sshpass -p1 ssh user@192.168.208.142 "lsblk -o NAME,FSTYPE,MOUNTPOINT | head -10"
-sshpass -p1 ssh user@192.168.208.142 "dmsetup status 2>/dev/null | head -5 || echo 'dm-crypt 미사용'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "lsblk -o NAME,FSTYPE,MOUNTPOINT | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "dmsetup status 2>/dev/null | head -5 || echo 'dm-crypt 미사용'"
 ```
 
 ---

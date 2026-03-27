@@ -78,9 +78,9 @@
 
 | 서버 | IP | 접속 |
 |------|-----|------|
-| secu | 10.20.30.1 | `sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1` |
-| web | 10.20.30.80 | `sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80` |
-| siem | 10.20.30.100 | `sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100` |
+| secu | 10.20.30.1 | `sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1` |
+| web | 10.20.30.80 | `sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80` |
+| siem | 10.20.30.100 | `sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100` |
 
 **전제 조건**: 시험 시작 시 모든 보안 설정이 초기화되어 있다. 처음부터 구축해야 한다.
 
@@ -109,7 +109,7 @@ secu 서버에 **화이트리스트 정책** 방화벽을 구축하라.
 **정답 예시:**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 echo 1 | sudo -S nft add table inet final_filter
 
@@ -227,7 +227,7 @@ echo 1 | sudo -S tail -10 /var/log/suricata/fast.log
 secu, web 서버의 Wazuh Agent가 Manager에 연결되어 있는지 확인하라. 연결이 끊어져 있으면 복구하라.
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 echo 1 | sudo -S /var/ossec/bin/agent_control -l
 ```
@@ -243,7 +243,7 @@ echo 1 | sudo -S /var/ossec/bin/agent_control -l
 **정답 예시:**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 echo 1 | sudo -S tee /var/ossec/etc/rules/local_rules.xml << 'EOF'
 <group name="final_exam,">
@@ -295,7 +295,7 @@ secu 서버에서 다음 경로를 FIM 실시간 감시하도록 설정하라:
 - `/etc/suricata/rules/`
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # ossec.conf에 syscheck 추가 (기존 설정에 병합)
 echo 1 | sudo -S tee -a /var/ossec/etc/ossec.conf << 'FEOF'
@@ -316,7 +316,7 @@ echo 1 | sudo -S systemctl restart wazuh-agent
 SSH 브루트포스(Rule 5712) 탐지 시 공격자 IP를 10분간 자동 차단하도록 Active Response를 설정하라.
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 # ossec.conf에 Active Response 추가
 echo 1 | sudo -S tee -a /var/ossec/etc/ossec.conf << 'AREOF'
@@ -414,7 +414,7 @@ STIXEOF
 
 ```bash
 # 1. Suricata 룰
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 echo 1 | sudo -S tee -a /etc/suricata/rules/local.rules << 'EOF'
 alert ip $HOME_NET any -> 198.51.100.10 any (msg:"FINAL-CTI: APT C2 #1"; sid:9600001; rev:1; classtype:trojan-activity;)
@@ -430,7 +430,7 @@ echo 1 | sudo -S nft insert rule inet final_filter input ip saddr @cti_block dro
 echo 1 | sudo -S nft insert rule inet final_filter output ip daddr @cti_block drop
 
 # 3. Wazuh CDB
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 echo 1 | sudo -S tee /var/ossec/etc/lists/final-cti-ips << 'EOF'
 198.51.100.10:APT-C2-1
 198.51.100.20:APT-C2-2
@@ -542,7 +542,7 @@ cat /tmp/final_incident_report.txt
 
 ```bash
 # secu 서버 정리
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'CLEANUP'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'CLEANUP'
 echo 1 | sudo -S nft delete table inet final_filter 2>/dev/null
 echo 1 | sudo -S nft delete table inet final_nat 2>/dev/null
 echo 1 | sudo -S nft delete table inet final_ips 2>/dev/null
@@ -551,7 +551,7 @@ echo 1 | sudo -S kill -USR2 $(pidof suricata) 2>/dev/null
 CLEANUP
 
 # siem 서버 정리
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'CLEANUP2'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'CLEANUP2'
 echo 1 | sudo -S cp /var/ossec/etc/rules/local_rules.xml /tmp/local_rules_backup.xml
 CLEANUP2
 ```

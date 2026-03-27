@@ -109,7 +109,7 @@
 ## 2. 실습 환경 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 # API 토큰 설정 (대시보드에서 확인한 값)
 OPENCTI_TOKEN="your-api-token-here"
@@ -338,7 +338,7 @@ for edge in data.get('data',{}).get('indicators',{}).get('edges',[]):
 **Step 2: Suricata 로그에서 IOC 검색**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # Suricata 로그에서 C2 IP 검색
 echo 1 | sudo -S grep -E "203\.0\.113\.(10|11|12)" /var/log/suricata/eve.json | \
@@ -355,7 +355,7 @@ for line in sys.stdin:
 **Step 3: Wazuh 로그에서 IOC 검색**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 echo 1 | sudo -S grep -E "203\.0\.113\.(10|11|12)" /var/ossec/logs/alerts/alerts.json | \
   python3 -c "
@@ -401,7 +401,7 @@ cat /tmp/hunting_report.txt
 ### 6.1 Suricata 룰로 변환
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # OpenCTI IOC를 Suricata 룰로 변환
 echo 1 | sudo -S tee -a /etc/suricata/rules/local.rules << 'EOF'
@@ -429,7 +429,7 @@ echo 1 | sudo -S nft add rule inet filter output ip daddr @cti_blocklist drop
 ### 6.3 Wazuh CDB List로 변환
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 # CDB 리스트 생성
 echo 1 | sudo -S tee /var/ossec/etc/lists/cti-malicious-ips << 'EOF'

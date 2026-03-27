@@ -119,7 +119,7 @@
 ```bash
 # 1. SSH 로그인 성공/실패 통계
 echo "=== SSH 로그인 감사 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
   echo -n "성공: "
   sshpass -p1 ssh user@$ip "grep 'Accepted' /var/log/auth.log 2>/dev/null | wc -l"
@@ -130,13 +130,13 @@ done
 
 ```bash
 # 2. 실패한 로그인의 출발지 IP 분석
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
   awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -10"
 ```
 
 ```bash
 # 3. sudo 사용 감사
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: sudo 사용 이력 ==="
   sshpass -p1 ssh user@$ip "grep 'sudo:' /var/log/auth.log 2>/dev/null | tail -5"
 done
@@ -144,7 +144,7 @@ done
 
 ```bash
 # 4. 비정상 시간대 로그인 확인 (새벽 2~5시)
-sshpass -p1 ssh user@192.168.208.142 "grep 'session opened' /var/log/auth.log 2>/dev/null | \
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'session opened' /var/log/auth.log 2>/dev/null | \
   awk '{print \$3}' | awk -F: '\$1>=2 && \$1<=5 {print}'"
 ```
 
@@ -153,11 +153,11 @@ sshpass -p1 ssh user@192.168.208.142 "grep 'session opened' /var/log/auth.log 2>
 ```bash
 # Suricata 알림 분석
 echo "=== Suricata 알림 통계 ==="
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/fast.log 2>/dev/null | \
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/fast.log 2>/dev/null | \
   awk -F'\\]' '{print \$2}' | sort | uniq -c | sort -rn | head -10"
 
 # Suricata 알림 심각도별 분류
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/fast.log 2>/dev/null | \
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/fast.log 2>/dev/null | \
   grep -oE 'Priority: [0-9]+' | sort | uniq -c | sort -rn"
 ```
 
@@ -165,7 +165,7 @@ sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/fast.log 2>/dev/null
 
 ```bash
 # Wazuh 알림 레벨별 통계
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 from collections import Counter
 levels = Counter()
@@ -201,7 +201,7 @@ echo "================================================"
 echo " 보안 설정 감사 보고서 - $(date '+%Y-%m-%d %H:%M')"
 echo "================================================"
 
-SERVERS="192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152"
+SERVERS="10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100"
 
 for ip in $SERVERS; do
   echo ""
@@ -248,7 +248,7 @@ CIS(Center for Internet Security)는 각 OS별 보안 설정 가이드를 제공
 
 ```bash
 # CIS 권장 사항 일부 점검
-ip=192.168.208.142
+ip=10.20.30.201
 
 echo "=== CIS Benchmark 일부 점검 ==="
 
@@ -297,7 +297,7 @@ echo "========================================="
 echo " 갭 분석 결과 - ISO 27001 기반"
 echo "========================================="
 
-ip=192.168.208.142
+ip=10.20.30.201
 
 # A.8.2 특수접근권한
 echo ""
@@ -342,7 +342,7 @@ fi
 echo ""
 echo "[A.8.20] 네트워크보안 - 방화벽 기본정책"
 echo "  기준: 기본 정책 DROP"
-result=$(sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | grep 'policy drop'" || echo "")
+result=$(sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep 'policy drop'" || echo "")
 if [ -n "$result" ]; then
   echo "  현황: 기본 정책 DROP"
   echo "  판정: 적합"

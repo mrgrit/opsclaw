@@ -318,7 +318,7 @@ C2 비콘:
 
 ```bash
 # secu 서버 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # nftables 규칙 확인
 sudo nft list ruleset
@@ -352,23 +352,23 @@ sudo nft list ruleset -a
 
 ```bash
 # secu 서버에서 Suricata 규칙 파일 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo ls /etc/suricata/rules/"
 
 # 로컬 규칙 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo cat /etc/suricata/rules/local.rules 2>/dev/null || echo '로컬 규칙 없음'"
 
 # Suricata 설정 파일에서 규칙 경로 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo grep -n 'rule-files\|rule-path' /etc/suricata/suricata.yaml | head -20"
 
 # Suricata 상태 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo systemctl status suricata"
 
 # 최근 경고 로그 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo tail -20 /var/log/suricata/fast.log 2>/dev/null || echo '로그 없음'"
 ```
 
@@ -378,7 +378,7 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
 
 ```bash
 # 터미널 1: secu에서 ICMP 패킷 모니터링
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo tcpdump -i eth0 icmp -nn -c 10 -X"
 
 # 터미널 2: opsclaw에서 정상 크기 ping
@@ -422,7 +422,7 @@ CMD=$(echo -n "whoami" | base64)
 curl -s "http://10.20.30.80:3000/rest/products/search?q=juice&ref=$CMD"
 
 # secu에서 이 트래픽을 모니터링
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo tcpdump -i eth0 port 3000 -A -nn -c 20"
 ```
 
@@ -442,7 +442,7 @@ curl -s "http://10.20.30.80:3000/rest/products/search?q=test%2527%2520UNION%2520
 curl -s "http://10.20.30.80:3000/rest/products/search?q=test' uNiOn SeLeCt 1--"
 
 # Suricata 경고 로그 확인 (각 요청 후)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo tail -5 /var/log/suricata/fast.log 2>/dev/null"
 ```
 

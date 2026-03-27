@@ -247,7 +247,7 @@ HAVING ports_scanned > 20;
 
 ```bash
 # siem 서버의 Wazuh 알림 확인
-ssh student@10.20.30.100
+ssh secu@10.20.30.100
 
 # 최근 알림 조회 (CloudTrail과 유사)
 cat /var/ossec/logs/alerts/alerts.json | tail -5 | python3 -m json.tool

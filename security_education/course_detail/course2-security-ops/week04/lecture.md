@@ -128,7 +128,7 @@ Suricata는 IDS와 IPS 모드를 모두 지원한다.
 ## 3. 실습 환경 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 ```
 
 ### 3.1 Suricata 설치 확인

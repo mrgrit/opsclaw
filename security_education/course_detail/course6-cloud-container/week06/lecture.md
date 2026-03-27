@@ -341,7 +341,7 @@ secrets:
 ### 실습 1: 기존 Compose 파일 보안 점검
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # BunkerWeb Compose 파일 확인
 cat /opt/bunkerweb/docker-compose.yaml

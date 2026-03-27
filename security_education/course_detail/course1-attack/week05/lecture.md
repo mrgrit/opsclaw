@@ -495,11 +495,11 @@ document.getElementById('output').innerHTML = clean;
 
 ```bash
 # web 서버의 Apache 접근 로그 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "sudo cat /var/log/apache2/access.log | grep -i 'script\|alert\|onerror' | tail -5"
 
 # JuiceShop 로그에서 XSS 시도 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "sudo docker logs juiceshop 2>&1 | grep -i 'script\|xss' | tail -5" 2>/dev/null
 ```
 
@@ -507,7 +507,7 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
 
 ```bash
 # Wazuh에서 XSS 관련 알림 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo grep -i 'xss\|cross.site\|script' /var/ossec/logs/alerts/alerts.json 2>/dev/null | tail -3"
 ```
 

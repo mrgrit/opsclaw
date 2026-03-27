@@ -132,27 +132,27 @@
 ```bash
 # CC6.1: 논리적 접근 보안 소프트웨어
 echo "=== 방화벽 ==="
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | head -10"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | head -10"
 
 echo "=== IPS ==="
-sshpass -p1 ssh user@192.168.208.150 "systemctl is-active suricata 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata 2>/dev/null"
 
 # CC6.2: 사용자 인증
 echo "=== 인증 방식 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
   sshpass -p1 ssh user@$ip "grep -E 'PasswordAuthentication|PubkeyAuthentication' /etc/ssh/sshd_config | grep -v '^#'"
 done
 
 # CC6.3: 접근 권한 부여/변경/제거
 echo "=== 권한 관리 ==="
-sshpass -p1 ssh user@192.168.208.142 "getent group sudo"
-sshpass -p1 ssh user@192.168.208.142 "lastlog 2>/dev/null | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "getent group sudo"
+sshpass -p1 ssh opsclaw@10.20.30.201 "lastlog 2>/dev/null | head -10"
 
 # CC6.6: 외부 위협으로부터 보호
 echo "=== 보안 시스템 ==="
-sshpass -p1 ssh user@192.168.208.150 "systemctl is-active suricata nftables 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.151 "docker ps 2>/dev/null | grep bunkerweb || systemctl is-active bunkerweb 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata nftables 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "docker ps 2>/dev/null | grep bunkerweb || systemctl is-active bunkerweb 2>/dev/null"
 ```
 
 ### 2.4 실습: CC7 (시스템 운영) 점검
@@ -160,12 +160,12 @@ sshpass -p1 ssh user@192.168.208.151 "docker ps 2>/dev/null | grep bunkerweb || 
 ```bash
 # CC7.1: 이상 징후 탐지
 echo "=== Wazuh 알림 현황 ==="
-sshpass -p1 ssh user@192.168.208.152 "systemctl is-active wazuh-manager 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.152 "wc -l /var/ossec/logs/alerts/alerts.json 2>/dev/null"
+sshpass -p1 ssh siem@10.20.30.100 "systemctl is-active wazuh-manager 2>/dev/null"
+sshpass -p1 ssh siem@10.20.30.100 "wc -l /var/ossec/logs/alerts/alerts.json 2>/dev/null"
 
 # CC7.2: 보안 사고 모니터링
 echo "=== 최근 고위험 알림 ==="
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 for line in sys.stdin:
     try:
@@ -178,7 +178,7 @@ for line in sys.stdin:
 
 # CC7.3: 변경 관리
 echo "=== 최근 패키지 변경 ==="
-sshpass -p1 ssh user@192.168.208.142 "tail -5 /var/log/dpkg.log 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "tail -5 /var/log/dpkg.log 2>/dev/null"
 ```
 
 ---
@@ -219,22 +219,22 @@ sshpass -p1 ssh user@192.168.208.142 "tail -5 /var/log/dpkg.log 2>/dev/null"
 ```bash
 # 기술적 보호조치: 접근통제 (164.312(a))
 echo "=== 고유 사용자 ID ==="
-sshpass -p1 ssh user@192.168.208.142 "awk -F: '\$3>=1000 && \$3<65534 {print \$1, \$3}' /etc/passwd"
+sshpass -p1 ssh opsclaw@10.20.30.201 "awk -F: '\$3>=1000 && \$3<65534 {print \$1, \$3}' /etc/passwd"
 
 echo "=== 자동 로그오프 ==="
-sshpass -p1 ssh user@192.168.208.142 "grep TMOUT /etc/profile /etc/bash.bashrc 2>/dev/null || echo '미설정 (HIPAA 부적합)'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep TMOUT /etc/profile /etc/bash.bashrc 2>/dev/null || echo '미설정 (HIPAA 부적합)'"
 
 echo "=== 접근 실패 잠금 ==="
-sshpass -p1 ssh user@192.168.208.142 "grep pam_faillock /etc/pam.d/common-auth 2>/dev/null || echo '미설정'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep pam_faillock /etc/pam.d/common-auth 2>/dev/null || echo '미설정'"
 
 # 기술적 보호조치: 감사통제 (164.312(b))
 echo "=== 감사 로그 ==="
-sshpass -p1 ssh user@192.168.208.142 "systemctl is-active auditd rsyslog 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.142 "ls -lh /var/log/auth.log 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "systemctl is-active auditd rsyslog 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -lh /var/log/auth.log 2>/dev/null"
 
 # 기술적 보호조치: 전송보안 (164.312(e))
 echo "=== 전송 암호화 ==="
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
 ```
 
 ### 3.5 HIPAA 위반 제재
@@ -286,7 +286,7 @@ echo "========================================="
 echo " 글로벌 컴플라이언스 공통 점검"
 echo "========================================="
 
-ip=192.168.208.142
+ip=10.20.30.201
 
 echo "[1] 접근통제"
 sshpass -p1 ssh user@$ip "grep -c '^PermitRootLogin no' /etc/ssh/sshd_config 2>/dev/null && echo '  root 로그인 차단: OK' || echo '  root 로그인 차단: FAIL'"
@@ -295,14 +295,14 @@ echo "[2] 로깅"
 sshpass -p1 ssh user@$ip "systemctl is-active rsyslog 2>/dev/null && echo '  rsyslog: OK' || echo '  rsyslog: FAIL'"
 
 echo "[3] 암호화"
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep 'Protocol' | grep -q 'TLSv1.[23]' && echo '  TLS: OK' || echo '  TLS: 확인필요'"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep 'Protocol' | grep -q 'TLSv1.[23]' && echo '  TLS: OK' || echo '  TLS: 확인필요'"
 
 echo "[4] 패치"
 cnt=$(sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null | wc -l")
 echo "  미적용 패치: $cnt"
 
 echo "[5] 사고대응"
-sshpass -p1 ssh user@192.168.208.152 "systemctl is-active wazuh-manager 2>/dev/null && echo '  SIEM: OK' || echo '  SIEM: FAIL'"
+sshpass -p1 ssh siem@10.20.30.100 "systemctl is-active wazuh-manager 2>/dev/null && echo '  SIEM: OK' || echo '  SIEM: FAIL'"
 
 echo "[6] 리스크관리"
 echo "  (문서 점검 항목 - 리스크 평가 문서 존재 여부)"

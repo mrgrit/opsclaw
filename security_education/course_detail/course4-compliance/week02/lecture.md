@@ -224,26 +224,26 @@ ISO 27001은 **PDCA(Plan-Do-Check-Act)** 사이클을 따른다.
 
 ```bash
 # opsclaw 서버 (control plane)
-sshpass -p1 ssh user@192.168.208.142 "hostname; uname -a; cat /etc/os-release | head -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "hostname; uname -a; cat /etc/os-release | head -5"
 
 # secu 서버 (방화벽/IPS)
-sshpass -p1 ssh user@192.168.208.150 "hostname; uname -a"
+sshpass -p1 ssh secu@10.20.30.1 "hostname; uname -a"
 
 # web 서버 (WAF/웹앱)
-sshpass -p1 ssh user@192.168.208.151 "hostname; uname -a"
+sshpass -p1 ssh web@10.20.30.80 "hostname; uname -a"
 
 # siem 서버 (Wazuh)
-sshpass -p1 ssh user@192.168.208.152 "hostname; uname -a"
+sshpass -p1 ssh siem@10.20.30.100 "hostname; uname -a"
 ```
 
 ### 6.2 서비스 자산 식별
 
 ```bash
 # 각 서버에서 실행 중인 서비스 확인
-sshpass -p1 ssh user@192.168.208.142 "systemctl list-units --type=service --state=running | head -20"
+sshpass -p1 ssh opsclaw@10.20.30.201 "systemctl list-units --type=service --state=running | head -20"
 
 # 열린 포트 확인
-sshpass -p1 ssh user@192.168.208.150 "ss -tlnp"
+sshpass -p1 ssh secu@10.20.30.1 "ss -tlnp"
 ```
 
 ### 6.3 자산 목록 작성 (실습 과제)
@@ -252,11 +252,11 @@ sshpass -p1 ssh user@192.168.208.150 "ss -tlnp"
 
 | 자산명 | 유형 | 위치(IP) | 담당자 | 중요도(상/중/하) |
 |--------|------|---------|--------|----------------|
-| Manager API | 소프트웨어 | 192.168.208.142 | ? | ? |
-| Suricata IPS | 소프트웨어 | 192.168.208.150 | ? | ? |
-| JuiceShop 웹앱 | 소프트웨어 | 192.168.208.151 | ? | ? |
-| Wazuh SIEM | 소프트웨어 | 192.168.208.152 | ? | ? |
-| PostgreSQL DB | 소프트웨어 | 192.168.208.142 | ? | ? |
+| Manager API | 소프트웨어 | 10.20.30.201 | ? | ? |
+| Suricata IPS | 소프트웨어 | 10.20.30.1 | ? | ? |
+| JuiceShop 웹앱 | 소프트웨어 | 10.20.30.80 | ? | ? |
+| Wazuh SIEM | 소프트웨어 | 10.20.30.100 | ? | ? |
+| PostgreSQL DB | 소프트웨어 | 10.20.30.201 | ? | ? |
 
 ---
 
@@ -266,20 +266,20 @@ sshpass -p1 ssh user@192.168.208.150 "ss -tlnp"
 
 ```bash
 # SSH 설정 점검 (비밀번호 로그인 허용 여부)
-sshpass -p1 ssh user@192.168.208.142 "grep -i 'PasswordAuthentication' /etc/ssh/sshd_config"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -i 'PasswordAuthentication' /etc/ssh/sshd_config"
 
 # 방화벽 상태 확인
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset | head -30"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset | head -30"
 ```
 
 ### 7.2 Check - 로그 모니터링
 
 ```bash
 # 최근 SSH 접근 시도 확인
-sshpass -p1 ssh user@192.168.208.142 "journalctl -u sshd --since '1 hour ago' --no-pager | tail -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "journalctl -u sshd --since '1 hour ago' --no-pager | tail -10"
 
 # 실패한 로그인 시도 확인
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | tail -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | tail -5"
 ```
 
 ---

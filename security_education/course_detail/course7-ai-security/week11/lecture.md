@@ -124,7 +124,7 @@ curl -s -X POST "http://localhost:8000/projects/$PID/dispatch" \
   -H "X-API-Key: opsclaw-api-key-2026" \
   -d '{
     "command": "RED_MISSION: web 서버(10.20.30.80)의 열린 포트와 서비스를 탐색하고 보안 취약점을 식별하라",
-    "subagent_url": "http://192.168.208.150:8002"
+    "subagent_url": "http://10.20.30.1:8002"
   }' | python3 -m json.tool
 ```
 

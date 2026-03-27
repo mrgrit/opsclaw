@@ -249,7 +249,7 @@ docker run -d \
 ### 실습 1: capability 비교
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # 기본 실행 (기본 capability 포함)
 docker run --rm alpine sh -c 'cat /proc/1/status | grep Cap'

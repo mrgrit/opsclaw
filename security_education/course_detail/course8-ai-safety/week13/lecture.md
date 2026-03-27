@@ -90,7 +90,7 @@
 ### 1.2 OWASP LLM Top 10 (2025)
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 owasp_llm_top10 = [
     ("LLM01", "Prompt Injection", "직접/간접 프롬프트 인젝션"),
@@ -121,7 +121,7 @@ ENDSSH
 ### 2.1 평가 카테고리
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 categories = [
     {
@@ -167,7 +167,7 @@ ENDSSH
 ### 2.2 자동화 레드팀 스크립트
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
 
@@ -245,7 +245,7 @@ ENDSSH
 ### 3.1 ATLAS 전술과 기법
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 atlas_tactics = [
     ("Reconnaissance", "ML 모델/데이터 정보 수집", ["AML.T0000 학습 데이터 수집", "AML.T0001 모델 구조 탐색"]),
@@ -274,7 +274,7 @@ ENDSSH
 ### 4.1 보고서 구조
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 report_structure = """
 ================================================================
@@ -344,7 +344,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 5.1 CI/CD 파이프라인 통합
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 print("=== 지속적 AI Red Teaming ===\n")
 

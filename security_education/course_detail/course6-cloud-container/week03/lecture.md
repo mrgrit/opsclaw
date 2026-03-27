@@ -230,7 +230,7 @@ trivy fs --scanners secret /path/to/project
 ### 실습 1: JuiceShop 이미지 취약점 스캔
 
 ```bash
-ssh student@10.20.30.80
+ssh web@10.20.30.80
 
 # JuiceShop 이미지 스캔
 trivy image bkimminich/juice-shop:latest --severity HIGH,CRITICAL

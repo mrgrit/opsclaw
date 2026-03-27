@@ -200,7 +200,7 @@ echo "저장 위치: $EVIDENCE_DIR"
 
 # 1. 서버 인벤토리 (A.5.9)
 echo "=== [A.5.9] 자산 인벤토리 수집 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   sshpass -p1 ssh user@$ip "
     echo '=== 서버 정보 ==='
     hostname
@@ -217,13 +217,13 @@ done
 
 # 2. SSH 설정 (A.8.5)
 echo "=== [A.8.5] SSH 설정 수집 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   sshpass -p1 ssh user@$ip "cat /etc/ssh/sshd_config" 2>/dev/null > "$EVIDENCE_DIR/sshd_config_${ip}.txt"
 done
 
 # 3. 사용자 계정 (A.8.2)
 echo "=== [A.8.2] 계정 정보 수집 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   sshpass -p1 ssh user@$ip "
     echo '=== 사용자 목록 ==='
     cat /etc/passwd
@@ -238,11 +238,11 @@ done
 
 # 4. 방화벽 규칙 (A.8.20)
 echo "=== [A.8.20] 방화벽 규칙 수집 ==="
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset" 2>/dev/null > "$EVIDENCE_DIR/firewall_rules.txt"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset" 2>/dev/null > "$EVIDENCE_DIR/firewall_rules.txt"
 
 # 5. 비밀번호 정책 (A.8.5)
 echo "=== [A.8.5] 비밀번호 정책 수집 ==="
-sshpass -p1 ssh user@192.168.208.142 "
+sshpass -p1 ssh opsclaw@10.20.30.201 "
   echo '=== login.defs ==='
   grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs
   echo '=== pwquality ==='
@@ -251,18 +251,18 @@ sshpass -p1 ssh user@192.168.208.142 "
 
 # 6. 로그 샘플 (A.8.15)
 echo "=== [A.8.15] 로그 샘플 수집 ==="
-sshpass -p1 ssh user@192.168.208.142 "tail -100 /var/log/auth.log" 2>/dev/null > "$EVIDENCE_DIR/auth_log_sample.txt"
-sshpass -p1 ssh user@192.168.208.152 "tail -50 /var/ossec/logs/alerts/alerts.json" 2>/dev/null > "$EVIDENCE_DIR/wazuh_alerts_sample.txt"
+sshpass -p1 ssh opsclaw@10.20.30.201 "tail -100 /var/log/auth.log" 2>/dev/null > "$EVIDENCE_DIR/auth_log_sample.txt"
+sshpass -p1 ssh siem@10.20.30.100 "tail -50 /var/ossec/logs/alerts/alerts.json" 2>/dev/null > "$EVIDENCE_DIR/wazuh_alerts_sample.txt"
 
 # 7. NTP 설정 (A.8.17)
 echo "=== [A.8.17] NTP 설정 수집 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   sshpass -p1 ssh user@$ip "timedatectl" 2>/dev/null > "$EVIDENCE_DIR/ntp_${ip}.txt"
 done
 
 # 8. 패치 현황 (A.8.8)
 echo "=== [A.8.8] 패치 현황 수집 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null" > "$EVIDENCE_DIR/patches_${ip}.txt"
 done
 
@@ -312,13 +312,13 @@ cat checksums.sha256
 
 ```bash
 # SSH 접근 제한 설정 시연
-sshpass -p1 ssh user@192.168.208.142 "grep -E 'PermitRootLogin|PasswordAuthentication|MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'PermitRootLogin|PasswordAuthentication|MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#'"
 
 # 방화벽에서 SSH 접근 제한
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | grep -A2 'ssh\|22'"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep -A2 'ssh\|22'"
 
 # 계정 권한 현황
-sshpass -p1 ssh user@192.168.208.142 "getent group sudo"
+sshpass -p1 ssh opsclaw@10.20.30.201 "getent group sudo"
 ```
 
 **시나리오 2: 모니터링 심사**
@@ -328,13 +328,13 @@ sshpass -p1 ssh user@192.168.208.142 "getent group sudo"
 
 ```bash
 # Wazuh SIEM 운영 현황
-sshpass -p1 ssh user@192.168.208.152 "systemctl status wazuh-manager 2>/dev/null | head -5"
+sshpass -p1 ssh siem@10.20.30.100 "systemctl status wazuh-manager 2>/dev/null | head -5"
 
 # 에이전트 연결 현황
-sshpass -p1 ssh user@192.168.208.152 "/var/ossec/bin/agent_control -l 2>/dev/null | head -10"
+sshpass -p1 ssh siem@10.20.30.100 "/var/ossec/bin/agent_control -l 2>/dev/null | head -10"
 
 # 최근 알림 확인
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | tail -3 | python3 -m json.tool 2>/dev/null | head -20"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | tail -3 | python3 -m json.tool 2>/dev/null | head -20"
 ```
 
 **시나리오 3: 사고대응 심사**
@@ -344,7 +344,7 @@ sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/
 
 ```bash
 # 고위험 알림 이력
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 for line in sys.stdin:
     try:

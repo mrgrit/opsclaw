@@ -110,7 +110,7 @@ CTF(Capture The Flag)는 보안 기술을 겨루는 대회 형식이다. 취약�
 
 SSH 접속:
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.201
+sshpass -p1 ssh -o StrictHostKeyChecking=no opsclaw@10.20.30.201
 ```
 
 ---

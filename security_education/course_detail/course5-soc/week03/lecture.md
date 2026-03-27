@@ -121,15 +121,15 @@
 
 ```bash
 # web 서버의 웹 로그 확인
-sshpass -p1 ssh user@192.168.208.151 "ls -la /var/log/nginx/ /var/log/apache2/ /var/log/bunkerweb/ 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/nginx/ /var/log/apache2/ /var/log/bunkerweb/ 2>/dev/null"
 
 # 접근 로그 최근 내용
-sshpass -p1 ssh user@192.168.208.151 "tail -20 /var/log/nginx/access.log 2>/dev/null || \
+sshpass -p1 ssh web@10.20.30.80 "tail -20 /var/log/nginx/access.log 2>/dev/null || \
   tail -20 /var/log/bunkerweb/access.log 2>/dev/null || \
   echo '웹 로그 경로 확인 필요'"
 
 # 에러 로그 확인
-sshpass -p1 ssh user@192.168.208.151 "tail -10 /var/log/nginx/error.log 2>/dev/null || \
+sshpass -p1 ssh web@10.20.30.80 "tail -10 /var/log/nginx/error.log 2>/dev/null || \
   tail -10 /var/log/bunkerweb/error.log 2>/dev/null"
 ```
 
@@ -137,20 +137,20 @@ sshpass -p1 ssh user@192.168.208.151 "tail -10 /var/log/nginx/error.log 2>/dev/n
 
 ```bash
 # SQL Injection 시도 탐지 (UNION, SELECT, OR 1=1 등)
-sshpass -p1 ssh user@192.168.208.151 "grep -iE 'union|select|or.1=1|drop.table|insert.into' /var/log/nginx/access.log 2>/dev/null | tail -10"
+sshpass -p1 ssh web@10.20.30.80 "grep -iE 'union|select|or.1=1|drop.table|insert.into' /var/log/nginx/access.log 2>/dev/null | tail -10"
 
 # XSS 시도 탐지 (<script>, alert, onerror 등)
-sshpass -p1 ssh user@192.168.208.151 "grep -iE 'script|alert|onerror|onload' /var/log/nginx/access.log 2>/dev/null | tail -10"
+sshpass -p1 ssh web@10.20.30.80 "grep -iE 'script|alert|onerror|onload' /var/log/nginx/access.log 2>/dev/null | tail -10"
 
 # 디렉토리 탐색 시도 (../ 또는 %2e%2e)
-sshpass -p1 ssh user@192.168.208.151 "grep -iE '\.\./|%2e%2e|/etc/passwd' /var/log/nginx/access.log 2>/dev/null | tail -10"
+sshpass -p1 ssh web@10.20.30.80 "grep -iE '\.\./|%2e%2e|/etc/passwd' /var/log/nginx/access.log 2>/dev/null | tail -10"
 
 # 대량 404 에러 (디렉토리 스캐닝 의심)
-sshpass -p1 ssh user@192.168.208.151 "grep ' 404 ' /var/log/nginx/access.log 2>/dev/null | \
+sshpass -p1 ssh web@10.20.30.80 "grep ' 404 ' /var/log/nginx/access.log 2>/dev/null | \
   awk '{print \$1}' | sort | uniq -c | sort -rn | head -5"
 
 # 대량 요청 IP (DDoS/스캐닝 의심)
-sshpass -p1 ssh user@192.168.208.151 "awk '{print \$1}' /var/log/nginx/access.log 2>/dev/null | \
+sshpass -p1 ssh web@10.20.30.80 "awk '{print \$1}' /var/log/nginx/access.log 2>/dev/null | \
   sort | uniq -c | sort -rn | head -10"
 ```
 
@@ -158,11 +158,11 @@ sshpass -p1 ssh user@192.168.208.151 "awk '{print \$1}' /var/log/nginx/access.lo
 
 ```bash
 # 비정상 User-Agent 확인 (스캐너, 봇)
-sshpass -p1 ssh user@192.168.208.151 "awk -F'\"' '{print \$6}' /var/log/nginx/access.log 2>/dev/null | \
+sshpass -p1 ssh web@10.20.30.80 "awk -F'\"' '{print \$6}' /var/log/nginx/access.log 2>/dev/null | \
   sort | uniq -c | sort -rn | head -10"
 
 # 알려진 스캐너 도구 탐지
-sshpass -p1 ssh user@192.168.208.151 "grep -iE 'nikto|sqlmap|nmap|dirbuster|gobuster|burp' /var/log/nginx/access.log 2>/dev/null | tail -5"
+sshpass -p1 ssh web@10.20.30.80 "grep -iE 'nikto|sqlmap|nmap|dirbuster|gobuster|burp' /var/log/nginx/access.log 2>/dev/null | tail -5"
 ```
 
 ---
@@ -199,18 +199,18 @@ sshpass -p1 ssh user@192.168.208.151 "grep -iE 'nikto|sqlmap|nmap|dirbuster|gobu
 
 ```bash
 # fast.log 최근 내용
-sshpass -p1 ssh user@192.168.208.150 "tail -20 /var/log/suricata/fast.log 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "tail -20 /var/log/suricata/fast.log 2>/dev/null"
 
 # 알림 유형별 통계
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/fast.log 2>/dev/null | \
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/fast.log 2>/dev/null | \
   grep -oP '\[\*\*\].*?\[\*\*\]' | sort | uniq -c | sort -rn | head -10"
 
 # 우선순위별 통계
-sshpass -p1 ssh user@192.168.208.150 "grep -oP 'Priority: [0-9]+' /var/log/suricata/fast.log 2>/dev/null | \
+sshpass -p1 ssh secu@10.20.30.1 "grep -oP 'Priority: [0-9]+' /var/log/suricata/fast.log 2>/dev/null | \
   sort | uniq -c | sort -rn"
 
 # 출발지 IP별 통계 (공격자 식별)
-sshpass -p1 ssh user@192.168.208.150 "grep -oP '\\{\\w+\\} [0-9.]+' /var/log/suricata/fast.log 2>/dev/null | \
+sshpass -p1 ssh secu@10.20.30.1 "grep -oP '\\{\\w+\\} [0-9.]+' /var/log/suricata/fast.log 2>/dev/null | \
   awk '{print \$2}' | sort | uniq -c | sort -rn | head -10"
 ```
 
@@ -218,10 +218,10 @@ sshpass -p1 ssh user@192.168.208.150 "grep -oP '\\{\\w+\\} [0-9.]+' /var/log/sur
 
 ```bash
 # eve.json 최근 이벤트 (JSON 형식)
-sshpass -p1 ssh user@192.168.208.150 "tail -3 /var/log/suricata/eve.json 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30"
+sshpass -p1 ssh secu@10.20.30.1 "tail -3 /var/log/suricata/eve.json 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30"
 
 # 이벤트 유형별 통계
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
 import sys, json
 from collections import Counter
 types = Counter()
@@ -235,7 +235,7 @@ for t, c in types.most_common(10):
 \" 2>/dev/null"
 
 # alert 이벤트만 추출
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
 import sys, json
 for line in sys.stdin:
     try:
@@ -265,14 +265,14 @@ nft add rule inet filter input log prefix "DROPPED: " drop
 
 ```bash
 # 현재 방화벽 규칙 확인
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null"
 
 # 방화벽 로그 확인 (커널 로그에 기록됨)
-sshpass -p1 ssh user@192.168.208.150 "grep -i 'nft\|DROPPED\|REJECT\|firewall' /var/log/kern.log 2>/dev/null | tail -10"
-sshpass -p1 ssh user@192.168.208.150 "dmesg 2>/dev/null | grep -i 'nft\|DROP\|REJECT' | tail -10"
+sshpass -p1 ssh secu@10.20.30.1 "grep -i 'nft\|DROPPED\|REJECT\|firewall' /var/log/kern.log 2>/dev/null | tail -10"
+sshpass -p1 ssh secu@10.20.30.1 "dmesg 2>/dev/null | grep -i 'nft\|DROP\|REJECT' | tail -10"
 
 # iptables 로그 (레거시 환경)
-sshpass -p1 ssh user@192.168.208.150 "grep 'iptables\|nftables' /var/log/syslog 2>/dev/null | tail -10"
+sshpass -p1 ssh secu@10.20.30.1 "grep 'iptables\|nftables' /var/log/syslog 2>/dev/null | tail -10"
 ```
 
 ### 3.3 방화벽 로그 분석 포인트
@@ -292,11 +292,11 @@ sshpass -p1 ssh user@192.168.208.150 "grep 'iptables\|nftables' /var/log/syslog 
 
 ```bash
 # BunkerWeb 로그 확인
-sshpass -p1 ssh user@192.168.208.151 "ls -la /var/log/bunkerweb/ 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.151 "docker logs bunkerweb 2>/dev/null | tail -20 || echo 'docker 로그 확인 필요'"
+sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/bunkerweb/ 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "docker logs bunkerweb 2>/dev/null | tail -20 || echo 'docker 로그 확인 필요'"
 
 # WAF에 의해 차단된 요청
-sshpass -p1 ssh user@192.168.208.151 "grep ' 403 ' /var/log/bunkerweb/access.log 2>/dev/null | tail -10 || \
+sshpass -p1 ssh web@10.20.30.80 "grep ' 403 ' /var/log/bunkerweb/access.log 2>/dev/null | tail -10 || \
   grep ' 403 ' /var/log/nginx/access.log 2>/dev/null | tail -10"
 ```
 
@@ -313,13 +313,13 @@ sshpass -p1 ssh user@192.168.208.151 "grep ' 403 ' /var/log/bunkerweb/access.log
 TARGET_TIME="Mar 27 10:1"
 
 echo "=== auth.log ==="
-sshpass -p1 ssh user@192.168.208.142 "grep '$TARGET_TIME' /var/log/auth.log 2>/dev/null | head -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep '$TARGET_TIME' /var/log/auth.log 2>/dev/null | head -5"
 
 echo "=== Suricata ==="
-sshpass -p1 ssh user@192.168.208.150 "grep '03/27/2026-10:1' /var/log/suricata/fast.log 2>/dev/null | head -5"
+sshpass -p1 ssh secu@10.20.30.1 "grep '03/27/2026-10:1' /var/log/suricata/fast.log 2>/dev/null | head -5"
 
 echo "=== 웹 로그 ==="
-sshpass -p1 ssh user@192.168.208.151 "grep '27/Mar/2026:10:1' /var/log/nginx/access.log 2>/dev/null | head -5"
+sshpass -p1 ssh web@10.20.30.80 "grep '27/Mar/2026:10:1' /var/log/nginx/access.log 2>/dev/null | head -5"
 ```
 
 ### 5.2 IP 기반 상관 분석
@@ -332,13 +332,13 @@ SUSPECT_IP="192.168.208.1"  # 의심 IP (실제 발견된 IP로 변경)
 echo "=== $SUSPECT_IP 활동 추적 ==="
 
 echo "[SSH 시도]"
-sshpass -p1 ssh user@192.168.208.142 "grep '$SUSPECT_IP' /var/log/auth.log 2>/dev/null | tail -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep '$SUSPECT_IP' /var/log/auth.log 2>/dev/null | tail -5"
 
 echo "[IPS 탐지]"
-sshpass -p1 ssh user@192.168.208.150 "grep '$SUSPECT_IP' /var/log/suricata/fast.log 2>/dev/null | tail -5"
+sshpass -p1 ssh secu@10.20.30.1 "grep '$SUSPECT_IP' /var/log/suricata/fast.log 2>/dev/null | tail -5"
 
 echo "[웹 접근]"
-sshpass -p1 ssh user@192.168.208.151 "grep '$SUSPECT_IP' /var/log/nginx/access.log 2>/dev/null | tail -5"
+sshpass -p1 ssh web@10.20.30.80 "grep '$SUSPECT_IP' /var/log/nginx/access.log 2>/dev/null | tail -5"
 ```
 
 ---

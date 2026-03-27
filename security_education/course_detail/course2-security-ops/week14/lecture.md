@@ -166,46 +166,46 @@ echo ""
 # 1. secu 서버
 echo "--- secu (10.20.30.1) ---"
 echo -n "  SSH: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 user@10.20.30.1 "echo OK" 2>/dev/null || echo "FAIL"
+sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 secu@10.20.30.1 "echo OK" 2>/dev/null || echo "FAIL"
 
 echo -n "  nftables: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 "echo 1 | sudo -S nft list tables 2>/dev/null | wc -l" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S nft list tables 2>/dev/null | wc -l" 2>/dev/null
 
 echo -n "  Suricata: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 "echo 1 | sudo -S systemctl is-active suricata 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S systemctl is-active suricata 2>/dev/null" 2>/dev/null
 
 echo -n "  Wazuh Agent: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 "echo 1 | sudo -S systemctl is-active wazuh-agent 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S systemctl is-active wazuh-agent 2>/dev/null" 2>/dev/null
 
 echo ""
 
 # 2. web 서버
 echo "--- web (10.20.30.80) ---"
 echo -n "  SSH: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 user@10.20.30.80 "echo OK" 2>/dev/null || echo "FAIL"
+sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 web@10.20.30.80 "echo OK" 2>/dev/null || echo "FAIL"
 
 echo -n "  BunkerWeb: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 "echo 1 | sudo -S docker ps --format '{{.Status}}' --filter name=bunkerweb 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S docker ps --format '{{.Status}}' --filter name=bunkerweb 2>/dev/null" 2>/dev/null
 
 echo -n "  HTTP: "
 curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://10.20.30.80/ 2>/dev/null || echo "FAIL"
 echo ""
 
 echo -n "  Wazuh Agent: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 "echo 1 | sudo -S systemctl is-active wazuh-agent 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S systemctl is-active wazuh-agent 2>/dev/null" 2>/dev/null
 
 echo ""
 
 # 3. siem 서버
 echo "--- siem (10.20.30.100) ---"
 echo -n "  SSH: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 user@10.20.30.100 "echo OK" 2>/dev/null || echo "FAIL"
+sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 siem@10.20.30.100 "echo OK" 2>/dev/null || echo "FAIL"
 
 echo -n "  Wazuh Manager: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 "echo 1 | sudo -S systemctl is-active wazuh-manager 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "echo 1 | sudo -S systemctl is-active wazuh-manager 2>/dev/null" 2>/dev/null
 
 echo -n "  Wazuh Dashboard: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 "echo 1 | sudo -S systemctl is-active wazuh-dashboard 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "echo 1 | sudo -S systemctl is-active wazuh-dashboard 2>/dev/null" 2>/dev/null
 
 echo -n "  OpenCTI: "
 curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://10.20.30.100:9400/health 2>/dev/null || echo "FAIL"
@@ -279,19 +279,19 @@ bash /tmp/check_all.sh
 curl -s "http://10.20.30.80/?id=1%20UNION%20SELECT%201,2,3" > /dev/null
 
 # 1. nftables 로그 확인 (secu)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "echo 1 | sudo -S journalctl -k --since '1 min ago' --grep='NFT' --no-pager" 2>/dev/null | tail -5
 
 # 2. Suricata 로그 확인 (secu)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "echo 1 | sudo -S tail -5 /var/log/suricata/fast.log" 2>/dev/null
 
 # 3. WAF 로그 확인 (web)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "echo 1 | sudo -S docker exec bunkerweb tail -5 /var/log/bunkerweb/error.log" 2>/dev/null
 
 # 4. Wazuh 알림 확인 (siem)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "echo 1 | sudo -S tail -5 /var/ossec/logs/alerts/alerts.json" 2>/dev/null | \
   python3 -c "
 import sys, json
@@ -439,7 +439,7 @@ echo "=== 공격 완료. 로그를 분석하세요. ==="
 
 ```bash
 # 1. Wazuh에서 최근 고심각도 알림 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json" 2>/dev/null | \
   python3 -c "
 import sys, json
@@ -456,7 +456,7 @@ for line in sys.stdin:
 echo "=== 의심 IP 목록 ==="
 
 # 3. 긴급 차단 (nftables)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "echo 1 | sudo -S nft add element inet filter blocklist '{ 10.20.30.XXX }'" 2>/dev/null
 
 # 4. IOC 등록 (OpenCTI)
@@ -484,12 +484,12 @@ bash /tmp/check_all.sh 2>/dev/null
 
 echo ""
 echo "[2] Suricata 커널 드롭"
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "echo 1 | sudo -S grep 'kernel_drops' /var/log/suricata/stats.log | tail -1" 2>/dev/null
 
 echo ""
 echo "[3] 최근 24시간 고심각도 알림 (Level >= 10)"
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json" 2>/dev/null | \
   python3 -c "
 import sys, json

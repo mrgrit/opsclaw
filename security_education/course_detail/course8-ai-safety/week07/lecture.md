@@ -104,7 +104,7 @@
 ### 2.1 텍스트 백도어 시뮬레이션
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json
 
@@ -146,7 +146,7 @@ ENDSSH
 ### 2.2 파인튜닝 데이터 오염 시나리오
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # 파인튜닝 데이터 오염 시나리오
 scenarios = [
@@ -202,7 +202,7 @@ ENDSSH
 ### 3.1 통계적 이상 탐지
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import random
 import statistics
@@ -241,7 +241,7 @@ ENDSSH
 ### 3.2 라벨 일관성 검증
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # 라벨 일관성 검증: 유사한 데이터에 다른 라벨이 있으면 의심
 dataset = [
@@ -289,7 +289,7 @@ ENDSSH
 ### 4.1 RLHF 오염 시나리오
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # RLHF (Reinforcement Learning from Human Feedback) 오염
 print("=== RLHF 피드백 조작 시나리오 ===\n")
@@ -328,7 +328,7 @@ ENDSSH
 ### 5.1 안전한 데이터 파이프라인 설계
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 pipeline_security = {
     "수집 단계": [

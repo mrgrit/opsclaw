@@ -116,7 +116,7 @@
 ### 2.1 공개 CTI 소스에서 IOC 수집
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # 교육용 IOC 데이터베이스 시뮬레이션
 ioc_database = {
@@ -156,7 +156,7 @@ ENDSSH
 ### 2.2 로그에서 IOC 매칭
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== IOC 매칭: 네트워크 로그 vs 악성 IP ==="
 
 MALICIOUS_IPS="45.33.32.156 185.220.101.35 91.219.236.222"
@@ -185,7 +185,7 @@ ENDSSH
 ### 2.3 Wazuh CDB 리스트 활용
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
 echo "=== Wazuh CDB 리스트 기반 IOC 탐지 ==="
 
 cat << 'EXPLAIN'
@@ -223,7 +223,7 @@ ENDSSH
 ### 3.1 STIX 2.1 객체 이해
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json
 
@@ -271,7 +271,7 @@ ENDSSH
 ### 4.1 가설 기반 위협 헌팅
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 위협 헌팅 실습 ==="
 echo "가설: 내부 서버에서 외부 C2 서버로 비콘 통신이 발생하고 있다"
 echo ""
@@ -303,7 +303,7 @@ ENDSSH
 ### 4.2 Suricata 로그 기반 위협 헌팅
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== Suricata 로그 위협 헌팅 ==="
 
 cat /var/log/suricata/eve.json 2>/dev/null | python3 -c "
@@ -359,7 +359,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 5.1 IOC 자동 업데이트 스크립트
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json
 from datetime import datetime

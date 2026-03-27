@@ -104,7 +104,7 @@
 ### 2.1 auth.log에서 sudo 사용 이력 분석
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== sudo 사용 이력 분석 ==="
 
 # 전체 sudo 명령 이력
@@ -132,7 +132,7 @@ ENDSSH
 ### 2.2 auditd 규칙으로 민감 행위 감시
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== auditd 규칙 확인 ==="
 
 # 현재 audit 규칙 확인
@@ -165,7 +165,7 @@ ENDSSH
 ### 2.3 Wazuh에서 내부 위협 경보
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
 echo "=== Wazuh 내부 위협 관련 경보 ==="
 
 cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
@@ -197,7 +197,7 @@ ENDSSH
 ### 3.1 시나리오 1 - sudo를 이용한 파일 열람
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 시나리오 1: sudo 파일 열람 시뮬레이션 ==="
 
 echo "--- Step 1: 다른 사용자 디렉토리 접근 시도 ---"
@@ -223,7 +223,7 @@ ENDSSH
 ### 3.2 시나리오 2 - 데이터 유출 시도 패턴
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 python3 << 'PYEOF'
 exfil_indicators = [
     {
@@ -262,7 +262,7 @@ ENDSSH
 ### 3.3 UEBA 스타일 행위 이상 탐지
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 python3 << 'PYEOF'
 user_activities = [
     {"time": "09:00", "action": "login", "detail": "SSH 로그인"},
@@ -300,7 +300,7 @@ ENDSSH
 ### 4.1 계정 비활성화 절차
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
 echo "=== 계정 비활성화 절차 (교육용) ==="
 
 cat << 'PROCEDURE'
@@ -337,7 +337,7 @@ ENDSSH
 ### 4.2 Wazuh Active Response 설정
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
 echo "=== Wazuh Active Response 설정 예시 ==="
 
 cat << 'CONFIG'
@@ -389,7 +389,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 6.1 예방적 통제
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 controls = {
     "기술적 통제": [

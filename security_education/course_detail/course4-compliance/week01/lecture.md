@@ -453,7 +453,7 @@ cat /etc/security/pwquality.conf 2>/dev/null | grep -v "^#" | grep -v "^$"
 ### 5.3 secu 서버 패스워드 정책 확인
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "cat /etc/login.defs | grep -E '^PASS_MAX_DAYS|^PASS_MIN_DAYS|^PASS_MIN_LEN|^PASS_WARN_AGE'"
 ```
 
@@ -485,17 +485,17 @@ sudo nft list ruleset 2>/dev/null | head -5 || sudo iptables -L 2>/dev/null | he
 
 echo ""
 echo "=== secu 방화벽 상태 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "sudo nft list ruleset 2>/dev/null | head -10"
 
 echo ""
 echo "=== web 방화벽 상태 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "sudo nft list ruleset 2>/dev/null | head -5 || sudo iptables -L 2>/dev/null | head -5 || echo '방화벽 규칙 없음'"
 
 echo ""
 echo "=== siem 방화벽 상태 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo nft list ruleset 2>/dev/null | head -5 || sudo iptables -L 2>/dev/null | head -5 || echo '방화벽 규칙 없음'"
 ```
 

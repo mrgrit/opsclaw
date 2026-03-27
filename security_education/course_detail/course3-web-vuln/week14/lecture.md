@@ -141,7 +141,7 @@
 ### 2.3 실습: JuiceShop 취약점 CVSS 산출
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 # CVSS v3.1 간이 계산기
 def cvss_score(av, ac, pr, ui, scope, c, i, a):
@@ -259,7 +259,7 @@ OWASP: A01:2021 - 카테고리명
 ### 3.2 실습: SQL Injection 취약점 카드 작성
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 echo "=== 취약점 카드 작성 실습 ==="
 
 # 재현 증거 수집
@@ -297,7 +297,7 @@ ENDSSH
 ### 3.3 보고서 자동 생성 스크립트
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 from datetime import datetime
 
@@ -410,7 +410,7 @@ ENDSSH
 ### 4.2 권고사항 상세 작성 실습
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 recommendations = [
     {
@@ -500,7 +500,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 6.1 자가 점검 항목
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 checklist = [
     ("표지", "프로젝트명, 일시, 점검 범위, 점검자 정보"),

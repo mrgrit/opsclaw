@@ -147,7 +147,7 @@ curl -s -X POST "http://localhost:8000/projects/$PID/dispatch" \
   -H "X-API-Key: opsclaw-api-key-2026" \
   -d '{
     "command": "sudo nft list ruleset | head -20",
-    "subagent_url": "http://192.168.208.150:8002"
+    "subagent_url": "http://10.20.30.1:8002"
   }' | python3 -m json.tool
 ```
 
@@ -174,13 +174,13 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
         "order": 2,
         "instruction_prompt": "cat /etc/os-release",
         "risk_level": "low",
-        "subagent_url": "http://192.168.208.150:8002"
+        "subagent_url": "http://10.20.30.1:8002"
       },
       {
         "order": 3,
         "instruction_prompt": "docker ps --format table",
         "risk_level": "medium",
-        "subagent_url": "http://192.168.208.151:8002"
+        "subagent_url": "http://10.20.30.80:8002"
       }
     ],
     "subagent_url": "http://localhost:8002"
@@ -299,8 +299,8 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
   -d '{
     "tasks": [
       {"order":1, "instruction_prompt":"hostname && uptime", "risk_level":"low", "subagent_url":"http://localhost:8002"},
-      {"order":2, "instruction_prompt":"hostname && uptime", "risk_level":"low", "subagent_url":"http://192.168.208.150:8002"},
-      {"order":3, "instruction_prompt":"hostname && uptime", "risk_level":"low", "subagent_url":"http://192.168.208.151:8002"}
+      {"order":2, "instruction_prompt":"hostname && uptime", "risk_level":"low", "subagent_url":"http://10.20.30.1:8002"},
+      {"order":3, "instruction_prompt":"hostname && uptime", "risk_level":"low", "subagent_url":"http://10.20.30.80:8002"}
     ],
     "subagent_url":"http://localhost:8002"
   }' | python3 -m json.tool

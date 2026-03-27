@@ -119,7 +119,7 @@ LLM의 출력이 안전하고 의도된 범위 내에 있도록 제한하는 메
 ### 2.1 키워드 기반 필터
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import re
 
@@ -201,7 +201,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 3.1 유해성 분류기
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import re
 
@@ -247,7 +247,7 @@ ENDSSH
 ### 3.2 PII 마스킹
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import re
 
@@ -330,7 +330,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 5.1 전체 파이프라인 구현
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import re, json, urllib.request
 
@@ -414,7 +414,7 @@ ENDSSH
 ### 6.1 필터 우회 시도
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import re
 

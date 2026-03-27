@@ -98,7 +98,7 @@
 # 실행하여 결과를 분석할 것
 
 # 각 서버별 SSH 실패 횟수
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   echo -n "실패: "
   sshpass -p1 ssh user@$ip "grep -c 'Failed password' /var/log/auth.log 2>/dev/null || echo 0"
@@ -107,11 +107,11 @@ for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
 done
 
 # 공격자 IP Top 5
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
   awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -5"
 
 # 공격 대상 사용자 Top 5
-sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
   awk '{for(i=1;i<=NF;i++) if(\$i==\"for\") {if(\$(i+1)==\"invalid\") print \$(i+3); else print \$(i+1)}}' | \
   sort | uniq -c | sort -rn | head -5"
 ```
@@ -126,13 +126,13 @@ sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2
 
 ```bash
 # sudo 사용 이력 분석
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: sudo 이력 ==="
   sshpass -p1 ssh user@$ip "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -5"
 done
 
 # 비인가 sudo 시도
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "grep 'NOT in sudoers' /var/log/auth.log 2>/dev/null"
 done
@@ -146,13 +146,13 @@ done
 
 ```bash
 # syslog에서 이상 징후 검색
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "grep -iE 'error|fail|critical|emergency|segfault|oom' /var/log/syslog 2>/dev/null | wc -l"
 done
 
 # 커널 오류 확인
-sshpass -p1 ssh user@192.168.208.142 "journalctl -p err --no-pager 2>/dev/null | tail -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "journalctl -p err --no-pager 2>/dev/null | tail -10"
 ```
 
 ---
@@ -163,18 +163,18 @@ sshpass -p1 ssh user@192.168.208.142 "journalctl -p err --no-pager 2>/dev/null |
 
 ```bash
 # Suricata 알림 통계
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/fast.log 2>/dev/null | wc -l"
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/fast.log 2>/dev/null | wc -l"
 
 # 알림 유형 Top 10
-sshpass -p1 ssh user@192.168.208.150 "cat /var/log/suricata/fast.log 2>/dev/null | \
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/fast.log 2>/dev/null | \
   grep -oP '\[\*\*\].*?\[\*\*\]' | sort | uniq -c | sort -rn | head -10"
 
 # Priority별 분포
-sshpass -p1 ssh user@192.168.208.150 "grep -oP 'Priority: [0-9]+' /var/log/suricata/fast.log 2>/dev/null | \
+sshpass -p1 ssh secu@10.20.30.1 "grep -oP 'Priority: [0-9]+' /var/log/suricata/fast.log 2>/dev/null | \
   sort | uniq -c | sort -rn"
 
 # 공격자 IP Top 5
-sshpass -p1 ssh user@192.168.208.150 "grep -oP '\\{\\w+\\} [0-9.]+' /var/log/suricata/fast.log 2>/dev/null | \
+sshpass -p1 ssh secu@10.20.30.1 "grep -oP '\\{\\w+\\} [0-9.]+' /var/log/suricata/fast.log 2>/dev/null | \
   awk '{print \$2}' | sort | uniq -c | sort -rn | head -5"
 ```
 
@@ -187,20 +187,20 @@ sshpass -p1 ssh user@192.168.208.150 "grep -oP '\\{\\w+\\} [0-9.]+' /var/log/sur
 
 ```bash
 # 웹 로그 기본 통계
-sshpass -p1 ssh user@192.168.208.151 "wc -l /var/log/nginx/access.log 2>/dev/null || echo '0'"
+sshpass -p1 ssh web@10.20.30.80 "wc -l /var/log/nginx/access.log 2>/dev/null || echo '0'"
 
 # HTTP 상태코드 분포
-sshpass -p1 ssh user@192.168.208.151 "awk '{print \$9}' /var/log/nginx/access.log 2>/dev/null | \
+sshpass -p1 ssh web@10.20.30.80 "awk '{print \$9}' /var/log/nginx/access.log 2>/dev/null | \
   sort | uniq -c | sort -rn | head -10"
 
 # 웹 공격 패턴 검색
-sshpass -p1 ssh user@192.168.208.151 "grep -iE 'union|select|script|alert|\.\./' /var/log/nginx/access.log 2>/dev/null | wc -l"
+sshpass -p1 ssh web@10.20.30.80 "grep -iE 'union|select|script|alert|\.\./' /var/log/nginx/access.log 2>/dev/null | wc -l"
 
 # 의심스러운 요청 샘플
-sshpass -p1 ssh user@192.168.208.151 "grep -iE 'union|select|script|\.\./' /var/log/nginx/access.log 2>/dev/null | head -5"
+sshpass -p1 ssh web@10.20.30.80 "grep -iE 'union|select|script|\.\./' /var/log/nginx/access.log 2>/dev/null | head -5"
 
 # User-Agent 분석
-sshpass -p1 ssh user@192.168.208.151 "awk -F'\"' '{print \$6}' /var/log/nginx/access.log 2>/dev/null | \
+sshpass -p1 ssh web@10.20.30.80 "awk -F'\"' '{print \$6}' /var/log/nginx/access.log 2>/dev/null | \
   sort | uniq -c | sort -rn | head -5"
 ```
 
@@ -217,7 +217,7 @@ sshpass -p1 ssh user@192.168.208.151 "awk -F'\"' '{print \$6}' /var/log/nginx/ac
 
 ```bash
 # 경보 전체 통계
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 from collections import Counter
 levels = Counter()
@@ -239,7 +239,7 @@ for r, c in rules.most_common(10):
 \" 2>/dev/null"
 
 # Level 10+ 상세
-sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 for line in sys.stdin:
     try:
@@ -328,15 +328,15 @@ level: (low/medium/high/critical)
 
 ```bash
 # 서버 접속 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 user@$ip "hostname" 2>/dev/null \
     && echo "$ip: OK" || echo "$ip: FAIL"
 done
 
 # 로그 존재 확인
-sshpass -p1 ssh user@192.168.208.142 "ls -lh /var/log/auth.log 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.150 "ls -lh /var/log/suricata/fast.log 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.152 "ls -lh /var/ossec/logs/alerts/alerts.json 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -lh /var/log/auth.log 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "ls -lh /var/log/suricata/fast.log 2>/dev/null"
+sshpass -p1 ssh siem@10.20.30.100 "ls -lh /var/ossec/logs/alerts/alerts.json 2>/dev/null"
 ```
 
 ---

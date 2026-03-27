@@ -327,7 +327,7 @@ GET /file?name=../../../../etc/passwd
 
 ```bash
 # opsclaw 서버에서 secu로 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 ```
 
 ### 4.2 nftables 서비스 상태 확인
@@ -392,7 +392,7 @@ exit
 ### 5.1 secu 서버에 다시 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 ```
 
 ### 5.2 Suricata 서비스 상태 확인
@@ -459,7 +459,7 @@ exit
 ### 6.1 web 서버 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 ```
 
 ### 6.2 BunkerWeb 서비스 상태 확인
@@ -520,7 +520,7 @@ exit
 ### 7.1 siem 서버 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 ```
 
 ### 7.2 Wazuh 서비스 상태 확인
@@ -596,7 +596,7 @@ exit
 ### 8.1 siem 서버에서 OpenCTI 확인
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 ```
 
 ### 8.2 OpenCTI 서비스 확인
@@ -660,11 +660,11 @@ done
 ```bash
 # secu: nftables 상태
 echo "=== secu: nftables ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 "sudo systemctl is-active nftables" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "sudo systemctl is-active nftables" 2>/dev/null
 
 # secu: Suricata 상태
 echo "=== secu: Suricata ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 "sudo systemctl is-active suricata" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "sudo systemctl is-active suricata" 2>/dev/null
 
 # web: JuiceShop 상태
 echo "=== web: JuiceShop ==="
@@ -672,7 +672,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://10.20.30.80:3000/ 2>/dev/null
 
 # siem: Wazuh 상태
 echo "=== siem: Wazuh Manager ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 "sudo systemctl is-active wazuh-manager" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "sudo systemctl is-active wazuh-manager" 2>/dev/null
 
 # siem: OpenCTI 상태
 echo "=== siem: OpenCTI ==="

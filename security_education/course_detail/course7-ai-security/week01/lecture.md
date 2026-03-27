@@ -290,7 +290,7 @@ opsclaw 서버에서 dgx-spark의 Ollama 서버에 접근한다.
 
 ```bash
 # opsclaw 서버에 SSH 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.201
+sshpass -p1 ssh -o StrictHostKeyChecking=no opsclaw@10.20.30.201
 ```
 
 ```bash

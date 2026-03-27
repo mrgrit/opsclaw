@@ -418,7 +418,7 @@ False Negative (FN) : 공격인데 놓침               ← 가장 위험
 먼저 siem 서버에서 Wazuh 서비스가 정상 동작하는지 확인하자.
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo systemctl status wazuh-manager --no-pager | head -10"
 ```
 
@@ -430,7 +430,7 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
 ```
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo systemctl status wazuh-dashboard --no-pager | head -10"
 ```
 
@@ -482,7 +482,7 @@ Wazuh Dashboard 주요 메뉴:
 ### 7.1 에이전트 목록 조회
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo /var/ossec/bin/agent_control -l 2>/dev/null || sudo /var/ossec/bin/manage_agents -l 2>/dev/null"
 ```
 
@@ -498,7 +498,7 @@ Available agents:
 
 ```bash
 # 에이전트 001 (secu) 상세 정보
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo /var/ossec/bin/agent_control -i 001 2>/dev/null"
 ```
 
@@ -524,7 +524,7 @@ opsclaw (10.20.30.201)──→ Wazuh Agent ──→ TCP 1514 ──→ Wazuh M
 ### 8.1 최근 알림 확인 (명령줄)
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo tail -5 /var/ossec/logs/alerts/alerts.json" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -50
 ```
 
@@ -588,7 +588,7 @@ Wazuh 알림의 JSON 구조를 이해해보자:
 ### 8.5 레벨별 알림 분포 확인
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 levels = {}
@@ -638,7 +638,7 @@ for level in sorted(levels.keys()):
 
 ```bash
 # MITRE ATT&CK ID가 포함된 알림 조회
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 mitre_count = {}
@@ -680,9 +680,9 @@ SOC 분석가는 MITRE ATT&CK을 다음과 같이 활용한다:
 
 ```bash
 # 잘못된 비밀번호로 secu에 SSH 시도 (의도적 실패)
-sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no user@10.20.30.1 "echo test" 2>/dev/null
-sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no user@10.20.30.1 "echo test" 2>/dev/null
-sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no user@10.20.30.1 "echo test" 2>/dev/null
+sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null
+sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null
+sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null
 echo "3회 로그인 실패 생성 완료"
 ```
 
@@ -691,7 +691,7 @@ echo "3회 로그인 실패 생성 완료"
 ```bash
 # 최근 SSH 관련 알림 확인
 sleep 15
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.100 \
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo tail -20 /var/ossec/logs/alerts/alerts.json 2>/dev/null" | \
   python3 -c "
 import sys, json

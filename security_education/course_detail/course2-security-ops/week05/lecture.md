@@ -139,7 +139,7 @@ Suricata가 지원하는 프로토콜:
 ## 4. 실습 환경 접속
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 ```
 
 룰 파일 위치 확인:

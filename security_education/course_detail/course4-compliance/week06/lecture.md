@@ -106,8 +106,8 @@
 
 ```bash
 # 보안 관련 문서/설정 파일 존재 확인
-sshpass -p1 ssh user@192.168.208.142 "ls -la /etc/security/ 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.142 "ls -la /etc/pam.d/ | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /etc/security/ 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /etc/pam.d/ | head -10"
 ```
 
 ### 2.2 [2.1.3] 정보자산 관리
@@ -116,7 +116,7 @@ sshpass -p1 ssh user@192.168.208.142 "ls -la /etc/pam.d/ | head -10"
 
 ```bash
 # 서버 인벤토리 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "hostname; cat /etc/machine-id; lscpu | grep 'Model name'; free -h | grep Mem"
 done
@@ -126,7 +126,7 @@ done
 
 ```bash
 # sudo 권한 사용자 확인 (주요 직무자)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "getent group sudo 2>/dev/null; getent group wheel 2>/dev/null"
 done
@@ -148,7 +148,7 @@ done
 
 ```bash
 # 점검: 불필요한 계정, 기본 계정, 미사용 계정
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 사용자 계정 ==="
   sshpass -p1 ssh user@$ip "awk -F: '\$3 >= 1000 && \$3 < 65534 {print \$1, \$6, \$7}' /etc/passwd"
   echo "--- 최근 로그인 ---"
@@ -160,15 +160,15 @@ done
 
 ```bash
 # 점검: 공용 계정 사용 여부 (같은 계정으로 다수 접속)
-sshpass -p1 ssh user@192.168.208.142 "who"
-sshpass -p1 ssh user@192.168.208.142 "last | head -20"
+sshpass -p1 ssh opsclaw@10.20.30.201 "who"
+sshpass -p1 ssh opsclaw@10.20.30.201 "last | head -20"
 ```
 
 ### 3.3 [2.5.3] 사용자 인증
 
 ```bash
 # 비밀번호 정책 점검
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 비밀번호 정책 ==="
   sshpass -p1 ssh user@$ip "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs"
   echo "--- pwquality ---"
@@ -185,7 +185,7 @@ done
 
 ```bash
 # 각 사용자의 비밀번호 만료일 확인
-sshpass -p1 ssh user@192.168.208.142 "sudo chage -l user 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "sudo chage -l user 2>/dev/null"
 ```
 
 ### 3.5 [2.6.1] 네트워크 접근
@@ -193,10 +193,10 @@ sshpass -p1 ssh user@192.168.208.142 "sudo chage -l user 2>/dev/null"
 ```bash
 # 방화벽 규칙 점검
 echo "=== secu 서버 방화벽 ==="
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null"
 
 # 기본 정책 확인 (DROP이어야 함)
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | grep 'policy'"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep 'policy'"
 ```
 
 ---
@@ -207,7 +207,7 @@ sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset 2>/dev/null | grep '
 
 ```bash
 # SSH 접근 제한 설정 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: SSH 설정 ==="
   sshpass -p1 ssh user@$ip "grep -E 'PermitRootLogin|PasswordAuthentication|MaxAuthTries|AllowUsers|AllowGroups|LoginGraceTime' /etc/ssh/sshd_config | grep -v '^#'"
 done
@@ -217,13 +217,13 @@ done
 
 ```bash
 # 불필요한 서비스 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 불필요 서비스 ==="
   sshpass -p1 ssh user@$ip "systemctl list-units --type=service --state=running --no-pager | grep -E 'cups|avahi|bluetooth|rpcbind|telnet|ftp' || echo '해당 없음'"
 done
 
 # SUID 파일 점검
-sshpass -p1 ssh user@192.168.208.142 "find /usr -perm -4000 -type f 2>/dev/null | wc -l"
+sshpass -p1 ssh opsclaw@10.20.30.201 "find /usr -perm -4000 -type f 2>/dev/null | wc -l"
 ```
 
 ### 4.3 [2.7.1] 암호정책 적용
@@ -231,31 +231,31 @@ sshpass -p1 ssh user@192.168.208.142 "find /usr -perm -4000 -type f 2>/dev/null 
 ```bash
 # 전송 구간 암호화 확인
 echo "=== Wazuh Dashboard TLS ==="
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep -E 'Protocol|Cipher'"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep -E 'Protocol|Cipher'"
 
 echo "=== SSH 암호 알고리즘 ==="
-sshpass -p1 ssh user@192.168.208.142 "ssh -Q cipher 2>/dev/null | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ssh -Q cipher 2>/dev/null | head -10"
 ```
 
 ### 4.4 [2.9.1] 변경관리
 
 ```bash
 # 최근 패키지 변경 이력
-sshpass -p1 ssh user@192.168.208.142 "cat /var/log/dpkg.log 2>/dev/null | tail -10"
-sshpass -p1 ssh user@192.168.208.142 "cat /var/log/apt/history.log 2>/dev/null | tail -20"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /var/log/dpkg.log 2>/dev/null | tail -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /var/log/apt/history.log 2>/dev/null | tail -20"
 ```
 
 ### 4.5 [2.9.3] 보안시스템 운영
 
 ```bash
 # IPS 상태 확인
-sshpass -p1 ssh user@192.168.208.150 "systemctl status suricata 2>/dev/null | head -5"
+sshpass -p1 ssh secu@10.20.30.1 "systemctl status suricata 2>/dev/null | head -5"
 
 # WAF 상태 확인
-sshpass -p1 ssh user@192.168.208.151 "systemctl status bunkerweb 2>/dev/null | head -5 || docker ps 2>/dev/null | grep bunkerweb"
+sshpass -p1 ssh web@10.20.30.80 "systemctl status bunkerweb 2>/dev/null | head -5 || docker ps 2>/dev/null | grep bunkerweb"
 
 # SIEM 상태 확인
-sshpass -p1 ssh user@192.168.208.152 "systemctl status wazuh-manager 2>/dev/null | head -5"
+sshpass -p1 ssh siem@10.20.30.100 "systemctl status wazuh-manager 2>/dev/null | head -5"
 ```
 
 ---
@@ -266,7 +266,7 @@ sshpass -p1 ssh user@192.168.208.152 "systemctl status wazuh-manager 2>/dev/null
 
 ```bash
 # 로그 보존 설정
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 로그 보존 ==="
   sshpass -p1 ssh user@$ip "cat /etc/logrotate.conf 2>/dev/null | grep -E 'rotate|weekly|monthly|daily'"
   echo "--- 로그 파일 크기 ---"
@@ -280,7 +280,7 @@ done
 
 ```bash
 # NTP 설정 확인 (로그 시간 정확성)
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip ==="
   sshpass -p1 ssh user@$ip "timedatectl 2>/dev/null | grep -E 'Time zone|NTP|synchronized'"
 done
@@ -290,7 +290,7 @@ done
 
 ```bash
 # 보안 패치 현황
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 패치 현황 ==="
   sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null | wc -l"
 done
@@ -300,20 +300,20 @@ done
 
 ```bash
 # Wazuh 에이전트 설치 및 동작 확인
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
   echo "=== $ip: Wazuh Agent ==="
   sshpass -p1 ssh user@$ip "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
 done
 
 # Wazuh Manager 알림 수집 확인
-sshpass -p1 ssh user@192.168.208.152 "ls -la /var/ossec/logs/alerts/ 2>/dev/null | tail -3"
+sshpass -p1 ssh siem@10.20.30.100 "ls -la /var/ossec/logs/alerts/ 2>/dev/null | tail -3"
 ```
 
 ### 5.5 [2.11.4] 사고 분석 및 공유
 
 ```bash
 # 최근 보안 이벤트 확인
-sshpass -p1 ssh user@192.168.208.152 "tail -5 /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30"
+sshpass -p1 ssh siem@10.20.30.100 "tail -5 /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30"
 ```
 
 ---
@@ -325,7 +325,7 @@ sshpass -p1 ssh user@192.168.208.152 "tail -5 /var/ossec/logs/alerts/alerts.json
 ```bash
 #!/bin/bash
 # ISMS-P 핵심 20개 항목 자동 점검 스크립트
-SERVERS="192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152"
+SERVERS="10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100"
 
 echo "=========================================="
 echo " ISMS-P 핵심 점검 실행: $(date)"

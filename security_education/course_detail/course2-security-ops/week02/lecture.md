@@ -144,7 +144,7 @@ Table (테이블)
 
 ```bash
 # 실습 서버 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 ```
 
 접속 후 nftables 버전을 확인한다:
@@ -409,13 +409,13 @@ web 서버에서 secu 서버로 접근 테스트:
 
 ```bash
 # web 서버에 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # ping 테스트 (허용되어야 함)
 ping -c 2 10.20.30.1
 
 # SSH 테스트 (허용되어야 함)
-sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1 hostname
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 hostname
 
 # 차단된 포트 테스트 (연결 안 됨)
 nc -zv 10.20.30.1 8888

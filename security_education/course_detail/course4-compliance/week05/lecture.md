@@ -189,53 +189,53 @@ ISMS-P 인증 기준 (총 102개)
 # 실습: 사용자 인증 관련 점검
 
 # 2.5.1 사용자 계정 관리 — 불필요한 계정 확인
-sshpass -p1 ssh user@192.168.208.142 "awk -F: '\$3 >= 1000 && \$3 < 65534 {print \$1}' /etc/passwd"
+sshpass -p1 ssh opsclaw@10.20.30.201 "awk -F: '\$3 >= 1000 && \$3 < 65534 {print \$1}' /etc/passwd"
 
 # 2.5.2 사용자 식별 — 공용 계정 사용 여부
-sshpass -p1 ssh user@192.168.208.142 "last | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "last | head -10"
 
 # 2.5.3 사용자 인증 — 비밀번호 정책
-sshpass -p1 ssh user@192.168.208.142 "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN' /etc/login.defs"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN' /etc/login.defs"
 
 # 2.5.4 비밀번호 관리 — 비밀번호 복잡도
-sshpass -p1 ssh user@192.168.208.142 "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$'"
 ```
 
 ### 4.2 접근통제 (2.6)
 
 ```bash
 # 2.6.1 네트워크 접근 — 방화벽 규칙
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset | wc -l"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset | wc -l"
 
 # 2.6.2 정보시스템 접근 — SSH 접근 제한
-sshpass -p1 ssh user@192.168.208.142 "grep -E 'AllowUsers|AllowGroups|DenyUsers' /etc/ssh/sshd_config"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'AllowUsers|AllowGroups|DenyUsers' /etc/ssh/sshd_config"
 
 # 2.6.5 인터넷 접속 통제 — 외부 접근 포트 확인
-sshpass -p1 ssh user@192.168.208.150 "sudo nft list ruleset | grep 'dport' | head -10"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset | grep 'dport' | head -10"
 ```
 
 ### 4.3 암호화 적용 (2.7)
 
 ```bash
 # 2.7.1 암호정책 적용 — 전송 구간 암호화
-sshpass -p1 ssh user@192.168.208.152 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
 
 # 2.7.2 암호키 관리 — 키 파일 권한 확인
-sshpass -p1 ssh user@192.168.208.142 "ls -la ~/.ssh/ 2>/dev/null"
-sshpass -p1 ssh user@192.168.208.142 "stat -c '%a %n' /etc/ssh/ssh_host_*_key 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la ~/.ssh/ 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "stat -c '%a %n' /etc/ssh/ssh_host_*_key 2>/dev/null"
 ```
 
 ### 4.4 시스템 및 서비스 보안관리 (2.10)
 
 ```bash
 # 2.10.1 보안시스템 운영 — IPS 상태 확인
-sshpass -p1 ssh user@192.168.208.150 "systemctl status suricata 2>/dev/null | head -5"
+sshpass -p1 ssh secu@10.20.30.1 "systemctl status suricata 2>/dev/null | head -5"
 
 # 2.10.4 로그 및 접속기록 관리 — 로그 보존 기간
-sshpass -p1 ssh user@192.168.208.142 "cat /etc/logrotate.conf | grep -A2 'rotate'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/logrotate.conf | grep -A2 'rotate'"
 
 # 2.10.7 패치 관리
-sshpass -p1 ssh user@192.168.208.142 "apt list --upgradable 2>/dev/null | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "apt list --upgradable 2>/dev/null | head -10"
 ```
 
 ---
@@ -312,18 +312,18 @@ sshpass -p1 ssh user@192.168.208.142 "apt list --upgradable 2>/dev/null | head -
 ```bash
 # 1.2.1 정보자산 식별 — 서버 자산 확인
 echo "=== 자산 목록 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151 192.168.208.152; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
   sshpass -p1 ssh user@$ip "hostname; uname -r; cat /etc/os-release | grep PRETTY_NAME" 2>/dev/null
 done
 
 # 1.2.2 현황분석 — 네트워크 구성 확인
 echo "=== 네트워크 구성 ==="
-sshpass -p1 ssh user@192.168.208.150 "ip route show"
+sshpass -p1 ssh secu@10.20.30.1 "ip route show"
 
 # 2.11.1 사고 예방 — Wazuh 에이전트 설치 현황
 echo "=== Wazuh Agent 상태 ==="
-for ip in 192.168.208.142 192.168.208.150 192.168.208.151; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
   echo "--- $ip ---"
   sshpass -p1 ssh user@$ip "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
 done
