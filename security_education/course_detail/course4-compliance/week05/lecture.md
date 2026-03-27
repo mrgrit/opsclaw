@@ -311,7 +311,7 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "apt list --upgradable 2>/dev/null | head -
 echo "=== 자산 목록 ==="
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
-  sshpass -p1 ssh user@$ip "hostname; uname -r; cat /etc/os-release | grep PRETTY_NAME" 2>/dev/null
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "hostname; uname -r; cat /etc/os-release | grep PRETTY_NAME" 2>/dev/null
 done
 
 # 1.2.2 현황분석 — 네트워크 구성 확인
@@ -322,7 +322,7 @@ sshpass -p1 ssh secu@10.20.30.1 "ip route show"
 echo "=== Wazuh Agent 상태 ==="
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
   echo "--- $ip ---"
-  sshpass -p1 ssh user@$ip "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
 done
 ```
 

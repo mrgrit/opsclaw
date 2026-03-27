@@ -79,9 +79,9 @@
 
 ```bash
 # 모든 서버 접속 확인
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh -o StrictHostKeyChecking=no user@$ip "hostname" 2>/dev/null || echo "접속 실패"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "hostname" 2>/dev/null || echo "접속 실패"
 done
 ```
 
@@ -102,9 +102,9 @@ done
 
 ```bash
 # 자동 로그아웃 설정 확인 (TMOUT)
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "grep TMOUT /etc/profile /etc/bash.bashrc /etc/environment 2>/dev/null || echo 'TMOUT 미설정'"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep TMOUT /etc/profile /etc/bash.bashrc /etc/environment 2>/dev/null || echo 'TMOUT 미설정'"
 done
 ```
 
@@ -118,18 +118,18 @@ done
 
 ```bash
 # 각 서버의 sudo 사용자 확인
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "getent group sudo 2>/dev/null; getent group wheel 2>/dev/null"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "getent group sudo 2>/dev/null; getent group wheel 2>/dev/null"
 done
 ```
 
 ### 3.2 root 직접 로그인 차단 확인
 
 ```bash
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "grep '^PermitRootLogin' /etc/ssh/sshd_config || echo '기본값 사용 중'"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^PermitRootLogin' /etc/ssh/sshd_config || echo '기본값 사용 중'"
 done
 ```
 
@@ -159,9 +159,9 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_
 ### 4.2 SSH 인증 방식 점검
 
 ```bash
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "grep -E 'PasswordAuthentication|PubkeyAuthentication|MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#'"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep -E 'PasswordAuthentication|PubkeyAuthentication|MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#'"
 done
 ```
 
@@ -231,7 +231,7 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "sudo auditctl -l 2>/dev/null || echo 'audi
 # Wazuh 에이전트 상태
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
   echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "systemctl status wazuh-agent 2>/dev/null | grep Active || echo 'Wazuh Agent 미설치'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl status wazuh-agent 2>/dev/null | grep Active || echo 'Wazuh Agent 미설치'"
 done
 ```
 
@@ -250,9 +250,9 @@ sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset"
 
 ```bash
 # 각 서버에서 열려 있는 포트 확인
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "ss -tlnp 2>/dev/null | grep LISTEN"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ss -tlnp 2>/dev/null | grep LISTEN"
 done
 ```
 

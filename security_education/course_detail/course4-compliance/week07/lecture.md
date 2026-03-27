@@ -139,9 +139,9 @@
 
 ```bash
 # ID.AM-1: 물리적 장치 및 시스템 인벤토리
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "hostname; lscpu | grep 'Model name'; free -h | grep Mem; df -h / | tail -1"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "hostname; lscpu | grep 'Model name'; free -h | grep Mem; df -h / | tail -1"
 done
 
 # ID.AM-2: 소프트웨어 인벤토리

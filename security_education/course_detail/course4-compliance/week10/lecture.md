@@ -123,7 +123,7 @@
 # 하드웨어 자산 정보 수집
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
-  sshpass -p1 ssh user@$ip "
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
     echo '[호스트명]' && hostname
     echo '[OS]' && cat /etc/os-release | grep PRETTY_NAME
     echo '[CPU]' && lscpu | grep 'Model name'
@@ -138,7 +138,7 @@ done
 # 소프트웨어 자산 수집
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip: 실행 서비스 =========="
-  sshpass -p1 ssh user@$ip "systemctl list-units --type=service --state=running --no-pager | grep -v 'loaded units' | tail -n +2 | head -15"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl list-units --type=service --state=running --no-pager | grep -v 'loaded units' | tail -n +2 | head -15"
 done
 ```
 
@@ -146,7 +146,7 @@ done
 # 네트워크 자산 (열린 포트 = 서비스)
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip: 열린 포트 =========="
-  sshpass -p1 ssh user@$ip "ss -tlnp 2>/dev/null | grep LISTEN"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ss -tlnp 2>/dev/null | grep LISTEN"
 done
 ```
 
@@ -319,9 +319,9 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "sysctl net.ipv4.conf.all.accept_redirects 
 
 ```bash
 # 1단계: 자산 확인
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "hostname; ss -tlnp 2>/dev/null | grep LISTEN | wc -l; echo '서비스 수'"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "hostname; ss -tlnp 2>/dev/null | grep LISTEN | wc -l; echo '서비스 수'"
 done
 
 # 2단계: 위협 증거
@@ -334,7 +334,7 @@ sshpass -p1 ssh secu@10.20.30.1 "wc -l /var/log/suricata/fast.log 2>/dev/null"
 # 3단계: 취약점 확인
 echo "=== 미패치 현황 ==="
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "$ip: $(sshpass -p1 ssh user@$ip 'apt list --upgradable 2>/dev/null | wc -l') 패키지"
+  echo "$ip: $(sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) 'apt list --upgradable 2>/dev/null | wc -l') 패키지"
 done
 ```
 

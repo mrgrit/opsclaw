@@ -113,9 +113,9 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /etc/pam.d/ | head -10"
 
 ```bash
 # 서버 인벤토리 확인
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "hostname; cat /etc/machine-id; lscpu | grep 'Model name'; free -h | grep Mem"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "hostname; cat /etc/machine-id; lscpu | grep 'Model name'; free -h | grep Mem"
 done
 ```
 
@@ -123,9 +123,9 @@ done
 
 ```bash
 # sudo 권한 사용자 확인 (주요 직무자)
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "getent group sudo 2>/dev/null; getent group wheel 2>/dev/null"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "getent group sudo 2>/dev/null; getent group wheel 2>/dev/null"
 done
 ```
 
@@ -147,9 +147,9 @@ done
 # 점검: 불필요한 계정, 기본 계정, 미사용 계정
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 사용자 계정 ==="
-  sshpass -p1 ssh user@$ip "awk -F: '\$3 >= 1000 && \$3 < 65534 {print \$1, \$6, \$7}' /etc/passwd"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "awk -F: '\$3 >= 1000 && \$3 < 65534 {print \$1, \$6, \$7}' /etc/passwd"
   echo "--- 최근 로그인 ---"
-  sshpass -p1 ssh user@$ip "lastlog 2>/dev/null | awk 'NR>1 && \$2 != \"Never\" {print}' | head -5"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "lastlog 2>/dev/null | awk 'NR>1 && \$2 != \"Never\" {print}' | head -5"
 done
 ```
 
@@ -167,9 +167,9 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "last | head -20"
 # 비밀번호 정책 점검
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 비밀번호 정책 ==="
-  sshpass -p1 ssh user@$ip "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs"
   echo "--- pwquality ---"
-  sshpass -p1 ssh user@$ip "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$' || echo '미설정'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$' || echo '미설정'"
 done
 ```
 
@@ -206,7 +206,7 @@ sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep 'polic
 # SSH 접근 제한 설정 확인
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: SSH 설정 ==="
-  sshpass -p1 ssh user@$ip "grep -E 'PermitRootLogin|PasswordAuthentication|MaxAuthTries|AllowUsers|AllowGroups|LoginGraceTime' /etc/ssh/sshd_config | grep -v '^#'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep -E 'PermitRootLogin|PasswordAuthentication|MaxAuthTries|AllowUsers|AllowGroups|LoginGraceTime' /etc/ssh/sshd_config | grep -v '^#'"
 done
 ```
 
@@ -216,7 +216,7 @@ done
 # 불필요한 서비스 확인
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 불필요 서비스 ==="
-  sshpass -p1 ssh user@$ip "systemctl list-units --type=service --state=running --no-pager | grep -E 'cups|avahi|bluetooth|rpcbind|telnet|ftp' || echo '해당 없음'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl list-units --type=service --state=running --no-pager | grep -E 'cups|avahi|bluetooth|rpcbind|telnet|ftp' || echo '해당 없음'"
 done
 
 # SUID 파일 점검
@@ -265,9 +265,9 @@ sshpass -p1 ssh siem@10.20.30.100 "systemctl status wazuh-manager 2>/dev/null | 
 # 로그 보존 설정
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 로그 보존 ==="
-  sshpass -p1 ssh user@$ip "cat /etc/logrotate.conf 2>/dev/null | grep -E 'rotate|weekly|monthly|daily'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "cat /etc/logrotate.conf 2>/dev/null | grep -E 'rotate|weekly|monthly|daily'"
   echo "--- 로그 파일 크기 ---"
-  sshpass -p1 ssh user@$ip "ls -lh /var/log/syslog /var/log/auth.log 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ls -lh /var/log/syslog /var/log/auth.log 2>/dev/null"
 done
 ```
 
@@ -277,9 +277,9 @@ done
 
 ```bash
 # NTP 설정 확인 (로그 시간 정확성)
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "timedatectl 2>/dev/null | grep -E 'Time zone|NTP|synchronized'"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "timedatectl 2>/dev/null | grep -E 'Time zone|NTP|synchronized'"
 done
 ```
 
@@ -289,7 +289,7 @@ done
 # 보안 패치 현황
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 패치 현황 ==="
-  sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null | wc -l"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "apt list --upgradable 2>/dev/null | wc -l"
 done
 ```
 
@@ -299,7 +299,7 @@ done
 # Wazuh 에이전트 설치 및 동작 확인
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
   echo "=== $ip: Wazuh Agent ==="
-  sshpass -p1 ssh user@$ip "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
 done
 
 # Wazuh Manager 알림 수집 확인
@@ -333,27 +333,27 @@ for ip in $SERVERS; do
   echo "########## $ip ##########"
 
   echo "[2.5.1] 사용자 계정:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no user@$ip \
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv \
     "awk -F: '\$3>=1000 && \$3<65534{print \$1}' /etc/passwd" 2>/dev/null
 
   echo "[2.5.3] 비밀번호 정책:"
-  sshpass -p1 ssh user@$ip \
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) \
     "grep PASS_MAX_DAYS /etc/login.defs 2>/dev/null | grep -v '^#'" 2>/dev/null
 
   echo "[2.6.2] SSH 접근 제한:"
-  sshpass -p1 ssh user@$ip \
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) \
     "grep -E 'PermitRootLogin|MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#'" 2>/dev/null
 
   echo "[2.10.4] 로그 보존:"
-  sshpass -p1 ssh user@$ip \
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) \
     "ls -lh /var/log/auth.log 2>/dev/null || echo 'N/A'" 2>/dev/null
 
   echo "[2.10.5] NTP 동기화:"
-  sshpass -p1 ssh user@$ip \
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) \
     "timedatectl 2>/dev/null | grep synchronized" 2>/dev/null
 
   echo "[2.10.7] 패치 현황:"
-  sshpass -p1 ssh user@$ip \
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) \
     "apt list --upgradable 2>/dev/null | wc -l" 2>/dev/null
 done
 ```

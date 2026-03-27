@@ -154,7 +154,7 @@ echo ""
 echo "=== 로그 수집 ==="
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
   echo -n "$ip Wazuh Agent: "
-  sshpass -p1 ssh user@$ip "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
 done
 
 # 백업 상태
@@ -203,7 +203,7 @@ echo ""
 echo "[2] 의심 프로세스"
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
-  sshpass -p1 ssh user@$ip "ps aux --sort=-%cpu | head -5"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ps aux --sort=-%cpu | head -5"
 done
 
 # 3. 네트워크 연결 확인
@@ -302,7 +302,7 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "apt list --upgradable 2>/dev/null | head -
 echo "=== 서비스 상태 ==="
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
-  sshpass -p1 ssh user@$ip "systemctl list-units --type=service --state=failed --no-pager"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl list-units --type=service --state=failed --no-pager"
 done
 
 # 2. 모니터링 강화

@@ -138,7 +138,7 @@ sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata 2>/dev/null"
 echo "=== 인증 방식 ==="
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
-  sshpass -p1 ssh user@$ip "grep -E 'PasswordAuthentication|PubkeyAuthentication' /etc/ssh/sshd_config | grep -v '^#'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep -E 'PasswordAuthentication|PubkeyAuthentication' /etc/ssh/sshd_config | grep -v '^#'"
 done
 
 # CC6.3: 접근 권한 부여/변경/제거
@@ -286,16 +286,16 @@ echo "========================================="
 ip=10.20.30.201
 
 echo "[1] 접근통제"
-sshpass -p1 ssh user@$ip "grep -c '^PermitRootLogin no' /etc/ssh/sshd_config 2>/dev/null && echo '  root 로그인 차단: OK' || echo '  root 로그인 차단: FAIL'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep -c '^PermitRootLogin no' /etc/ssh/sshd_config 2>/dev/null && echo '  root 로그인 차단: OK' || echo '  root 로그인 차단: FAIL'"
 
 echo "[2] 로깅"
-sshpass -p1 ssh user@$ip "systemctl is-active rsyslog 2>/dev/null && echo '  rsyslog: OK' || echo '  rsyslog: FAIL'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active rsyslog 2>/dev/null && echo '  rsyslog: OK' || echo '  rsyslog: FAIL'"
 
 echo "[3] 암호화"
 sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep 'Protocol' | grep -q 'TLSv1.[23]' && echo '  TLS: OK' || echo '  TLS: 확인필요'"
 
 echo "[4] 패치"
-cnt=$(sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null | wc -l")
+cnt=$(sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "apt list --upgradable 2>/dev/null | wc -l")
 echo "  미적용 패치: $cnt"
 
 echo "[5] 사고대응"

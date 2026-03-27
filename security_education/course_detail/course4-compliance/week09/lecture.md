@@ -204,9 +204,9 @@ sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:44
 
 ```bash
 # 개인정보가 포함될 수 있는 로그 파일의 접근 권한
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "ls -la /var/log/auth.log /var/log/syslog 2>/dev/null"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ls -la /var/log/auth.log /var/log/syslog 2>/dev/null"
 done
 ```
 

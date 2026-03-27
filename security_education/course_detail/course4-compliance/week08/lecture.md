@@ -144,13 +144,13 @@ for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
 
   echo "[1] 일반 사용자 계정 목록:"
-  sshpass -p1 ssh user@$ip "awk -F: '\$3>=1000 && \$3<65534{print \$1,\$6,\$7}' /etc/passwd"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "awk -F: '\$3>=1000 && \$3<65534{print \$1,\$6,\$7}' /etc/passwd"
 
   echo "[2] sudo 권한 사용자:"
-  sshpass -p1 ssh user@$ip "getent group sudo 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "getent group sudo 2>/dev/null"
 
   echo "[3] root 직접 로그인 설정:"
-  sshpass -p1 ssh user@$ip "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'"
 done
 ```
 
@@ -161,13 +161,13 @@ for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
 
   echo "[4] 비밀번호 정책:"
-  sshpass -p1 ssh user@$ip "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN' /etc/login.defs | grep -v '^#'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN' /etc/login.defs | grep -v '^#'"
 
   echo "[5] SSH 최대 인증 시도:"
-  sshpass -p1 ssh user@$ip "grep 'MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#' || echo '기본값(6)'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep 'MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#' || echo '기본값(6)'"
 
   echo "[6] 비밀번호 복잡도:"
-  sshpass -p1 ssh user@$ip "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$' || echo '미설정'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$' || echo '미설정'"
 done
 ```
 
@@ -178,16 +178,16 @@ for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
 
   echo "[7] syslog 서비스:"
-  sshpass -p1 ssh user@$ip "systemctl is-active rsyslog 2>/dev/null || systemctl is-active syslog-ng 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active rsyslog 2>/dev/null || systemctl is-active syslog-ng 2>/dev/null"
 
   echo "[8] 로그 파일 존재:"
-  sshpass -p1 ssh user@$ip "ls -lh /var/log/syslog /var/log/auth.log 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ls -lh /var/log/syslog /var/log/auth.log 2>/dev/null"
 
   echo "[9] auditd 상태:"
-  sshpass -p1 ssh user@$ip "systemctl is-active auditd 2>/dev/null || echo '미설치'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active auditd 2>/dev/null || echo '미설치'"
 
   echo "[10] Wazuh Agent:"
-  sshpass -p1 ssh user@$ip "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
 done
 ```
 
@@ -201,7 +201,7 @@ sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep policy
 echo "[12] 열린 포트:"
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
-  sshpass -p1 ssh user@$ip "ss -tlnp 2>/dev/null | grep LISTEN"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ss -tlnp 2>/dev/null | grep LISTEN"
 done
 
 # IPS 상태
@@ -226,13 +226,13 @@ for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "========== $ip =========="
 
   echo "[16] 커널 보안 파라미터:"
-  sshpass -p1 ssh user@$ip "sysctl net.ipv4.ip_forward net.ipv4.conf.all.accept_redirects 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "sysctl net.ipv4.ip_forward net.ipv4.conf.all.accept_redirects 2>/dev/null"
 
   echo "[17] NTP 동기화:"
-  sshpass -p1 ssh user@$ip "timedatectl 2>/dev/null | grep -E 'synchronized|NTP'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "timedatectl 2>/dev/null | grep -E 'synchronized|NTP'"
 
   echo "[18] 패치 현황:"
-  sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null | wc -l"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "apt list --upgradable 2>/dev/null | wc -l"
 done
 ```
 
@@ -319,7 +319,7 @@ done
 ```bash
 # 서버 접속 확인
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 user@$ip "hostname" 2>/dev/null \
+  sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 $srv "hostname" 2>/dev/null \
     && echo "$ip: OK" || echo "$ip: FAIL"
 done
 ```

@@ -158,9 +158,9 @@
 
 ```bash
 # 정책 4.2: root 직접 로그인 금지 — 현재 설정 확인
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
-  echo "=== $ip ==="
-  sshpass -p1 ssh user@$ip "grep '^PermitRootLogin' /etc/ssh/sshd_config || echo 'PermitRootLogin: 기본값'"
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+  echo "=== $srv ==="
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^PermitRootLogin' /etc/ssh/sshd_config || echo 'PermitRootLogin: 기본값'"
 done
 
 # 정책 4.1: 미사용 계정 확인
@@ -339,9 +339,9 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/logrotate.conf 2>/dev/null | grep
 ```bash
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: 패치 현황 ==="
-  sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null | head -5"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "apt list --upgradable 2>/dev/null | head -5"
   echo "보안 패치:"
-  sshpass -p1 ssh user@$ip "apt list --upgradable 2>/dev/null | grep -i security | head -3"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "apt list --upgradable 2>/dev/null | grep -i security | head -3"
 done
 ```
 
@@ -368,19 +368,19 @@ echo "=== 정책 준수 점검 ==="
 ip=10.20.30.201
 
 echo "[1] root 로그인:"
-sshpass -p1 ssh user@$ip "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'"
 
 echo "[2] 비밀번호 만료:"
-sshpass -p1 ssh user@$ip "grep '^PASS_MAX_DAYS' /etc/login.defs"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^PASS_MAX_DAYS' /etc/login.defs"
 
 echo "[3] 세션 타임아웃:"
-sshpass -p1 ssh user@$ip "grep TMOUT /etc/profile /etc/bash.bashrc 2>/dev/null || echo '미설정'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep TMOUT /etc/profile /etc/bash.bashrc 2>/dev/null || echo '미설정'"
 
 echo "[4] NTP:"
-sshpass -p1 ssh user@$ip "timedatectl 2>/dev/null | grep synchronized"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "timedatectl 2>/dev/null | grep synchronized"
 
 echo "[5] 로그 보관:"
-sshpass -p1 ssh user@$ip "grep '^rotate' /etc/logrotate.conf"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^rotate' /etc/logrotate.conf"
 ```
 
 ---

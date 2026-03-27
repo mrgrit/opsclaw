@@ -119,9 +119,9 @@ echo "=== SSH 로그인 감사 ==="
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "--- $ip ---"
   echo -n "성공: "
-  sshpass -p1 ssh user@$ip "grep 'Accepted' /var/log/auth.log 2>/dev/null | wc -l"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep 'Accepted' /var/log/auth.log 2>/dev/null | wc -l"
   echo -n "실패: "
-  sshpass -p1 ssh user@$ip "grep 'Failed password' /var/log/auth.log 2>/dev/null | wc -l"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep 'Failed password' /var/log/auth.log 2>/dev/null | wc -l"
 done
 ```
 
@@ -135,7 +135,7 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2
 # 3. sudo 사용 감사
 for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
   echo "=== $ip: sudo 사용 이력 ==="
-  sshpass -p1 ssh user@$ip "grep 'sudo:' /var/log/auth.log 2>/dev/null | tail -5"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep 'sudo:' /var/log/auth.log 2>/dev/null | tail -5"
 done
 ```
 
@@ -206,7 +206,7 @@ for ip in $SERVERS; do
 
   # 1. SSH 설정
   echo "[SSH 설정]"
-  sshpass -p1 ssh user@$ip "
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
     echo -n '  PermitRootLogin: '; grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'
     echo -n '  PasswordAuth: '; grep '^PasswordAuthentication' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'
     echo -n '  MaxAuthTries: '; grep '^MaxAuthTries' /etc/ssh/sshd_config 2>/dev/null || echo '기본값(6)'
@@ -215,23 +215,23 @@ for ip in $SERVERS; do
 
   # 2. 비밀번호 정책
   echo "[비밀번호 정책]"
-  sshpass -p1 ssh user@$ip "
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
     grep -E '^PASS_MAX_DAYS|^PASS_MIN_DAYS|^PASS_MIN_LEN' /etc/login.defs 2>/dev/null | sed 's/^/  /'
   " 2>/dev/null
 
   # 3. 파일 권한
   echo "[중요 파일 권한]"
-  sshpass -p1 ssh user@$ip "
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
     stat -c '  %a %n' /etc/passwd /etc/shadow /etc/ssh/sshd_config 2>/dev/null
   " 2>/dev/null
 
   # 4. 네트워크 서비스
   echo "[열린 포트]"
-  sshpass -p1 ssh user@$ip "ss -tlnp 2>/dev/null | grep LISTEN | awk '{print \"  \" \$4}'" 2>/dev/null
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ss -tlnp 2>/dev/null | grep LISTEN | awk '{print \"  \" \$4}'" 2>/dev/null
 
   # 5. 커널 보안
   echo "[커널 보안 파라미터]"
-  sshpass -p1 ssh user@$ip "
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
     echo -n '  ip_forward: '; sysctl -n net.ipv4.ip_forward 2>/dev/null
     echo -n '  accept_redirects: '; sysctl -n net.ipv4.conf.all.accept_redirects 2>/dev/null
     echo -n '  accept_source_route: '; sysctl -n net.ipv4.conf.all.accept_source_route 2>/dev/null
@@ -250,28 +250,28 @@ ip=10.20.30.201
 echo "=== CIS Benchmark 일부 점검 ==="
 
 echo "[1.1] 별도 /tmp 파티션:"
-sshpass -p1 ssh user@$ip "mount | grep ' /tmp ' || echo '  별도 파티션 아님'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "mount | grep ' /tmp ' || echo '  별도 파티션 아님'"
 
 echo "[1.4] ASLR 활성화:"
-sshpass -p1 ssh user@$ip "sysctl kernel.randomize_va_space 2>/dev/null"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "sysctl kernel.randomize_va_space 2>/dev/null"
 
 echo "[2.1] inetd/xinetd 서비스:"
-sshpass -p1 ssh user@$ip "systemctl is-active inetd xinetd 2>/dev/null || echo '  미설치 (양호)'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active inetd xinetd 2>/dev/null || echo '  미설치 (양호)'"
 
 echo "[3.1] IP 포워딩 비활성화:"
-sshpass -p1 ssh user@$ip "sysctl net.ipv4.ip_forward 2>/dev/null"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "sysctl net.ipv4.ip_forward 2>/dev/null"
 
 echo "[4.1] auditd 활성화:"
-sshpass -p1 ssh user@$ip "systemctl is-active auditd 2>/dev/null || echo '  미활성'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active auditd 2>/dev/null || echo '  미활성'"
 
 echo "[5.1] cron 접근 제한:"
-sshpass -p1 ssh user@$ip "ls -la /etc/cron.allow /etc/cron.deny 2>/dev/null || echo '  설정 없음'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ls -la /etc/cron.allow /etc/cron.deny 2>/dev/null || echo '  설정 없음'"
 
 echo "[5.2] SSH 설정:"
-sshpass -p1 ssh user@$ip "stat -c '%a' /etc/ssh/sshd_config 2>/dev/null | xargs -I{} echo '  sshd_config 권한: {}'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "stat -c '%a' /etc/ssh/sshd_config 2>/dev/null | xargs -I{} echo '  sshd_config 권한: {}'"
 
 echo "[6.1] 파일 무결성 도구:"
-sshpass -p1 ssh user@$ip "which aide tripwire 2>/dev/null || echo '  무결성 도구 미설치'"
+sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "which aide tripwire 2>/dev/null || echo '  무결성 도구 미설치'"
 ```
 
 ---
@@ -300,7 +300,7 @@ ip=10.20.30.201
 echo ""
 echo "[A.8.2] 특수접근권한 관리"
 echo "  기준: PermitRootLogin no"
-result=$(sshpass -p1 ssh user@$ip "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null" || echo "미설정")
+result=$(sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null" || echo "미설정")
 echo "  현황: $result"
 if echo "$result" | grep -q "no"; then
   echo "  판정: 적합"
@@ -313,7 +313,7 @@ fi
 echo ""
 echo "[A.8.5] 보안인증 - 비밀번호 최대 사용일"
 echo "  기준: PASS_MAX_DAYS <= 90"
-result=$(sshpass -p1 ssh user@$ip "grep '^PASS_MAX_DAYS' /etc/login.defs 2>/dev/null | awk '{print \$2}'")
+result=$(sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^PASS_MAX_DAYS' /etc/login.defs 2>/dev/null | awk '{print \$2}'")
 echo "  현황: PASS_MAX_DAYS = $result"
 if [ -n "$result" ] && [ "$result" -le 90 ] 2>/dev/null; then
   echo "  판정: 적합"
@@ -326,7 +326,7 @@ fi
 echo ""
 echo "[A.8.15] 로깅 - auditd"
 echo "  기준: auditd 활성화"
-result=$(sshpass -p1 ssh user@$ip "systemctl is-active auditd 2>/dev/null" || echo "inactive")
+result=$(sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active auditd 2>/dev/null" || echo "inactive")
 echo "  현황: $result"
 if [ "$result" = "active" ]; then
   echo "  판정: 적합"
