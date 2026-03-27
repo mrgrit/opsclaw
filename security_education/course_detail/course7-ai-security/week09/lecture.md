@@ -74,6 +74,24 @@
 
 ## 1. OpsClaw 프로젝트 생명주기
 
+> **이 실습을 왜 하는가?**
+> OpsClaw는 보안 작업을 **자동화하고 증적을 관리**하는 하네스 플랫폼이다.
+> 직접 SSH로 명령을 실행하면 아무런 기록이 남지 않지만,
+> OpsClaw를 경유하면 **모든 명령, 결과, 시간, 보상이 자동으로 기록**된다.
+>
+> **이걸 하면 무엇을 알 수 있는가?**
+> - 프로젝트 라이프사이클 (created→planned→executing→done)
+> - dispatch(단일 명령)와 execute-plan(다중 태스크 병렬)의 차이
+> - evidence/replay로 작업 이력을 추적하는 방법
+> - PoW 블록과 보상(reward)의 의미
+>
+> **실무 활용:**
+> - 보안 감사: "어떤 명령을 어떤 서버에서 실행했는가?" → replay API로 즉시 답변
+> - 성과 관리: 에이전트별 보상 누적 → 리더보드
+> - 반복 작업: Playbook으로 동일 점검을 매주 자동 실행
+>
+> **검증 완료:** OpsClaw API 정상 동작, execute-plan 병렬 실행, evidence/replay 확인
+
 ```
 created → planned → executing → done
    ↓         ↓          ↓
