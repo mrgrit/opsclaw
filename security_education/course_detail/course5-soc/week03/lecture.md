@@ -65,7 +65,7 @@
 | **syslog** | syslog | 시스템 로그를 원격 전송하는 프로토콜 (UDP 514) | 모든 부서 보고서를 본사로 모으는 시스템 |
 
 
-# 본 강의 내용
+---
 
 # Week 03: 로그 이해 (2) - 네트워크/웹 로그
 
@@ -500,84 +500,6 @@ TTD=$((DETECT_TIME - ATTACK_TIME))
 echo "TTD (탐지 소요 시간): ${TTD}초"
 ```
 
-## 보충 실습
-
-### 보충 실습 1: 기본 동작 확인
-
-이론에서 배운 내용을 직접 확인하는 기초 실습이다.
-
-```bash
-# Step 1: 현재 상태 확인
-echo "=== 현재 상태 ==="
-# (해당 주차에 맞는 확인 명령)
-
-# Step 2: 설정/변경 적용
-echo "=== 변경 적용 ==="
-# (해당 주차에 맞는 실습 명령)
-
-# Step 3: 결과 검증
-echo "=== 결과 확인 ==="
-# (변경 결과 확인 명령)
-```
-
-> **트러블슈팅:**
-> - 명령이 실패하면: 권한(sudo), 경로, 서비스 상태를 먼저 확인
-> - 예상과 다른 결과: 이전 실습의 설정이 남아있을 수 있으므로 초기화 후 재시도
-> - 타임아웃: 네트워크 연결 또는 서비스 가동 상태 확인
-
-### 보충 실습 2: 탐지/모니터링 관점
-
-공격자가 아닌 **방어자 관점**에서 동일한 활동을 모니터링하는 실습이다.
-
-```bash
-# siem 서버에서 관련 로그 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
-  "sudo cat /var/ossec/logs/alerts/alerts.json | tail -5" 2>/dev/null
-
-# Suricata 알림 확인 (해당 시)
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
-  "sudo tail -20 /var/log/suricata/fast.log" 2>/dev/null
-```
-
-> **왜 방어자 관점도 배우는가?**
-> 공격 기법만 알면 "스크립트 키디"에 불과하다.
-> 공격이 어떻게 탐지되는지 이해해야 진정한 보안 전문가이다.
-> 이 과목의 모든 공격 실습에는 대응하는 탐지/방어 관점이 포함된다.
-
-### 보충 실습 3: OpsClaw 자동화
-
-이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화한다.
-
-```bash
-# 프로젝트 생성 (이번 주차용)
-RESULT=$(curl -s -X POST http://localhost:8000/projects \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{"name":"weekXX-lab","request_text":"이번 주차 실습 자동화","master_mode":"external"}')
-PID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
-
-# Stage 전환
-curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
-curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
-
-# 실습 태스크 실행 (해당 주차에 맞게 수정)
-curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
-    "tasks": [
-      {"order":1,"title":"실습 태스크 1","instruction_prompt":"echo 실습1","risk_level":"low","subagent_url":"http://localhost:8002"},
-      {"order":2,"title":"실습 태스크 2","instruction_prompt":"echo 실습2","risk_level":"low","subagent_url":"http://10.20.30.80:8002"}
-    ],
-    "subagent_url":"http://localhost:8002",
-    "parallel":true
-  }'
-
-# Evidence 확인
-curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
-  -H "X-API-Key: opsclaw-api-key-2026" | python3 -m json.tool
-```
-
 
 ---
 
@@ -621,54 +543,9 @@ curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
 
 ## 과제 (다음 주까지)
 
-### 과제 1: 이론 정리 보고서 (30점)
-
-이번 주차의 핵심 개념을 자신의 말로 정리하라.
-
-| 항목 | 배점 |
-|------|------|
-| 핵심 개념 정의 및 설명 | 10점 |
-| 실습 결과 캡처 및 해석 | 10점 |
-| 보안 관점 분석 (공격↔방어) | 10점 |
-
-### 과제 2: 실습 수행 보고서 (40점)
-
-이번 주차의 모든 실습을 수행하고 결과를 보고서로 작성하라.
-
-| 항목 | 배점 |
-|------|------|
-| 실습 명령어 및 실행 결과 캡처 | 15점 |
-| 결과 해석 및 보안 의미 분석 | 15점 |
-| 트러블슈팅 경험 (있는 경우) | 10점 |
-
-### 과제 3: OpsClaw 자동화 (30점)
-
-이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화하라.
-
-| 항목 | 배점 |
-|------|------|
-| 프로젝트 생성 + stage 전환 | 5점 |
-| execute-plan 태스크 설계 (3개 이상) | 10점 |
-| evidence/summary 결과 | 5점 |
-| replay 타임라인 결과 | 5점 |
-| 자동화의 이점 분석 (직접 실행 대비) | 5점 |
-
-**제출:** 보고서(PDF 또는 MD) + OpsClaw project_id
-
-
----
 
 ## 검증 체크리스트
 
 이번 주차의 학습을 완료하려면 다음 항목을 모두 확인하라:
 
-- [ ] 이론 강의 내용 이해 (핵심 용어 설명 가능)
-- [ ] 기본 실습 모두 수행 완료
-- [ ] 보충 실습 1 (기본 동작 확인) 완료
-- [ ] 보충 실습 2 (탐지/모니터링 관점) 수행
-- [ ] 보충 실습 3 (OpsClaw 자동화) 수행
-- [ ] 자가 점검 퀴즈 8/10 이상 정답
-- [ ] 과제 1 (이론 정리) 작성
-- [ ] 과제 2 (실습 보고서) 작성
-- [ ] 과제 3 (OpsClaw 자동화) 완료
 

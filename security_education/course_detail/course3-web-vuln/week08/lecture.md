@@ -64,7 +64,7 @@
 | **점검 보고서** | Assessment Report | 발견된 취약점과 대응 방안을 정리한 문서 | 건물 안전 진단 보고서 |
 
 
-# 본 강의 내용
+---
 
 # Week 08: 중간고사 — JuiceShop 점검 보고서
 
@@ -410,140 +410,6 @@ for c in sorted(data, key=lambda x: x.get('difficulty', 0)):
 
 ---
 
-## 심화 학습: 개념 확장
-
-### 핵심 개념 상세 해설
-
-이 주차에서 다루는 핵심 개념들을 더 깊이 살펴본다.
-
-#### 개념 1: 동작 원리 (Course 3)
-
-이 주차에서 다루는 기술의 동작 방식을 단계별로 분해하여 이해한다.
-
-```
-[1단계] 입력/요청 → 시스템이 데이터를 수신
-[2단계] 처리 → 내부 로직에 의한 데이터 처리
-[3단계] 출력/응답 → 결과 반환 또는 상태 변경
-[4단계] 기록 → 로그/증적 생성
-```
-
-> **왜 이 순서가 중요한가?**
-> 각 단계에서 보안 검증이 누락되면 취약점이 발생한다.
-> 1단계: 입력값 검증 미흡 → Injection
-> 2단계: 인가 확인 누락 → Broken Access Control
-> 3단계: 에러 정보 노출 → Information Disclosure
-> 4단계: 로깅 실패 → Monitoring Failures
-
-#### 개념 2: 보안 관점에서의 위험 분석
-
-| 위험 요소 | 발생 조건 | 영향도 | 대응 방안 |
-|----------|---------|--------|---------|
-| 설정 미흡 | 기본 설정 사용 | 높음 | 보안 하드닝 가이드 적용 |
-| 패치 누락 | 업데이트 미적용 | 높음 | 정기 패치 관리 프로세스 |
-| 접근 제어 부재 | 인증/인가 미구현 | 매우 높음 | RBAC, MFA 적용 |
-| 로깅 미흡 | 감사 로그 미수집 | 중간 | SIEM 연동, 로그 정책 |
-
-#### 개념 3: 실제 사례 분석
-
-**사례 1: 유사 취약점이 실제 피해로 이어진 경우**
-
-실제 보안 사고에서 이 주차의 주제가 어떻게 악용되었는지 살펴본다.
-공격자는 동일한 기법을 사용하여 대규모 데이터 유출, 서비스 장애, 금전적 피해를 초래하였다.
-
-**교훈:**
-- 기본적인 보안 조치의 중요성
-- 탐지 체계의 필수성
-- 사고 대응 절차의 사전 수립 필요성
-
-### 도구 비교표
-
-| 도구 | 용도 | 장점 | 단점 | 라이선스 |
-|------|------|------|------|---------|
-| 도구 A | 기본 점검 | 간편, 빠름 | 기능 제한 | 오픈소스 |
-| 도구 B | 심층 분석 | 상세 결과 | 학습 곡선 | 상용/무료 |
-| 도구 C | 자동화 | CI/CD 연동 | 오탐 가능 | 오픈소스 |
-
-
----
-
-## 보충 실습
-
-### 보충 실습 1: 기본 동작 확인
-
-이론에서 배운 내용을 직접 확인하는 기초 실습이다.
-
-```bash
-# Step 1: 현재 상태 확인
-echo "=== 현재 상태 ==="
-# (해당 주차에 맞는 확인 명령)
-
-# Step 2: 설정/변경 적용
-echo "=== 변경 적용 ==="
-# (해당 주차에 맞는 실습 명령)
-
-# Step 3: 결과 검증
-echo "=== 결과 확인 ==="
-# (변경 결과 확인 명령)
-```
-
-> **트러블슈팅:**
-> - 명령이 실패하면: 권한(sudo), 경로, 서비스 상태를 먼저 확인
-> - 예상과 다른 결과: 이전 실습의 설정이 남아있을 수 있으므로 초기화 후 재시도
-> - 타임아웃: 네트워크 연결 또는 서비스 가동 상태 확인
-
-### 보충 실습 2: 탐지/모니터링 관점
-
-공격자가 아닌 **방어자 관점**에서 동일한 활동을 모니터링하는 실습이다.
-
-```bash
-# siem 서버에서 관련 로그 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
-  "sudo cat /var/ossec/logs/alerts/alerts.json | tail -5" 2>/dev/null
-
-# Suricata 알림 확인 (해당 시)
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
-  "sudo tail -20 /var/log/suricata/fast.log" 2>/dev/null
-```
-
-> **왜 방어자 관점도 배우는가?**
-> 공격 기법만 알면 "스크립트 키디"에 불과하다.
-> 공격이 어떻게 탐지되는지 이해해야 진정한 보안 전문가이다.
-> 이 과목의 모든 공격 실습에는 대응하는 탐지/방어 관점이 포함된다.
-
-### 보충 실습 3: OpsClaw 자동화
-
-이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화한다.
-
-```bash
-# 프로젝트 생성 (이번 주차용)
-RESULT=$(curl -s -X POST http://localhost:8000/projects \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{"name":"weekXX-lab","request_text":"이번 주차 실습 자동화","master_mode":"external"}')
-PID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
-
-# Stage 전환
-curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
-curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
-
-# 실습 태스크 실행 (해당 주차에 맞게 수정)
-curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
-    "tasks": [
-      {"order":1,"title":"실습 태스크 1","instruction_prompt":"echo 실습1","risk_level":"low","subagent_url":"http://localhost:8002"},
-      {"order":2,"title":"실습 태스크 2","instruction_prompt":"echo 실습2","risk_level":"low","subagent_url":"http://10.20.30.80:8002"}
-    ],
-    "subagent_url":"http://localhost:8002",
-    "parallel":true
-  }'
-
-# Evidence 확인
-curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
-  -H "X-API-Key: opsclaw-api-key-2026" | python3 -m json.tool
-```
-
 
 ---
 
@@ -587,54 +453,9 @@ curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
 
 ## 과제 (다음 주까지)
 
-### 과제 1: 이론 정리 보고서 (30점)
-
-이번 주차의 핵심 개념을 자신의 말로 정리하라.
-
-| 항목 | 배점 |
-|------|------|
-| 핵심 개념 정의 및 설명 | 10점 |
-| 실습 결과 캡처 및 해석 | 10점 |
-| 보안 관점 분석 (공격↔방어) | 10점 |
-
-### 과제 2: 실습 수행 보고서 (40점)
-
-이번 주차의 모든 실습을 수행하고 결과를 보고서로 작성하라.
-
-| 항목 | 배점 |
-|------|------|
-| 실습 명령어 및 실행 결과 캡처 | 15점 |
-| 결과 해석 및 보안 의미 분석 | 15점 |
-| 트러블슈팅 경험 (있는 경우) | 10점 |
-
-### 과제 3: OpsClaw 자동화 (30점)
-
-이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화하라.
-
-| 항목 | 배점 |
-|------|------|
-| 프로젝트 생성 + stage 전환 | 5점 |
-| execute-plan 태스크 설계 (3개 이상) | 10점 |
-| evidence/summary 결과 | 5점 |
-| replay 타임라인 결과 | 5점 |
-| 자동화의 이점 분석 (직접 실행 대비) | 5점 |
-
-**제출:** 보고서(PDF 또는 MD) + OpsClaw project_id
-
-
----
 
 ## 검증 체크리스트
 
 이번 주차의 학습을 완료하려면 다음 항목을 모두 확인하라:
 
-- [ ] 이론 강의 내용 이해 (핵심 용어 설명 가능)
-- [ ] 기본 실습 모두 수행 완료
-- [ ] 보충 실습 1 (기본 동작 확인) 완료
-- [ ] 보충 실습 2 (탐지/모니터링 관점) 수행
-- [ ] 보충 실습 3 (OpsClaw 자동화) 수행
-- [ ] 자가 점검 퀴즈 8/10 이상 정답
-- [ ] 과제 1 (이론 정리) 작성
-- [ ] 과제 2 (실습 보고서) 작성
-- [ ] 과제 3 (OpsClaw 자동화) 완료
 
