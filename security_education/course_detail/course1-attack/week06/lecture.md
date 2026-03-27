@@ -124,6 +124,18 @@
 
 ### 2.1 기본/약한 비밀번호 (Default/Weak Passwords)
 
+> **이 실습을 왜 하는가?**
+> 기본 비밀번호(default credential)는 가장 쉬운 공격 벡터이다.
+> 공격자는 SQLi 같은 복잡한 기법을 사용하기 전에, 먼저 "admin/admin123"을 시도한다.
+> Shodan 같은 검색 엔진으로 기본 비밀번호가 그대로인 시스템을 수만 대 찾을 수 있다.
+>
+> **실제 사례:**
+> - 2016년 Mirai 봇넷: IoT 기기의 기본 비밀번호(admin/admin)로 60만 대 감염 → Dyn DNS DDoS
+> - Purple Team 실험에서도 JuiceShop admin 비밀번호 admin123이 첫 번째 발견 (Critical)
+>
+> **실무 활용:** 모의해킹 보고서에서 "기본 인증 정보 사용"은 CRITICAL로 분류된다.
+> OWASP A07(Identification and Authentication Failures)에 해당한다.
+
 많은 시스템이 기본 비밀번호를 변경하지 않고 사용한다.
 
 ```bash
@@ -358,7 +370,25 @@ PYEOF
 
 ## 5. 접근 제어 취약점
 
+> **OWASP A01 — Broken Access Control이 1위인 이유:**
+> 2021년 OWASP Top 10에서 접근 제어 실패가 **1위**로 올라왔다 (이전 5위에서).
+> 94%의 웹 애플리케이션에서 어떤 형태의 접근 제어 문제가 발견되었다.
+> SQLi나 XSS는 입력값 검증으로 방어할 수 있지만, 접근 제어는 **비즈니스 로직**에 의존하므로
+> WAF나 자동화 도구로 방어하기 어렵다.
+
 ### 5.1 IDOR (Insecure Direct Object Reference)
+
+> **이 실습을 왜 하는가?**
+> IDOR는 가장 흔하고 영향이 큰 접근 제어 취약점이다.
+> URL의 숫자(ID)를 1씩 바꿔보는 단순한 행위로 다른 사용자의 데이터를 볼 수 있다.
+> API 설계 시 "인증"만 하고 "인가"를 빠뜨리면 발생한다.
+>
+> **실무 시나리오:**
+> 쇼핑몰에서 /orders/12345 (내 주문)를 /orders/12344 (다른 사람 주문)로 바꾸면
+> 다른 고객의 배송지, 결제 정보가 보이는 사례가 실제로 빈번하다.
+> 2023년 한 대형 플랫폼에서 IDOR로 500만 건 개인정보가 노출된 사례가 있다.
+>
+> **검증 완료:** JuiceShop에서 admin 토큰으로 basket/1, basket/2, basket/3 모두 접근 성공 (200 OK)
 
 IDOR은 URL이나 파라미터의 ID를 변경하여 **다른 사용자의 데이터에 접근**하는 공격이다.
 
