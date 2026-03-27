@@ -4,9 +4,6 @@
 - CIS Docker Benchmark의 주요 항목을 이해한다
 - Docker Bench for Security 도구를 실행하고 결과를 해석할 수 있다
 - 점검 결과를 바탕으로 보안 개선 조치를 수행할 수 있다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -269,7 +266,7 @@ echo "=== 점검 완료 ==="
 ### 실습 1: Docker Bench 실행
 
 ```bash
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # Docker Bench 실행
 docker run --rm --net host --pid host --userns host \

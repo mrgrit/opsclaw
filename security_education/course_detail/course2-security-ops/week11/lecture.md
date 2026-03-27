@@ -4,9 +4,6 @@
 - FIM(File Integrity Monitoring)을 설정하고 파일 변경을 탐지할 수 있다
 - SCA(Security Configuration Assessment)로 보안 설정을 평가할 수 있다
 - Active Response를 구성하여 위협에 자동 대응할 수 있다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)

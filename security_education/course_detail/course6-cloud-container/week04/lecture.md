@@ -5,9 +5,6 @@
 - `--privileged` 플래그의 위험성을 설명할 수 있다
 - Linux capability와 seccomp 프로파일을 활용한 보안 강화를 실습한다
 - 컨테이너 탈출 시나리오를 직접 재현하고 방어 방법을 익힌다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -16,7 +13,7 @@
 |------|-----|------|------|
 | opsclaw | 10.20.30.201 | Control Plane (OpsClaw) | `ssh opsclaw@10.20.30.201` (pw: 1) |
 | secu | 10.20.30.1 | 방화벽/IPS (nftables, Suricata) | `sshpass -p1 ssh secu@10.20.30.1` |
-| web | 10.20.30.80 | 웹서버 (JuiceShop:3000, Apache:80) | `sshpass -p1 ssh web@10.20.30.80` |
+| web | 10.20.30.80 | 웹서버 (JuiceShop:3000, Apache:80) | `sshpass -p1 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80` |
 | siem | 10.20.30.100 | SIEM (Wazuh:443, OpenCTI:9400) | `sshpass -p1 ssh siem@10.20.30.100` |
 | dgx-spark | 192.168.0.105 | AI/GPU (Ollama:11434) | 원격 API만 |
 
@@ -249,7 +246,7 @@ docker run -d \
 ### 실습 1: capability 비교
 
 ```bash
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # 기본 실행 (기본 capability 포함)
 docker run --rm alpine sh -c 'cat /proc/1/status | grep Cap'

@@ -5,9 +5,6 @@
 - IAM(Identity and Access Management)의 원칙을 설명할 수 있다
 - VPC와 Security Group으로 네트워크 격리를 설계할 수 있다
 - 공유 책임 모델(Shared Responsibility Model)을 이해한다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -246,7 +243,7 @@ VPC (10.0.0.0/16)
 
 ```bash
 # secu 서버에서 nftables 규칙 확인
-ssh secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 sudo nft list ruleset
 
 # 이것이 클라우드의 Security Group/NACL과 같은 역할

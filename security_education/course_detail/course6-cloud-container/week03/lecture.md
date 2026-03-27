@@ -5,9 +5,6 @@
 - Trivy를 사용하여 이미지 취약점을 스캔할 수 있다
 - 안전한 베이스 이미지 선택 기준을 설명할 수 있다
 - 이미지에 포함된 시크릿을 탐지할 수 있다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -230,7 +227,7 @@ trivy fs --scanners secret /path/to/project
 ### 실습 1: JuiceShop 이미지 취약점 스캔
 
 ```bash
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # JuiceShop 이미지 스캔
 trivy image bkimminich/juice-shop:latest --severity HIGH,CRITICAL

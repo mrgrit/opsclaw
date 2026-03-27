@@ -5,9 +5,6 @@
 - Pod Security Standards를 적용할 수 있다
 - RBAC(Role-Based Access Control)으로 접근을 제어할 수 있다
 - NetworkPolicy로 Pod 간 통신을 제한할 수 있다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -319,7 +316,7 @@ echo "cGFzc3dvcmQxMjM=" | base64 -d
 ### 실습 1: RBAC 개념을 Docker 환경에서 이해
 
 ```bash
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # Docker에서의 접근 제어 = docker.sock 접근 권한
 # K8s에서의 접근 제어 = RBAC
@@ -332,7 +329,7 @@ groups  # docker 그룹 확인
 
 ```bash
 # secu 서버에서 Pod 간 통신 제어 개념 이해
-ssh secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 
 # web(10.20.30.80)에서 siem(10.20.30.100)으로의 특정 포트만 허용
 # 이것이 K8s NetworkPolicy의 원리

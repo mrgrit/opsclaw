@@ -5,9 +5,6 @@
 - S3 버킷 공개 노출의 위험과 방지 방법을 이해한다
 - IAM 과도 권한의 위험을 인식하고 최소화 방법을 익힌다
 - CSPM(Cloud Security Posture Management) 개념을 이해한다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -272,7 +269,7 @@ prowler aws --severity critical high
 ### 실습 1: Docker 환경에서 설정 오류 시뮬레이션
 
 ```bash
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # "S3 공개 노출"을 Docker 볼륨으로 시뮬레이션
 # 민감 데이터가 있는 컨테이너를 외부에 노출

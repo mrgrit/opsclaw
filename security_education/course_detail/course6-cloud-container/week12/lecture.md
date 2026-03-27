@@ -5,9 +5,6 @@
 - Pod 탈출(escape) 기법과 방어 방법을 익힌다
 - ServiceAccount 토큰 악용 시나리오를 파악한다
 - Kubernetes 공격 킬체인을 설명할 수 있다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -328,7 +325,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 실습 3: Docker 환경에서 컨테이너 탈출 체험
 
 ```bash
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # privileged 컨테이너에서 호스트 정보 접근 (교육 목적)
 docker run --rm --privileged alpine sh -c '

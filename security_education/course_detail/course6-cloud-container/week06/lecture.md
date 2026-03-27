@@ -5,9 +5,6 @@
 - Docker Secrets로 비밀정보를 안전하게 관리할 수 있다
 - 리소스 제한과 healthcheck를 설정할 수 있다
 - Compose 파일의 보안 점검 포인트를 파악한다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -341,7 +338,7 @@ secrets:
 ### 실습 1: 기존 Compose 파일 보안 점검
 
 ```bash
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # Apache+ModSecurity Compose 파일 확인
 cat /etc/apache2/sites-enabled/ (VirtualHost 설정)

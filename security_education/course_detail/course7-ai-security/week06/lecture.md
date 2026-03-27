@@ -5,9 +5,6 @@
 - CVE 정보를 LLM으로 분석하고 영향을 평가할 수 있다
 - 취약점 보고서를 자동 생성할 수 있다
 - LLM 기반 취약점 분석의 한계를 이해한다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -253,7 +250,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ### 실습 2: Docker 이미지 취약점 분석
 
 ```bash
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 # Trivy 스캔 결과를 LLM으로 분석
 TRIVY_OUT=$(trivy image --severity CRITICAL nginx:latest -f json 2>/dev/null | head -500)

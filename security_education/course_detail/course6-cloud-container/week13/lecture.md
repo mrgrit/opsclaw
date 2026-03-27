@@ -5,9 +5,6 @@
 - CloudTrail(API 감사 로깅)의 개념과 활용 방법을 익힌다
 - CloudWatch(메트릭 및 알람)의 보안 모니터링 활용을 이해한다
 - 실습 환경(Wazuh)과 클라우드 모니터링을 비교 분석할 수 있다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -247,7 +244,7 @@ HAVING ports_scanned > 20;
 
 ```bash
 # siem 서버의 Wazuh 알림 확인
-ssh secu@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.100
 
 # 최근 알림 조회 (CloudTrail과 유사)
 cat /var/ossec/logs/alerts/alerts.json | tail -5 | python3 -m json.tool

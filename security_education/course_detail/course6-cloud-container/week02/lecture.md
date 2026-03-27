@@ -4,9 +4,6 @@
 - Docker의 핵심 개념(이미지, 컨테이너, 네트워크, 볼륨)을 이해한다
 - Dockerfile을 작성하고 보안 관점에서 점검할 수 있다
 - 컨테이너 기반 환경의 보안 이점과 위험을 설명할 수 있다
-- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
-- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
-- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
 
 
 ## 실습 환경 (공통)
@@ -225,7 +222,7 @@ ENV DB_PASSWORD=mysecret123
 
 ```bash
 # web 서버 접속 후 실행 중인 컨테이너 확인
-ssh web@10.20.30.80
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 docker ps
 
 # JuiceShop 컨테이너 확인
