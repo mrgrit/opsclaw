@@ -229,20 +229,20 @@ ssh web@10.20.30.80
 docker ps
 
 # JuiceShop 컨테이너 확인
-docker inspect bunkerweb-juiceshop-1 | head -50
+docker inspect juice-shop | head -50
 ```
 
 ### 실습 2: 보안 관점 컨테이너 점검
 
 ```bash
 # 컨테이너가 root로 실행 중인지 확인
-docker inspect --format='{{.Config.User}}' bunkerweb-juiceshop-1
+docker inspect --format='{{.Config.User}}' juice-shop
 
 # 컨테이너의 capability 확인
-docker inspect --format='{{.HostConfig.CapAdd}}' bunkerweb-juiceshop-1
+docker inspect --format='{{.HostConfig.CapAdd}}' juice-shop
 
 # 읽기 전용 파일시스템 여부 확인
-docker inspect --format='{{.HostConfig.ReadonlyRootfs}}' bunkerweb-juiceshop-1
+docker inspect --format='{{.HostConfig.ReadonlyRootfs}}' juice-shop
 ```
 
 ### 실습 3: 안전한 컨테이너 실행
@@ -417,9 +417,29 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
 
 ## 과제 (다음 주까지)
 
+### 과제 1: Docker 보안 점검 보고서 (50점)
+
+web 서버와 siem 서버의 Docker 환경을 점검하고 보고서를 작성하라.
+
+| 점검 항목 | 명령어 | 배점 |
+|----------|--------|------|
+| Docker 버전 | `docker version` | 5점 |
+| 실행 중 컨테이너 | `docker ps` | 5점 |
+| 컨테이너 root 실행 여부 | `docker inspect --format '{{.Config.User}}'` | 10점 |
+| Privileged 여부 | `docker inspect --format '{{.HostConfig.Privileged}}'` | 10점 |
+| 네트워크 모드 | `docker inspect --format '{{.HostConfig.NetworkMode}}'` | 10점 |
+| 이미지 취약점 (있으면) | Trivy 또는 수동 분석 | 10점 |
+
+### 과제 2: 보안 컨테이너 실행 (50점)
+
+web 서버에서 `--read-only`, `--cap-drop ALL`, `-u 1000:1000` 옵션을 적용하여 nginx 컨테이너를 실행하고, 정상 동작을 확인하라.
+
+---
 
 ## 검증 체크리스트
 
-이번 주차의 학습을 완료하려면 다음 항목을 모두 확인하라:
-
-
+- [ ] web 서버에서 `docker ps`로 JuiceShop 컨테이너 확인 (이름: juice-shop)
+- [ ] siem 서버에서 `docker ps`로 OpenCTI 6개 컨테이너 확인
+- [ ] JuiceShop 컨테이너의 User, Privileged, NetworkMode 점검 완료
+- [ ] Dockerfile 보안 체크리스트(나쁜 예/좋은 예) 이해
+- [ ] 보안 옵션(--read-only, --cap-drop)을 적용한 컨테이너 실행 경험
