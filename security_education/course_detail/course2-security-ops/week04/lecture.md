@@ -1,0 +1,759 @@
+# Week 04: Suricata IPS (1) — 설치와 구성 (상세 버전)
+
+## 학습 목표
+- IDS와 IPS의 차이를 설명할 수 있다
+- Suricata의 아키텍처와 NFQUEUE 동작 방식을 이해한다
+- suricata.yaml 핵심 설정을 수정할 수 있다
+- 룰 소스를 관리하고 업데이트할 수 있다
+- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
+- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
+- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
+
+
+## 실습 환경 (공통)
+
+| 서버 | IP | 역할 | 접속 |
+|------|-----|------|------|
+| opsclaw | 10.20.30.201 | Control Plane (OpsClaw) | `ssh opsclaw@10.20.30.201` (pw: 1) |
+| secu | 10.20.30.1 | 방화벽/IPS (nftables, Suricata) | `sshpass -p1 ssh secu@10.20.30.1` |
+| web | 10.20.30.80 | 웹서버 (JuiceShop:3000, Apache:80) | `sshpass -p1 ssh web@10.20.30.80` |
+| siem | 10.20.30.100 | SIEM (Wazuh:443, OpenCTI:9400) | `sshpass -p1 ssh siem@10.20.30.100` |
+| dgx-spark | 192.168.0.105 | AI/GPU (Ollama:11434) | 원격 API만 |
+
+**OpsClaw API:** `http://localhost:8000` / Key: `opsclaw-api-key-2026`
+
+
+## 강의 시간 배분 (3시간)
+
+| 시간 | 내용 | 유형 |
+|------|------|------|
+| 0:00-0:40 | 이론 강의 (Part 1) | 강의 |
+| 0:40-1:10 | 이론 심화 + 사례 분석 (Part 2) | 강의/토론 |
+| 1:10-1:20 | 휴식 | - |
+| 1:20-2:00 | 실습 (Part 3) | 실습 |
+| 2:00-2:40 | 심화 실습 + 도구 활용 (Part 4) | 실습 |
+| 2:40-2:50 | 휴식 | - |
+| 2:50-3:20 | 응용 실습 + OpsClaw 연동 (Part 5) | 실습 |
+| 3:20-3:40 | 복습 퀴즈 + 과제 안내 (Part 6) | 퀴즈 |
+
+---
+
+
+---
+
+## 용어 해설 (보안 솔루션 운영 과목)
+
+| 용어 | 영문 | 설명 | 비유 |
+|------|------|------|------|
+| **방화벽** | Firewall | 네트워크 트래픽을 규칙에 따라 허용/차단하는 시스템 | 건물 출입 통제 시스템 |
+| **체인** | Chain (nftables) | 패킷 처리 규칙의 묶음 (input, forward, output) | 심사 단계 |
+| **룰/규칙** | Rule | 특정 조건의 트래픽을 어떻게 처리할지 정의 | "택배 기사만 출입 허용" |
+| **시그니처** | Signature | 알려진 공격 패턴을 식별하는 규칙 (IPS/AV) | 수배범 얼굴 사진 |
+| **NFQUEUE** | Netfilter Queue | 커널에서 사용자 영역으로 패킷을 넘기는 큐 | 의심 택배를 별도 검사대로 보내는 것 |
+| **FIM** | File Integrity Monitoring | 파일 변조 감시 (해시 비교) | CCTV로 금고 감시 |
+| **SCA** | Security Configuration Assessment | 보안 설정 점검 (CIS 벤치마크 기반) | 건물 안전 점검표 |
+| **Active Response** | Active Response | 탐지 시 자동 대응 (IP 차단 등) | 침입 감지 시 자동 잠금 |
+| **디코더** | Decoder (Wazuh) | 로그를 파싱하여 구조화하는 규칙 | 외국어 통역사 |
+| **CRS** | Core Rule Set (ModSecurity) | 범용 웹 공격 탐지 규칙 모음 | 표준 보안 검사 매뉴얼 |
+| **CTI** | Cyber Threat Intelligence | 사이버 위협 정보 (IOC, TTPs) | 범죄 정보 공유 시스템 |
+| **IOC** | Indicator of Compromise | 침해 지표 (악성 IP, 해시, 도메인 등) | 수배범의 지문, 차량번호 |
+| **STIX** | Structured Threat Information eXpression | 위협 정보 표준 포맷 | 범죄 보고서 표준 양식 |
+| **TAXII** | Trusted Automated eXchange of Intelligence Information | CTI 자동 교환 프로토콜 | 경찰서 간 수배 정보 공유 시스템 |
+| **NAT** | Network Address Translation | 내부 IP를 외부 IP로 변환 | 회사 대표번호 (내선→외선) |
+| **masquerade** | masquerade (nftables) | 나가는 패킷의 소스 IP를 게이트웨이 IP로 변환 | 회사 이름으로 편지 보내기 |
+
+
+# 본 강의 내용
+
+# Week 04: Suricata IPS (1) — 설치와 구성
+
+## 학습 목표
+
+- IDS와 IPS의 차이를 설명할 수 있다
+- Suricata의 아키텍처와 NFQUEUE 동작 방식을 이해한다
+- suricata.yaml 핵심 설정을 수정할 수 있다
+- 룰 소스를 관리하고 업데이트할 수 있다
+
+---
+
+## 1. IDS vs IPS
+
+| 구분 | IDS (탐지) | IPS (차단) |
+|------|-----------|-----------|
+| 역할 | 트래픽 감시, 경고 발생 | 트래픽 감시 + **즉시 차단** |
+| 배치 | 미러링 (out-of-band) | 인라인 (in-band) |
+| 패킷 처리 | 복사본 분석 | **원본 패킷** 분석 후 통과/차단 결정 |
+| 단점 | 차단 불가 | 성능 영향, 오탐 시 정상 트래픽 차단 |
+
+Suricata는 IDS와 IPS 모드를 모두 지원한다.
+실습 환경에서는 **NFQUEUE 기반 IPS 모드**로 운영한다.
+
+---
+
+## 2. Suricata 아키텍처
+
+```
+              ┌─────────────────────────────┐
+   패킷 →    │        nftables             │
+              │   (NFQUEUE로 패킷 전달)      │
+              └──────────┬──────────────────┘
+                         │ NFQUEUE
+                         ▼
+              ┌─────────────────────────────┐
+              │        Suricata             │
+              │  ┌─────┐ ┌─────┐ ┌─────┐   │
+              │  │Thrd1│ │Thrd2│ │Thrd3│   │
+              │  └──┬──┘ └──┬──┘ └──┬──┘   │
+              │     │       │       │       │
+              │  ┌──┴───────┴───────┴──┐    │
+              │  │    Detection Engine  │    │
+              │  │    (룰 매칭)         │    │
+              │  └──────────┬──────────┘    │
+              │             │               │
+              │     ACCEPT / DROP           │
+              └──────────┬──────────────────┘
+                         │
+                         ▼
+                   패킷 통과 또는 차단
+```
+
+**NFQUEUE 방식:**
+1. nftables가 패킷을 커널 큐(NFQUEUE)에 넣는다
+2. Suricata가 큐에서 패킷을 꺼내 룰과 매칭한다
+3. 매칭 결과에 따라 ACCEPT(통과) 또는 DROP(차단)을 결정한다
+4. 커널이 결정에 따라 패킷을 처리한다
+
+---
+
+## 3. 실습 환경 접속
+
+```bash
+sshpass -p1 ssh -o StrictHostKeyChecking=no user@10.20.30.1
+```
+
+### 3.1 Suricata 설치 확인
+
+```bash
+echo 1 | sudo -S suricata --build-info | head -20
+```
+
+**예상 출력:**
+```
+This is Suricata version 7.0.x RELEASE
+Features: PCAP_SET_BUFF AF_PACKET HAVE_PACKET_FANOUT ...
+  NFQueue support:                       yes
+  ...
+```
+
+```bash
+echo 1 | sudo -S suricata -V
+```
+
+**예상 출력:**
+```
+This is Suricata version 7.0.x RELEASE
+```
+
+---
+
+## 4. 디렉터리 구조
+
+Suricata의 주요 파일 위치:
+
+```bash
+echo 1 | sudo -S ls -la /etc/suricata/
+```
+
+| 경로 | 설명 |
+|------|------|
+| `/etc/suricata/suricata.yaml` | 메인 설정 파일 |
+| `/etc/suricata/rules/` | 룰 파일 디렉터리 |
+| `/var/log/suricata/` | 로그 디렉터리 |
+| `/var/log/suricata/eve.json` | JSON 이벤트 로그 (핵심) |
+| `/var/log/suricata/fast.log` | 한 줄 요약 로그 |
+| `/var/log/suricata/suricata.log` | 엔진 로그 |
+
+```bash
+echo 1 | sudo -S ls -la /var/log/suricata/
+```
+
+---
+
+## 5. suricata.yaml 핵심 설정
+
+### 5.1 설정 파일 열기
+
+```bash
+echo 1 | sudo -S cat /etc/suricata/suricata.yaml | head -50
+```
+
+### 5.2 HOME_NET 설정
+
+가장 중요한 설정. 보호할 내부 네트워크를 정의한다:
+
+```bash
+# 현재 HOME_NET 확인
+echo 1 | sudo -S grep -n "HOME_NET" /etc/suricata/suricata.yaml | head -5
+```
+
+**설정 예시 (suricata.yaml 내):**
+```yaml
+vars:
+  address-groups:
+    HOME_NET: "[10.20.30.0/24]"
+    EXTERNAL_NET: "!$HOME_NET"
+    HTTP_SERVERS: "[10.20.30.80]"
+    DNS_SERVERS: "[10.20.30.1]"
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+    SSH_PORTS: "22"
+```
+
+> **HOME_NET**이 잘못되면 탐지가 제대로 동작하지 않는다. 반드시 실습 환경에 맞게 설정하라.
+
+### 5.3 NFQUEUE 모드 설정
+
+```bash
+echo 1 | sudo -S grep -A 10 "nfq:" /etc/suricata/suricata.yaml
+```
+
+**설정 예시:**
+```yaml
+nfq:
+  mode: accept       # fail-open: Suricata 장애 시 패킷 통과
+  repeat-mark: 1
+  repeat-mask: 1
+  route-queue: 2
+  batchcount: 20
+  fail-open: yes     # 중요: Suricata 장애 시 트래픽 차단 방지
+```
+
+> **fail-open: yes** — Suricata가 죽어도 트래픽이 통과한다. 운영 환경에서 필수.
+
+### 5.4 로깅 설정
+
+```bash
+echo 1 | sudo -S grep -A 20 "outputs:" /etc/suricata/suricata.yaml | head -30
+```
+
+**핵심 로그 설정:**
+```yaml
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            payload-printable: yes
+            packet: yes
+        - http:
+            extended: yes
+        - dns:
+        - tls:
+            extended: yes
+        - files:
+            force-magic: no
+        - stats:
+            totals: yes
+            threads: no
+
+  - fast:
+      enabled: yes
+      filename: fast.log
+```
+
+### 5.5 스레드 설정
+
+```bash
+# CPU 코어 수 확인
+nproc
+```
+
+```yaml
+# 멀티스레드 설정
+threading:
+  set-cpu-affinity: yes
+  detect-thread-ratio: 1.0    # 코어당 탐지 스레드 비율
+```
+
+---
+
+## 6. NFQUEUE와 nftables 연동
+
+Suricata가 패킷을 받으려면 nftables에서 NFQUEUE로 패킷을 보내야 한다:
+
+### 6.1 현재 NFQUEUE 룰 확인
+
+```bash
+echo 1 | sudo -S nft list ruleset | grep -i queue
+```
+
+### 6.2 NFQUEUE 룰 추가 (실습용)
+
+```bash
+# forward 체인의 패킷을 NFQUEUE 0번으로 전달
+echo 1 | sudo -S nft add table inet suricata_lab
+echo 1 | sudo -S nft add chain inet suricata_lab forward \
+  '{ type filter hook forward priority -1; policy accept; }'
+echo 1 | sudo -S nft add rule inet suricata_lab forward \
+  queue num 0 bypass
+```
+
+> **bypass**: NFQUEUE가 가득 차면 패킷을 통과시킨다 (fail-open).
+
+**확인:**
+```bash
+echo 1 | sudo -S nft list table inet suricata_lab
+```
+
+**예상 출력:**
+```
+table inet suricata_lab {
+    chain forward {
+        type filter hook forward priority filter - 1; policy accept;
+        queue num 0 bypass
+    }
+}
+```
+
+---
+
+## 7. 룰 소스 관리
+
+### 7.1 룰 소스 종류
+
+| 소스 | 설명 | 비용 |
+|------|------|------|
+| **ET Open** | Emerging Threats 무료 룰 | 무료 |
+| ET Pro | 유료 고급 룰 | 유료 |
+| Suricata 자체 룰 | 기본 포함 | 무료 |
+| **Custom Rules** | 직접 작성 | 무료 |
+
+### 7.2 suricata-update로 룰 관리
+
+```bash
+# 룰 업데이트 도구 확인
+echo 1 | sudo -S suricata-update --version
+
+# 사용 가능한 룰 소스 목록
+echo 1 | sudo -S suricata-update list-sources
+```
+
+**예상 출력 (일부):**
+```
+Name: et/open
+  Vendor: Proofpoint
+  Summary: Emerging Threats Open Ruleset
+  License: MIT
+```
+
+### 7.3 룰 업데이트 실행
+
+```bash
+# ET Open 룰 다운로드 및 적용
+echo 1 | sudo -S suricata-update
+```
+
+**예상 출력:**
+```
+27/3/2026 -- 10:30:00 - <Info> -- Using data-directory /var/lib/suricata
+27/3/2026 -- 10:30:00 - <Info> -- Loading /etc/suricata/suricata.yaml
+27/3/2026 -- 10:30:01 - <Info> -- Loaded 35000 rules.
+27/3/2026 -- 10:30:01 - <Info> -- Disabled 14 rules.
+27/3/2026 -- 10:30:01 - <Info> -- Enabled 0 rules.
+27/3/2026 -- 10:30:01 - <Info> -- Writing rules to /var/lib/suricata/rules/suricata.rules
+```
+
+### 7.4 현재 룰 파일 확인
+
+```bash
+echo 1 | sudo -S ls -lh /var/lib/suricata/rules/
+echo 1 | sudo -S wc -l /var/lib/suricata/rules/suricata.rules
+```
+
+### 7.5 로컬 커스텀 룰 파일
+
+```bash
+# 로컬 룰 파일 확인
+echo 1 | sudo -S cat /etc/suricata/rules/local.rules 2>/dev/null || echo "(파일 없음)"
+
+# 로컬 룰 파일 생성 (비어있는)
+echo 1 | sudo -S touch /etc/suricata/rules/local.rules
+```
+
+---
+
+## 8. Suricata 시작과 상태 확인
+
+### 8.1 설정 파일 검증
+
+```bash
+# 설정 문법 검사 (-T: test mode)
+echo 1 | sudo -S suricata -T -c /etc/suricata/suricata.yaml
+```
+
+**예상 출력:**
+```
+Notice: suricata: This is Suricata version 7.0.x RELEASE
+Info: config: Loading rule file: /var/lib/suricata/rules/suricata.rules
+Notice: suricata: Configuration provided was successfully loaded. Exiting.
+```
+
+### 8.2 서비스 시작
+
+```bash
+echo 1 | sudo -S systemctl start suricata
+echo 1 | sudo -S systemctl status suricata
+```
+
+**예상 출력:**
+```
+● suricata.service - Suricata IDS/IPS
+     Loaded: loaded (/lib/systemd/system/suricata.service; enabled; ...)
+     Active: active (running) since ...
+```
+
+### 8.3 엔진 로그 확인
+
+```bash
+echo 1 | sudo -S tail -20 /var/log/suricata/suricata.log
+```
+
+**정상 기동 시 확인할 메시지:**
+```
+<Notice> - all 4 packet processing threads, 4 management threads initialized, engine started.
+```
+
+### 8.4 통계 확인
+
+```bash
+# Suricata 통계 (eve.json에서)
+echo 1 | sudo -S tail -1 /var/log/suricata/stats.log
+```
+
+---
+
+## 9. 간단한 동작 테스트
+
+### 9.1 테스트 룰 추가
+
+```bash
+# 테스트용 룰 작성 (HTTP 접근 시 알림)
+echo 'alert http any any -> any any (msg:"TEST - HTTP detected"; sid:9000001; rev:1;)' | \
+  sudo tee -a /etc/suricata/rules/local.rules
+```
+
+### 9.2 룰 리로드
+
+```bash
+# Suricata 재시작 없이 룰만 리로드
+echo 1 | sudo -S kill -USR2 $(pidof suricata)
+```
+
+### 9.3 테스트 트래픽 생성
+
+```bash
+# web 서버로 HTTP 요청
+curl -s http://10.20.30.80/ > /dev/null
+```
+
+### 9.4 알림 확인
+
+```bash
+echo 1 | sudo -S tail -5 /var/log/suricata/fast.log
+```
+
+**예상 출력:**
+```
+03/27/2026-10:35:22.123456  [**] [1:9000001:1] TEST - HTTP detected [**] ...
+```
+
+---
+
+## 10. 실습 과제
+
+### 과제 1: 설정 확인
+
+1. `suricata.yaml`에서 HOME_NET이 `10.20.30.0/24`로 설정되어 있는지 확인
+2. NFQUEUE 모드와 fail-open 설정을 확인
+3. eve-log, fast 로그가 활성화되어 있는지 확인
+
+### 과제 2: 룰 업데이트
+
+1. `suricata-update`로 최신 ET Open 룰을 다운로드
+2. 다운로드된 룰 수를 확인
+3. 설정 검증(`suricata -T`) 통과 확인
+
+### 과제 3: 동작 확인
+
+1. Suricata 서비스가 정상 동작하는지 확인
+2. 테스트 룰을 추가하고 알림이 발생하는지 확인
+3. 테스트가 끝나면 테스트 룰을 삭제
+
+```bash
+# 테스트 룰 삭제
+echo 1 | sudo -S sed -i '/sid:9000001/d' /etc/suricata/rules/local.rules
+
+# 실습 테이블 정리
+echo 1 | sudo -S nft delete table inet suricata_lab 2>/dev/null
+```
+
+---
+
+## 11. 핵심 정리
+
+| 개념 | 설명 |
+|------|------|
+| IDS vs IPS | 탐지만 vs 탐지+차단 |
+| NFQUEUE | 커널 큐를 통한 인라인 패킷 분석 |
+| HOME_NET | 보호 대상 네트워크 (반드시 올바르게 설정) |
+| fail-open | Suricata 장애 시 트래픽 통과 |
+| suricata-update | 룰 업데이트 도구 |
+| ET Open | 무료 공개 룰셋 |
+| local.rules | 사용자 정의 룰 파일 |
+| `suricata -T` | 설정 검증 |
+| `kill -USR2` | 재시작 없이 룰 리로드 |
+
+---
+
+## 다음 주 예고
+
+Week 05에서는 Suricata 룰을 직접 작성한다:
+- 룰 문법 (action, header, options)
+- alert/drop, content, flow 키워드
+- 커스텀 룰로 특정 공격 탐지
+
+
+---
+
+## 심화 학습: 개념 확장
+
+### 핵심 개념 상세 해설
+
+이 주차에서 다루는 핵심 개념들을 더 깊이 살펴본다.
+
+#### 개념 1: 동작 원리 (Course 2)
+
+이 주차에서 다루는 기술의 동작 방식을 단계별로 분해하여 이해한다.
+
+```
+[1단계] 입력/요청 → 시스템이 데이터를 수신
+[2단계] 처리 → 내부 로직에 의한 데이터 처리
+[3단계] 출력/응답 → 결과 반환 또는 상태 변경
+[4단계] 기록 → 로그/증적 생성
+```
+
+> **왜 이 순서가 중요한가?**
+> 각 단계에서 보안 검증이 누락되면 취약점이 발생한다.
+> 1단계: 입력값 검증 미흡 → Injection
+> 2단계: 인가 확인 누락 → Broken Access Control
+> 3단계: 에러 정보 노출 → Information Disclosure
+> 4단계: 로깅 실패 → Monitoring Failures
+
+#### 개념 2: 보안 관점에서의 위험 분석
+
+| 위험 요소 | 발생 조건 | 영향도 | 대응 방안 |
+|----------|---------|--------|---------|
+| 설정 미흡 | 기본 설정 사용 | 높음 | 보안 하드닝 가이드 적용 |
+| 패치 누락 | 업데이트 미적용 | 높음 | 정기 패치 관리 프로세스 |
+| 접근 제어 부재 | 인증/인가 미구현 | 매우 높음 | RBAC, MFA 적용 |
+| 로깅 미흡 | 감사 로그 미수집 | 중간 | SIEM 연동, 로그 정책 |
+
+#### 개념 3: 실제 사례 분석
+
+**사례 1: 유사 취약점이 실제 피해로 이어진 경우**
+
+실제 보안 사고에서 이 주차의 주제가 어떻게 악용되었는지 살펴본다.
+공격자는 동일한 기법을 사용하여 대규모 데이터 유출, 서비스 장애, 금전적 피해를 초래하였다.
+
+**교훈:**
+- 기본적인 보안 조치의 중요성
+- 탐지 체계의 필수성
+- 사고 대응 절차의 사전 수립 필요성
+
+### 도구 비교표
+
+| 도구 | 용도 | 장점 | 단점 | 라이선스 |
+|------|------|------|------|---------|
+| 도구 A | 기본 점검 | 간편, 빠름 | 기능 제한 | 오픈소스 |
+| 도구 B | 심층 분석 | 상세 결과 | 학습 곡선 | 상용/무료 |
+| 도구 C | 자동화 | CI/CD 연동 | 오탐 가능 | 오픈소스 |
+
+
+---
+
+## 보충 실습
+
+### 보충 실습 1: 기본 동작 확인
+
+이론에서 배운 내용을 직접 확인하는 기초 실습이다.
+
+```bash
+# Step 1: 현재 상태 확인
+echo "=== 현재 상태 ==="
+# (해당 주차에 맞는 확인 명령)
+
+# Step 2: 설정/변경 적용
+echo "=== 변경 적용 ==="
+# (해당 주차에 맞는 실습 명령)
+
+# Step 3: 결과 검증
+echo "=== 결과 확인 ==="
+# (변경 결과 확인 명령)
+```
+
+> **트러블슈팅:**
+> - 명령이 실패하면: 권한(sudo), 경로, 서비스 상태를 먼저 확인
+> - 예상과 다른 결과: 이전 실습의 설정이 남아있을 수 있으므로 초기화 후 재시도
+> - 타임아웃: 네트워크 연결 또는 서비스 가동 상태 확인
+
+### 보충 실습 2: 탐지/모니터링 관점
+
+공격자가 아닌 **방어자 관점**에서 동일한 활동을 모니터링하는 실습이다.
+
+```bash
+# siem 서버에서 관련 로그 확인
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
+  "sudo cat /var/ossec/logs/alerts/alerts.json | tail -5" 2>/dev/null
+
+# Suricata 알림 확인 (해당 시)
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
+  "sudo tail -20 /var/log/suricata/fast.log" 2>/dev/null
+```
+
+> **왜 방어자 관점도 배우는가?**
+> 공격 기법만 알면 "스크립트 키디"에 불과하다.
+> 공격이 어떻게 탐지되는지 이해해야 진정한 보안 전문가이다.
+> 이 과목의 모든 공격 실습에는 대응하는 탐지/방어 관점이 포함된다.
+
+### 보충 실습 3: OpsClaw 자동화
+
+이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화한다.
+
+```bash
+# 프로젝트 생성 (이번 주차용)
+RESULT=$(curl -s -X POST http://localhost:8000/projects \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: opsclaw-api-key-2026" \
+  -d '{"name":"weekXX-lab","request_text":"이번 주차 실습 자동화","master_mode":"external"}')
+PID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
+
+# Stage 전환
+curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+
+# 실습 태스크 실행 (해당 주차에 맞게 수정)
+curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: opsclaw-api-key-2026" \
+  -d '{
+    "tasks": [
+      {"order":1,"title":"실습 태스크 1","instruction_prompt":"echo 실습1","risk_level":"low","subagent_url":"http://localhost:8002"},
+      {"order":2,"title":"실습 태스크 2","instruction_prompt":"echo 실습2","risk_level":"low","subagent_url":"http://10.20.30.80:8002"}
+    ],
+    "subagent_url":"http://localhost:8002",
+    "parallel":true
+  }'
+
+# Evidence 확인
+curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
+  -H "X-API-Key: opsclaw-api-key-2026" | python3 -m json.tool
+```
+
+
+---
+
+## 자가 점검 퀴즈 (10문항)
+
+이번 주차의 핵심 내용을 점검한다. 8/10 이상 정답을 목표로 한다.
+
+**Q1.** 이번 주차 "Week 04: Suricata IPS (1) — 설치와 구성"의 핵심 목적은 무엇인가?
+- (a) 네트워크 속도 향상  (b) **보안 솔루션 기법/개념의 이해와 실습**  (c) 데이터베이스 관리  (d) UI 디자인
+
+**Q2.** 이 주제에서 방화벽/IPS의 역할은?
+- (a) 성능 최적화  (b) 비용 절감  (c) **체계적 분류와 대응 기준 제공**  (d) 사용자 편의
+
+**Q3.** 실습에서 사용한 주요 도구/명령어의 1차 목적은?
+- (a) 파일 복사  (b) **SIEM 수행 및 결과 확인**  (c) 메모리 관리  (d) 화면 출력
+
+**Q4.** OpsClaw를 통해 실습을 실행하는 가장 큰 이점은?
+- (a) 속도  (b) **모든 실행의 자동 증적(evidence) 기록**  (c) 무료  (d) 간편함
+
+**Q5.** 이 주제의 보안 위험이 높은 이유는?
+- (a) 비용이 많이 들어서  (b) 복잡해서  (c) **악용 시 시스템/데이터에 직접적 피해**  (d) 법적 문제
+
+**Q6.** 방어/대응의 핵심 원칙은?
+- (a) 모든 트래픽 차단  (b) **최소 권한 + 탐지 + 대응의 조합**  (c) 서버 재시작  (d) 비밀번호 변경
+
+**Q7.** 실습 결과를 분석할 때 가장 먼저 확인해야 하는 것은?
+- (a) 서버 이름  (b) **exit_code (성공/실패 여부)**  (c) 파일 크기  (d) 날짜
+
+**Q8.** 이 주제와 관련된 MITRE ATT&CK 전술은?
+- (a) Impact만  (b) Reconnaissance만  (c) **주제에 해당하는 전술(들)**  (d) 해당 없음
+
+**Q9.** 실무에서 이 기법/도구를 사용할 때 가장 주의할 점은?
+- (a) 속도  (b) **법적 허가와 범위 준수**  (c) 비용  (d) 보고서 양식
+
+**Q10.** 다음 주차와의 연결 포인트는?
+- (a) 관련 없음  (b) **이번 주 결과를 다음 주에서 활용/심화**  (c) 완전히 다른 주제  (d) 복습만
+
+**정답:** Q1:b, Q2:c, Q3:b, Q4:b, Q5:c, Q6:b, Q7:b, Q8:c, Q9:b, Q10:b
+
+---
+
+## 과제 (다음 주까지)
+
+### 과제 1: 이론 정리 보고서 (30점)
+
+이번 주차의 핵심 개념을 자신의 말로 정리하라.
+
+| 항목 | 배점 |
+|------|------|
+| 핵심 개념 정의 및 설명 | 10점 |
+| 실습 결과 캡처 및 해석 | 10점 |
+| 보안 관점 분석 (공격↔방어) | 10점 |
+
+### 과제 2: 실습 수행 보고서 (40점)
+
+이번 주차의 모든 실습을 수행하고 결과를 보고서로 작성하라.
+
+| 항목 | 배점 |
+|------|------|
+| 실습 명령어 및 실행 결과 캡처 | 15점 |
+| 결과 해석 및 보안 의미 분석 | 15점 |
+| 트러블슈팅 경험 (있는 경우) | 10점 |
+
+### 과제 3: OpsClaw 자동화 (30점)
+
+이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화하라.
+
+| 항목 | 배점 |
+|------|------|
+| 프로젝트 생성 + stage 전환 | 5점 |
+| execute-plan 태스크 설계 (3개 이상) | 10점 |
+| evidence/summary 결과 | 5점 |
+| replay 타임라인 결과 | 5점 |
+| 자동화의 이점 분석 (직접 실행 대비) | 5점 |
+
+**제출:** 보고서(PDF 또는 MD) + OpsClaw project_id
+
+
+---
+
+## 검증 체크리스트
+
+이번 주차의 학습을 완료하려면 다음 항목을 모두 확인하라:
+
+- [ ] 이론 강의 내용 이해 (핵심 용어 설명 가능)
+- [ ] 기본 실습 모두 수행 완료
+- [ ] 보충 실습 1 (기본 동작 확인) 완료
+- [ ] 보충 실습 2 (탐지/모니터링 관점) 수행
+- [ ] 보충 실습 3 (OpsClaw 자동화) 수행
+- [ ] 자가 점검 퀴즈 8/10 이상 정답
+- [ ] 과제 1 (이론 정리) 작성
+- [ ] 과제 2 (실습 보고서) 작성
+- [ ] 과제 3 (OpsClaw 자동화) 완료
+

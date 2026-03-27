@@ -1,0 +1,640 @@
+# Week 06: 경보 분석 (2) - 실전 + ATT&CK 매핑 (상세 버전)
+
+## 학습 목표
+- 실제 공격 로그를 분석하고 공격 유형을 식별할 수 있다
+- MITRE ATT&CK 프레임워크의 구조를 이해한다
+- 탐지된 경보를 ATT&CK 전술/기법에 매핑할 수 있다
+- 킬 체인 관점에서 공격 흐름을 재구성할 수 있다
+- 각 개념의 보안 관점에서의 위험과 대응 방안을 분석할 수 있다
+- OpsClaw를 활용하여 실습 작업을 자동화하고 증적을 관리할 수 있다
+- 실제 보안 사고 사례와 연결하여 학습 내용을 적용할 수 있다
+
+
+## 실습 환경 (공통)
+
+| 서버 | IP | 역할 | 접속 |
+|------|-----|------|------|
+| opsclaw | 10.20.30.201 | Control Plane (OpsClaw) | `ssh opsclaw@10.20.30.201` (pw: 1) |
+| secu | 10.20.30.1 | 방화벽/IPS (nftables, Suricata) | `sshpass -p1 ssh secu@10.20.30.1` |
+| web | 10.20.30.80 | 웹서버 (JuiceShop:3000, Apache:80) | `sshpass -p1 ssh web@10.20.30.80` |
+| siem | 10.20.30.100 | SIEM (Wazuh:443, OpenCTI:9400) | `sshpass -p1 ssh siem@10.20.30.100` |
+| dgx-spark | 192.168.0.105 | AI/GPU (Ollama:11434) | 원격 API만 |
+
+**OpsClaw API:** `http://localhost:8000` / Key: `opsclaw-api-key-2026`
+
+
+## 강의 시간 배분 (3시간)
+
+| 시간 | 내용 | 유형 |
+|------|------|------|
+| 0:00-0:40 | 이론 강의 (Part 1) | 강의 |
+| 0:40-1:10 | 이론 심화 + 사례 분석 (Part 2) | 강의/토론 |
+| 1:10-1:20 | 휴식 | - |
+| 1:20-2:00 | 실습 (Part 3) | 실습 |
+| 2:00-2:40 | 심화 실습 + 도구 활용 (Part 4) | 실습 |
+| 2:40-2:50 | 휴식 | - |
+| 2:50-3:20 | 응용 실습 + OpsClaw 연동 (Part 5) | 실습 |
+| 3:20-3:40 | 복습 퀴즈 + 과제 안내 (Part 6) | 퀴즈 |
+
+---
+
+
+---
+
+## 용어 해설 (보안관제/SOC 과목)
+
+| 용어 | 영문 | 설명 | 비유 |
+|------|------|------|------|
+| **SOC** | Security Operations Center | 보안 관제 센터 (24/7 모니터링) | 경찰 112 상황실 |
+| **관제** | Monitoring/Surveillance | 보안 이벤트를 실시간 감시하는 활동 | CCTV 관제 |
+| **경보** | Alert | 보안 이벤트가 탐지 규칙에 매칭되어 발생한 알림 | 화재 경보기 울림 |
+| **이벤트** | Event | 시스템에서 발생한 모든 활동 기록 | 일어난 일 하나하나 |
+| **인시던트** | Incident | 보안 정책을 위반한 이벤트 (실제 위협) | 실제 화재 발생 |
+| **오탐** | False Positive | 정상 활동을 공격으로 잘못 탐지 | 화재 경보기가 요리 연기에 울림 |
+| **미탐** | False Negative | 실제 공격을 놓침 | 도둑이 CCTV에 안 잡힘 |
+| **TTD** | Time to Detect | 공격 발생~탐지까지 걸리는 시간 | 화재 발생~경보 울림 시간 |
+| **TTR** | Time to Respond | 탐지~대응까지 걸리는 시간 | 경보~소방차 도착 시간 |
+| **SIGMA** | SIGMA | SIEM 벤더에 무관한 범용 탐지 룰 포맷 | 국제 표준 수배서 양식 |
+| **Tier 1/2/3** | SOC Tiers | 관제 인력 수준 (L1:모니터링, L2:분석, L3:전문가) | 일반의→전문의→교수 |
+| **트리아지** | Triage | 경보를 우선순위별로 분류하는 작업 | 응급실 환자 분류 |
+| **플레이북** | Playbook (IR) | 인시던트 유형별 대응 절차 매뉴얼 | 화재 대응 매뉴얼 |
+| **포렌식** | Forensics | 사이버 범죄 수사를 위한 증거 수집·분석 | 범죄 현장 감식 |
+| **IOC** | Indicator of Compromise | 침해 지표 (악성 IP, 도메인, 해시) | 수배범의 지문, 차량번호 |
+| **TTP** | Tactics, Techniques, Procedures | 공격자의 전술·기법·절차 | 범인의 범행 수법 |
+| **위협 헌팅** | Threat Hunting | 탐지 룰에 걸리지 않는 위협을 능동적으로 찾는 활동 | 잠복 수사 |
+| **syslog** | syslog | 시스템 로그를 원격 전송하는 프로토콜 (UDP 514) | 모든 부서 보고서를 본사로 모으는 시스템 |
+
+
+# 본 강의 내용
+
+# Week 06: 경보 분석 (2) - 실전 + ATT&CK 매핑
+
+## 학습 목표
+
+- 실제 공격 로그를 분석하고 공격 유형을 식별할 수 있다
+- MITRE ATT&CK 프레임워크의 구조를 이해한다
+- 탐지된 경보를 ATT&CK 전술/기법에 매핑할 수 있다
+- 킬 체인 관점에서 공격 흐름을 재구성할 수 있다
+
+---
+
+## 1. MITRE ATT&CK 프레임워크
+
+### 1.1 ATT&CK이란?
+
+**ATT&CK** = Adversarial Tactics, Techniques, and Common Knowledge
+
+- 실제 사이버 공격에서 관찰된 전술/기법을 체계적으로 정리한 지식 기반
+- https://attack.mitre.org
+- SOC, Red/Blue Team에서 사실상의 표준으로 사용
+
+### 1.2 구조
+
+```
+전술 (Tactic)     = "공격자의 목표" (WHY)
+  └ 기법 (Technique)  = "목표 달성 방법" (HOW)
+      └ 하위 기법 (Sub-technique) = "구체적 구현"
+```
+
+### 1.3 Enterprise ATT&CK 14개 전술
+
+| ID | 전술 | 설명 | 예시 |
+|----|------|------|------|
+| TA0001 | 초기 접근 (Initial Access) | 시스템 침입 | 피싱, 취약점 악용 |
+| TA0002 | 실행 (Execution) | 코드 실행 | 명령줄, 스크립트 |
+| TA0003 | 지속성 (Persistence) | 재접근 확보 | 백도어, cron 등록 |
+| TA0004 | 권한 상승 (Privilege Escalation) | 높은 권한 획득 | sudo 악용, 커널 취약점 |
+| TA0005 | 방어 회피 (Defense Evasion) | 탐지 회피 | 로그 삭제, 난독화 |
+| TA0006 | 자격 증명 접근 (Credential Access) | 인증 정보 탈취 | 비밀번호 크래킹 |
+| TA0007 | 탐색 (Discovery) | 환경 파악 | 포트 스캔, 계정 조회 |
+| TA0008 | 측면 이동 (Lateral Movement) | 다른 시스템 침투 | SSH, RDP |
+| TA0009 | 수집 (Collection) | 데이터 수집 | 파일 수집 |
+| TA0010 | 유출 (Exfiltration) | 데이터 유출 | HTTP, DNS 터널링 |
+| TA0011 | 명령 및 제어 (C2) | 원격 조종 | 리버스 셸 |
+| TA0040 | 영향 (Impact) | 시스템 파괴 | 랜섬웨어, 데이터 삭제 |
+| TA0042 | 정찰 (Reconnaissance) | 사전 정보 수집 | OSINT |
+| TA0043 | 자원 개발 (Resource Dev.) | 공격 인프라 준비 | 도메인 등록, 악성코드 제작 |
+
+---
+
+## 2. 실제 공격 로그 분석
+
+### 2.1 시나리오: SSH 무차별 대입 → 권한 상승
+
+```bash
+# 1단계: 정찰 (Reconnaissance) - TA0043
+# 포트 스캔 흔적
+sshpass -p1 ssh user@192.168.208.150 "grep -i 'scan' /var/log/suricata/fast.log 2>/dev/null | tail -5"
+
+# 2단계: 초기 접근 (Initial Access) - TA0001
+# SSH 무차별 대입 공격
+sshpass -p1 ssh user@192.168.208.142 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
+  awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -5"
+
+# 무차별 대입 후 성공 여부
+sshpass -p1 ssh user@192.168.208.142 "grep 'Accepted password' /var/log/auth.log 2>/dev/null | tail -5"
+
+# 3단계: 실행 (Execution) - TA0002
+# 로그인 후 실행된 명령 (auth.log에서 sudo 사용 확인)
+sshpass -p1 ssh user@192.168.208.142 "grep 'sudo:' /var/log/auth.log 2>/dev/null | tail -10"
+
+# 4단계: 권한 상승 (Privilege Escalation) - TA0004
+# sudo를 통한 root 권한 획득
+sshpass -p1 ssh user@192.168.208.142 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -10"
+```
+
+### 2.2 시나리오: 웹 공격 체인
+
+```bash
+# 1단계: 정찰 - 디렉토리 스캐닝
+sshpass -p1 ssh user@192.168.208.151 "grep ' 404 ' /var/log/nginx/access.log 2>/dev/null | \
+  awk '{print \$1}' | sort | uniq -c | sort -rn | head -5"
+
+# 2단계: 초기 접근 - SQL Injection 시도
+sshpass -p1 ssh user@192.168.208.151 "grep -iE 'union|select.*from|or.1=1' /var/log/nginx/access.log 2>/dev/null | tail -5"
+
+# 3단계: Suricata에서 웹 공격 탐지
+sshpass -p1 ssh user@192.168.208.150 "grep -i 'SQL\|XSS\|injection\|web' /var/log/suricata/fast.log 2>/dev/null | tail -10"
+
+# 4단계: Wazuh에서 웹 공격 경보
+sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+import sys, json
+for line in sys.stdin:
+    try:
+        a = json.loads(line)
+        r = a.get('rule',{})
+        groups = r.get('groups',[])
+        if 'web' in str(groups) or 'attack' in str(groups):
+            print(f'  [{r.get(\"level\",0)}] {r.get(\"description\",\"\")}')
+    except: pass
+\" 2>/dev/null | tail -10"
+```
+
+---
+
+## 3. ATT&CK 매핑 실습
+
+### 3.1 Wazuh의 ATT&CK 매핑
+
+Wazuh는 일부 규칙에 MITRE ATT&CK ID를 포함하고 있다.
+
+```bash
+# ATT&CK 매핑이 있는 경보 확인
+sshpass -p1 ssh user@192.168.208.152 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+import sys, json
+from collections import Counter
+techniques = Counter()
+for line in sys.stdin:
+    try:
+        a = json.loads(line)
+        r = a.get('rule',{})
+        mitre = r.get('mitre',{})
+        for tech in mitre.get('technique',[]):
+            techniques[tech] += 1
+        for tid in mitre.get('id',[]):
+            techniques[tid] += 1
+    except: pass
+if techniques:
+    print('=== ATT&CK 기법별 통계 ===')
+    for tech, cnt in techniques.most_common(15):
+        print(f'  {cnt:4d}건: {tech}')
+else:
+    print('ATT&CK 매핑된 경보가 없거나 mitre 필드 미포함')
+\" 2>/dev/null"
+```
+
+### 3.2 수동 ATT&CK 매핑
+
+경보에 ATT&CK 매핑이 없어도, 분석원이 직접 매핑할 수 있다:
+
+| 경보 유형 | ATT&CK 전술 | ATT&CK 기법 |
+|-----------|------------|------------|
+| SSH 인증 실패 다수 | 자격증명 접근 (TA0006) | Brute Force (T1110) |
+| SSH 로그인 성공 (외부IP) | 초기 접근 (TA0001) | Valid Accounts (T1078) |
+| sudo 실행 | 권한 상승 (TA0004) | Abuse Elevation Control (T1548) |
+| 파일 변경 탐지 | 지속성 (TA0003) | Modify System Process (T1543) |
+| 포트 스캔 | 탐색 (TA0007) | Network Service Discovery (T1046) |
+| SQL Injection | 초기 접근 (TA0001) | Exploit Public-Facing App (T1190) |
+| 로그 파일 삭제 | 방어 회피 (TA0005) | Indicator Removal (T1070) |
+| 대량 데이터 전송 | 유출 (TA0010) | Exfiltration Over C2 (T1041) |
+
+---
+
+## 4. 킬 체인 분석
+
+### 4.1 Cyber Kill Chain (Lockheed Martin)
+
+```
+1. 정찰 (Reconnaissance)     → 포트 스캔, 정보 수집
+2. 무기화 (Weaponization)     → 악성코드 제작
+3. 배달 (Delivery)            → 피싱, 웹 취약점 악용
+4. 악용 (Exploitation)        → 취약점 실행
+5. 설치 (Installation)        → 백도어 설치
+6. 명령/제어 (C2)              → 원격 조종
+7. 목표 달성 (Actions)         → 데이터 유출, 파괴
+```
+
+### 4.2 실습: 킬 체인 재구성
+
+```bash
+# 실습 환경에서 관찰 가능한 킬 체인 단계를 추적
+
+echo "=== 1. 정찰 단계 ==="
+echo "포트 스캔 흔적:"
+sshpass -p1 ssh user@192.168.208.150 "grep -i 'scan' /var/log/suricata/fast.log 2>/dev/null | wc -l"
+
+echo ""
+echo "=== 2. 초기 접근 시도 ==="
+echo "SSH 무차별 대입:"
+sshpass -p1 ssh user@192.168.208.142 "grep -c 'Failed password' /var/log/auth.log 2>/dev/null || echo '0'"
+echo "웹 공격 시도:"
+sshpass -p1 ssh user@192.168.208.151 "grep -cE 'union|select|script' /var/log/nginx/access.log 2>/dev/null || echo '0'"
+
+echo ""
+echo "=== 3. 초기 접근 성공 ==="
+echo "외부IP SSH 로그인 성공:"
+sshpass -p1 ssh user@192.168.208.142 "grep 'Accepted' /var/log/auth.log 2>/dev/null | grep -v '192.168.208' | head -5"
+
+echo ""
+echo "=== 4. 권한 상승 ==="
+echo "sudo 사용:"
+sshpass -p1 ssh user@192.168.208.142 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -5"
+
+echo ""
+echo "=== 5. 지속성 확보 (의심) ==="
+echo "cron 변경:"
+sshpass -p1 ssh user@192.168.208.142 "ls -la /var/spool/cron/crontabs/ 2>/dev/null"
+echo "SSH authorized_keys:"
+sshpass -p1 ssh user@192.168.208.142 "ls -la ~/.ssh/authorized_keys 2>/dev/null || echo '없음'"
+```
+
+---
+
+## 5. ATT&CK Navigator 활용
+
+### 5.1 ATT&CK Navigator란?
+
+ATT&CK 매트릭스를 시각화하는 도구이다.
+https://mitre-attack.github.io/attack-navigator/
+
+### 5.2 실습: 관찰된 기법 매핑
+
+지금까지 실습 환경에서 탐지한 기법을 정리한다:
+
+```
+관찰된 ATT&CK 기법:
+- T1110 Brute Force (SSH 무차별 대입)
+- T1078 Valid Accounts (로그인 성공)
+- T1046 Network Service Discovery (포트 스캔)
+- T1190 Exploit Public-Facing App (웹 공격)
+- T1548 Abuse Elevation Control (sudo)
+```
+
+ATT&CK Navigator에서 해당 기법에 색상을 표시하여 "우리 환경의 위협 맵"을 만든다.
+
+---
+
+## 6. 종합 분석 보고서
+
+### 6.1 양식
+
+```
+=== 공격 분석 보고서 ===
+분석일: 2026-03-27
+분석원: (이름)
+
+[공격 개요]
+- 공격 유형: (SSH 무차별 대입 / 웹 공격 등)
+- 공격 기간: YYYY-MM-DD HH:MM ~ YYYY-MM-DD HH:MM
+- 출발지: X.X.X.X
+- 대상: (서버명/IP)
+
+[킬 체인 분석]
+1. 정찰: (관찰 내용)
+2. 무기화: (해당 없음 / 정보 없음)
+3. 배달: (공격 방법)
+4. 악용: (취약점 이용 내용)
+5. 설치: (관찰 내용)
+6. C2: (관찰 내용)
+7. 목표: (성공/실패)
+
+[ATT&CK 매핑]
+| 전술 | 기법 ID | 기법명 | 증거 |
+|------|---------|--------|------|
+| TA0006 | T1110 | Brute Force | auth.log 실패 150건 |
+| ... | ... | ... | ... |
+
+[판정]
+- TP / FP 판정 및 근거
+- 공격 성공 여부
+- 피해 범위
+
+[권고사항]
+- 즉시 조치
+- 단기 개선
+- 중장기 개선
+```
+
+---
+
+## 7. 핵심 정리
+
+1. **ATT&CK** = 전술(WHY) → 기법(HOW) → 하위기법 체계
+2. **14개 전술** = 정찰부터 영향까지 공격의 전 단계
+3. **킬 체인** = 공격의 시간순 흐름을 재구성
+4. **매핑** = 경보를 ATT&CK 기법에 연결하여 공격 맥락 파악
+5. **상관 분석** = 여러 경보를 연결하여 전체 공격 그림 파악
+
+---
+
+## 과제
+
+1. 실습 환경의 Wazuh/Suricata 경보를 분석하여 ATT&CK 매핑 표를 작성하시오
+2. 관찰된 공격 시나리오를 킬 체인으로 재구성하시오
+3. 공격 분석 보고서를 작성하시오
+
+---
+
+## 참고 자료
+
+- MITRE ATT&CK (https://attack.mitre.org)
+- ATT&CK Navigator (https://mitre-attack.github.io/attack-navigator/)
+- Lockheed Martin Cyber Kill Chain
+
+
+---
+
+---
+
+## 심화: 보안관제(SOC) 실무 보충
+
+### 경보 분석 워크플로
+
+```
+[1단계] 경보 수신
+    → Wazuh Dashboard에서 경보 확인
+    → 심각도(level), 출처(src), 대상(dst) 즉시 파악
+
+[2단계] 초기 분류 (Triage, 5분 이내)
+    → 오탐(False Positive)인가? → 기존 사례와 비교
+    → 실제 위협인가? → IOC 확인 (악성 IP, 해시)
+    → 긴급도 결정: P1(즉시) / P2(4시간) / P3(24시간) / P4(일반)
+
+[3단계] 심층 분석 (Investigation)
+    → 관련 로그 추가 수집 (시간 범위 확대)
+    → ATT&CK 기법 매핑
+    → 영향 범위 파악 (어떤 서버, 어떤 데이터)
+
+[4단계] 대응 (Response)
+    → 격리: 감염 서버 네트워크 분리
+    → 차단: 공격자 IP 방화벽 차단
+    → 복구: 백업에서 복원, 패치 적용
+
+[5단계] 사후 분석 (Post-Incident)
+    → 타임라인 작성 (attack→detect→respond→recover)
+    → 탐지 룰 개선
+    → 보고서 작성
+```
+
+### Wazuh 로그 분석 실습
+
+```bash
+# siem 서버에서 최근 경보 확인
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
+  echo '=== 최근 경보 (level >= 7) ==='
+  sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | \
+    python3 -c '
+import sys, json
+for line in sys.stdin:
+    try:
+        a = json.loads(line.strip())
+        if a.get("rule",{}).get("level",0) >= 7:
+            print(f"[{a[\"rule\"][\"level\"]}] {a[\"rule\"].get(\"description\",\"?\")[:60]} src={a.get(\"srcip\",\"?\")}")
+    except: pass
+' 2>/dev/null | tail -10
+" 2>/dev/null
+```
+
+### SIGMA 룰 작성 가이드
+
+```yaml
+# SIGMA 룰 기본 구조
+title: SSH Brute Force Detection     # 룰 이름
+id: 12345678-abcd-efgh-...           # 고유 ID (UUID)
+status: experimental                  # experimental/test/stable
+description: |                        # 상세 설명
+    5분 내 동일 IP에서 10회 이상 SSH 인증 실패 탐지
+author: Student Name                  # 작성자
+date: 2026/03/27                      # 작성일
+
+logsource:                            # 어떤 로그를 볼 것인가
+    product: linux
+    service: sshd
+
+detection:                            # 어떤 패턴을 찾을 것인가
+    selection:
+        eventid: 4625                 # 또는 sshd 실패 이벤트
+    filter:                           # 제외 조건
+        srcip: "10.20.30.*"           # 내부 IP는 제외
+    condition: selection and not filter
+    timeframe: 5m                     # 시간 범위
+    count: 10                         # 최소 횟수
+
+level: high                           # 심각도
+tags:                                 # ATT&CK 매핑
+    - attack.credential_access
+    - attack.t1110.001
+falsepositives:                       # 오탐 가능성
+    - 자동화 스크립트의 반복 접속
+    - 비밀번호 정책 변경 후 재접속
+```
+
+### TTD/TTR 측정 실습
+
+```bash
+# 공격→탐지 시간(TTD) 측정 시나리오
+echo "=== 공격 시작 시각 기록 ==="
+ATTACK_TIME=$(date +%s)
+echo "공격 시작: $(date)"
+
+# (여기서 공격 실행)
+
+echo "=== SIEM 경보 확인 ==="
+# (경보 발생 시각 확인)
+DETECT_TIME=$(date +%s)
+TTD=$((DETECT_TIME - ATTACK_TIME))
+echo "TTD (탐지 소요 시간): ${TTD}초"
+```
+
+## 보충 실습
+
+### 보충 실습 1: 기본 동작 확인
+
+이론에서 배운 내용을 직접 확인하는 기초 실습이다.
+
+```bash
+# Step 1: 현재 상태 확인
+echo "=== 현재 상태 ==="
+# (해당 주차에 맞는 확인 명령)
+
+# Step 2: 설정/변경 적용
+echo "=== 변경 적용 ==="
+# (해당 주차에 맞는 실습 명령)
+
+# Step 3: 결과 검증
+echo "=== 결과 확인 ==="
+# (변경 결과 확인 명령)
+```
+
+> **트러블슈팅:**
+> - 명령이 실패하면: 권한(sudo), 경로, 서비스 상태를 먼저 확인
+> - 예상과 다른 결과: 이전 실습의 설정이 남아있을 수 있으므로 초기화 후 재시도
+> - 타임아웃: 네트워크 연결 또는 서비스 가동 상태 확인
+
+### 보충 실습 2: 탐지/모니터링 관점
+
+공격자가 아닌 **방어자 관점**에서 동일한 활동을 모니터링하는 실습이다.
+
+```bash
+# siem 서버에서 관련 로그 확인
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
+  "sudo cat /var/ossec/logs/alerts/alerts.json | tail -5" 2>/dev/null
+
+# Suricata 알림 확인 (해당 시)
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
+  "sudo tail -20 /var/log/suricata/fast.log" 2>/dev/null
+```
+
+> **왜 방어자 관점도 배우는가?**
+> 공격 기법만 알면 "스크립트 키디"에 불과하다.
+> 공격이 어떻게 탐지되는지 이해해야 진정한 보안 전문가이다.
+> 이 과목의 모든 공격 실습에는 대응하는 탐지/방어 관점이 포함된다.
+
+### 보충 실습 3: OpsClaw 자동화
+
+이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화한다.
+
+```bash
+# 프로젝트 생성 (이번 주차용)
+RESULT=$(curl -s -X POST http://localhost:8000/projects \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: opsclaw-api-key-2026" \
+  -d '{"name":"weekXX-lab","request_text":"이번 주차 실습 자동화","master_mode":"external"}')
+PID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
+
+# Stage 전환
+curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+
+# 실습 태스크 실행 (해당 주차에 맞게 수정)
+curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: opsclaw-api-key-2026" \
+  -d '{
+    "tasks": [
+      {"order":1,"title":"실습 태스크 1","instruction_prompt":"echo 실습1","risk_level":"low","subagent_url":"http://localhost:8002"},
+      {"order":2,"title":"실습 태스크 2","instruction_prompt":"echo 실습2","risk_level":"low","subagent_url":"http://10.20.30.80:8002"}
+    ],
+    "subagent_url":"http://localhost:8002",
+    "parallel":true
+  }'
+
+# Evidence 확인
+curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
+  -H "X-API-Key: opsclaw-api-key-2026" | python3 -m json.tool
+```
+
+
+---
+
+## 자가 점검 퀴즈 (10문항)
+
+이번 주차의 핵심 내용을 점검한다. 8/10 이상 정답을 목표로 한다.
+
+**Q1.** 이번 주차 "Week 06: 경보 분석 (2) - 실전 + ATT&CK 매핑"의 핵심 목적은 무엇인가?
+- (a) 네트워크 속도 향상  (b) **보안관제 기법/개념의 이해와 실습**  (c) 데이터베이스 관리  (d) UI 디자인
+
+**Q2.** 이 주제에서 로그 분석의 역할은?
+- (a) 성능 최적화  (b) 비용 절감  (c) **체계적 분류와 대응 기준 제공**  (d) 사용자 편의
+
+**Q3.** 실습에서 사용한 주요 도구/명령어의 1차 목적은?
+- (a) 파일 복사  (b) **인시던트 대응 수행 및 결과 확인**  (c) 메모리 관리  (d) 화면 출력
+
+**Q4.** OpsClaw를 통해 실습을 실행하는 가장 큰 이점은?
+- (a) 속도  (b) **모든 실행의 자동 증적(evidence) 기록**  (c) 무료  (d) 간편함
+
+**Q5.** 이 주제의 보안 위험이 높은 이유는?
+- (a) 비용이 많이 들어서  (b) 복잡해서  (c) **악용 시 시스템/데이터에 직접적 피해**  (d) 법적 문제
+
+**Q6.** 방어/대응의 핵심 원칙은?
+- (a) 모든 트래픽 차단  (b) **최소 권한 + 탐지 + 대응의 조합**  (c) 서버 재시작  (d) 비밀번호 변경
+
+**Q7.** 실습 결과를 분석할 때 가장 먼저 확인해야 하는 것은?
+- (a) 서버 이름  (b) **exit_code (성공/실패 여부)**  (c) 파일 크기  (d) 날짜
+
+**Q8.** 이 주제와 관련된 MITRE ATT&CK 전술은?
+- (a) Impact만  (b) Reconnaissance만  (c) **주제에 해당하는 전술(들)**  (d) 해당 없음
+
+**Q9.** 실무에서 이 기법/도구를 사용할 때 가장 주의할 점은?
+- (a) 속도  (b) **법적 허가와 범위 준수**  (c) 비용  (d) 보고서 양식
+
+**Q10.** 다음 주차와의 연결 포인트는?
+- (a) 관련 없음  (b) **이번 주 결과를 다음 주에서 활용/심화**  (c) 완전히 다른 주제  (d) 복습만
+
+**정답:** Q1:b, Q2:c, Q3:b, Q4:b, Q5:c, Q6:b, Q7:b, Q8:c, Q9:b, Q10:b
+
+---
+
+## 과제 (다음 주까지)
+
+### 과제 1: 이론 정리 보고서 (30점)
+
+이번 주차의 핵심 개념을 자신의 말로 정리하라.
+
+| 항목 | 배점 |
+|------|------|
+| 핵심 개념 정의 및 설명 | 10점 |
+| 실습 결과 캡처 및 해석 | 10점 |
+| 보안 관점 분석 (공격↔방어) | 10점 |
+
+### 과제 2: 실습 수행 보고서 (40점)
+
+이번 주차의 모든 실습을 수행하고 결과를 보고서로 작성하라.
+
+| 항목 | 배점 |
+|------|------|
+| 실습 명령어 및 실행 결과 캡처 | 15점 |
+| 결과 해석 및 보안 의미 분석 | 15점 |
+| 트러블슈팅 경험 (있는 경우) | 10점 |
+
+### 과제 3: OpsClaw 자동화 (30점)
+
+이번 주차의 핵심 실습을 OpsClaw execute-plan으로 자동화하라.
+
+| 항목 | 배점 |
+|------|------|
+| 프로젝트 생성 + stage 전환 | 5점 |
+| execute-plan 태스크 설계 (3개 이상) | 10점 |
+| evidence/summary 결과 | 5점 |
+| replay 타임라인 결과 | 5점 |
+| 자동화의 이점 분석 (직접 실행 대비) | 5점 |
+
+**제출:** 보고서(PDF 또는 MD) + OpsClaw project_id
+
+
+---
+
+## 검증 체크리스트
+
+이번 주차의 학습을 완료하려면 다음 항목을 모두 확인하라:
+
+- [ ] 이론 강의 내용 이해 (핵심 용어 설명 가능)
+- [ ] 기본 실습 모두 수행 완료
+- [ ] 보충 실습 1 (기본 동작 확인) 완료
+- [ ] 보충 실습 2 (탐지/모니터링 관점) 수행
+- [ ] 보충 실습 3 (OpsClaw 자동화) 수행
+- [ ] 자가 점검 퀴즈 8/10 이상 정답
+- [ ] 과제 1 (이론 정리) 작성
+- [ ] 과제 2 (실습 보고서) 작성
+- [ ] 과제 3 (OpsClaw 자동화) 완료
+
