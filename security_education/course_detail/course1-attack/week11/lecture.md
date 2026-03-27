@@ -177,10 +177,27 @@ bash -p
 
 ## 3. sudo 설정 오류
 
+> **이 실습을 왜 하는가?**
+> `sudo -l` 한 줄은 침투 테스터가 Linux 서버에서 **가장 먼저 실행**하는 명령이다.
+> sudo 설정 오류(NOPASSWD:ALL, 위험한 명령 허용)는 가장 흔하고 치명적인 권한 상승 경로이다.
+> 우리 실습 환경의 web 서버에도 **NOPASSWD: ALL**이 설정되어 있다 — Purple Team에서 발견한 Critical 취약점이다.
+>
+> **이걸 하면 무엇을 알 수 있는가?**
+> - 현재 사용자가 어떤 명령을 root로 실행할 수 있는지
+> - vim, less, find, python3 등 "안전해 보이는" 명령으로도 root 쉘을 얻을 수 있다는 사실
+> - GTFOBins(https://gtfobins.github.io)에서 sudo 우회 기법을 찾는 방법
+>
+> **실무 시나리오:** 실제 모의해킹에서 web 서버에 접근한 후:
+> 1. `sudo -l` 실행 → "(ALL) NOPASSWD: ALL" 발견
+> 2. `sudo bash` → 즉시 root 쉘 획득
+> 3. 보고서에 "CRITICAL: sudo NOPASSWD ALL 설정으로 일반 사용자가 root 동일 권한 보유" 기재
+>
+> **검증 완료:** web 서버에서 `sudo -l` → `(ALL : ALL) ALL`, `(ALL) NOPASSWD: ALL` 확인
+
 ### 3.1 sudo 권한 확인
 
 ```bash
-# 현재 사용자의 sudo 권한 확인
+# 현재 사용자의 sudo 권한 확인 (검증 완료)
 sudo -l
 
 # 예시 출력:
