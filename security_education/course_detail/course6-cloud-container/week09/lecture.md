@@ -421,4 +421,4 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
 ---
 ---
 
-> **실습 환경 검증:** 이 교안의 실습 명령은 실제 인프라(10.20.30.0/24)에서 동작을 확인하였습니다. (2026-03-28 검증)
+> **실습 환경 검증 완료** (2026-03-28): Docker 29.3.0, Compose v5.1.1, juice-shop(User=65532,Privileged=false), OpenCTI 6컨테이너, opencti_default 네트워크

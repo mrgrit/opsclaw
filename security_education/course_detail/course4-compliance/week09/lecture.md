@@ -451,4 +451,4 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
 ---
 ---
 
-> **실습 환경 검증:** 이 교안의 실습 명령은 실제 인프라(10.20.30.0/24)에서 동작을 확인하였습니다. (2026-03-28 검증)
+> **실습 환경 검증 완료** (2026-03-28): PASS_MAX_DAYS=99999, pam_pwquality, auditd, SSH 설정, nftables 점검
