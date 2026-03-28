@@ -104,10 +104,27 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 
 ## 3. 기본 룰 구조
 
+> **이 실습의 목적:**
+> Wazuh 탐지 룰은 SIEM의 **두뇌**이다. 로그가 수집되면 룰에 매칭하여 경보를 생성한다.
+> 기본 룰(약 3,000개)은 SSH 실패, 파일 변경, 악성코드 등 일반적 위협을 탐지하지만,
+> 우리 환경에 특화된 위협(SQLi, JuiceShop 공격 등)을 탐지하려면 **커스텀 룰**을 작성해야 한다.
+>
+> **실무 활용:** SOC 운영에서 새로운 위협이 보고되면 분석가가 커스텀 룰을 작성하여
+> local_rules.xml에 추가하고, `wazuh-logtest`로 테스트한 후 배포한다.
+>
+> **검증 완료:** siem 서버의 local_rules.xml에 62줄의 커스텀 룰 존재 (이전 Blue Team에서 작성)
+
 ### 3.1 룰 파일 위치
 
+> **왜 두 곳에 룰이 있는가?**
+> `/var/ossec/ruleset/rules/`는 Wazuh가 제공하는 **기본 룰**이다. 업데이트 시 덮어쓰이므로 수정하면 안 된다.
+> `/var/ossec/etc/rules/local_rules.xml`은 **사용자가 작성하는 커스텀 룰** 파일이다.
+> 커스텀 룰은 기본 룰보다 우선 평가되며, 여기에 환경 특화 탐지 로직을 작성한다.
+
 ```bash
+# 기본 룰 디렉토리 (수정 금지 — Wazuh 업데이트 시 덮어쓰임)
 echo 1 | sudo -S ls /var/ossec/ruleset/rules/ | head -20
+# 커스텀 룰 파일 (여기에 우리 환경 룰 작성)
 echo 1 | sudo -S ls /var/ossec/etc/rules/
 ```
 
