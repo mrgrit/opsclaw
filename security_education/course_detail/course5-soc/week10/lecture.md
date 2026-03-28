@@ -107,9 +107,17 @@
 
 ### 2.1 Suricata에서 탐지
 
+> **이 실습의 목적:**
+> 웹 공격이 발생하면 IPS(Suricata)가 **가장 먼저** 탐지해야 한다.
+> fast.log에서 SQLi, XSS 관련 알림을 검색하여 "공격이 IPS 수준에서 탐지되었는가?"를 확인한다.
+> 탐지되었으면 → IPS 룰이 정상 동작. 탐지되지 않았으면 → 룰 추가 또는 트래픽 경로 확인 필요.
+>
+> **실무 시나리오:** SOC L1 분석가가 "웹 서버 침해 의심" 보고를 받으면,
+> 가장 먼저 Suricata fast.log에서 해당 시간대의 웹 공격 알림을 검색한다.
+
 ```bash
-# SQL Injection 관련 Suricata 알림
-sshpass -p1 ssh secu@10.20.30.1 "grep -iE 'sql|injection|sqli' /var/log/suricata/fast.log 2>/dev/null | tail -10"
+# SQL Injection 관련 Suricata 알림 (검증 완료: fast.log에서 검색)
+sshpass -p1 ssh secu@10.20.30.1 "echo 1 | sudo -S grep -iE 'sql|injection|sqli' /var/log/suricata/fast.log 2>/dev/null | tail -10"
 
 # 웹 공격 전체 알림
 sshpass -p1 ssh secu@10.20.30.1 "grep -iE 'web|http|xss|rfi|lfi' /var/log/suricata/fast.log 2>/dev/null | tail -10"
