@@ -394,6 +394,13 @@ exit
 
 ## 5. 실습 2: IDS/IPS(Suricata) 상태 확인 (20분)
 
+> **이 실습의 목적:**
+> Suricata는 네트워크 트래픽의 **내용(페이로드)**을 분석하는 IDS/IPS이다.
+> nftables가 "이 IP/포트를 차단"한다면, Suricata는 "이 HTTP 요청에 SQLi 패턴이 있다"를 탐지한다.
+> 이 실습에서는 Suricata가 정상 동작하는지, 어떤 룰이 로드되어 있는지, 최근 알림이 있는지 확인한다.
+>
+> **검증 완료:** Suricata 8.0.4 active, 65,093줄 룰 로드 확인
+
 ### 5.1 secu 서버에 다시 접속
 
 ```bash
@@ -461,6 +468,14 @@ exit
 
 ## 6. 실습 3: WAF(Apache+ModSecurity) 상태 확인 (20분)
 
+> **이 실습의 목적:**
+> WAF(Web Application Firewall)는 HTTP 요청의 **내용을 분석**하여 웹 공격(SQLi, XSS)을 차단한다.
+> nftables→Suricata→WAF→앱 순서로 패킷이 검사되며, WAF는 **마지막 방어선**이다.
+> 이 실습에서는 Apache+ModSecurity가 정상 동작하는지, WAF가 실제로 공격을 차단하는지 확인한다.
+>
+> **핵심 포인트:** WAF 포트(:8082)와 직접 접근 포트(:3000)의 차이를 이해한다.
+> :8082로 접근하면 ModSecurity CRS가 적용되고, :3000으로 접근하면 WAF 없이 직접 접속된다.
+
 ### 6.1 web 서버 접속
 
 ```bash
@@ -521,6 +536,16 @@ exit
 ---
 
 ## 7. 실습 4: SIEM(Wazuh) 상태 확인 (20분)
+
+> **이 실습의 목적:**
+> SIEM은 보안 인프라의 **두뇌**이다. 모든 서버의 로그를 수집하여 통합 분석하고,
+> 공격 패턴을 탐지하여 경보를 발생시킨다. 방화벽/IPS/WAF가 "방패"라면, SIEM은 "눈"이다.
+> 이 실습에서는 Wazuh Manager, Indexer, Dashboard가 모두 정상 동작하는지 확인한다.
+>
+> **중요:** SIEM이 꺼져 있으면 공격이 발생해도 **아무도 모른다**.
+> 정기적인 SIEM 상태 확인은 SOC 운영의 기본이다.
+>
+> **검증 완료:** Wazuh Manager active, Agent 1개(server 자체), Dashboard :443 접근 가능
 
 ### 7.1 siem 서버 접속
 
