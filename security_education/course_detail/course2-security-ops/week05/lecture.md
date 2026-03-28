@@ -246,7 +246,26 @@ priority:1;    # 1(높음) ~ 4(낮음)
 
 ## 6. 커스텀 룰 작성 실습
 
+> **이 실습의 목적:**
+> Suricata의 기본 ET 룰셋(65,000+)은 범용적이다. 우리 환경에 특화된 위협을 탐지하려면
+> **커스텀 룰을 직접 작성**해야 한다. 이 실습에서 5개의 대표적 공격 유형에 대한 룰을 작성하며,
+> 각 룰의 옵션이 왜 그렇게 설정되는지를 이해한다.
+>
+> **실무 활용:** SOC에서 새로운 위협이 보고되면 분석가가 커스텀 룰을 작성하여 배포한다.
+> 예: "특정 C2 서버 IP에서 오는 트래픽 탐지" → 긴급 룰 추가 → Suricata 리로드
+
 ### 6.1 룰 1: SQL Injection 탐지
+
+> **왜 이 룰이 필요한가?**
+> UNION SELECT는 SQL Injection에서 다른 테이블의 데이터를 추출하는 핵심 기법이다.
+> HTTP URI에서 "union"과 "select"가 가까이 나타나면 SQLi 시도로 판단한다.
+>
+> **룰 해석:**
+> - `http.uri`: HTTP 요청의 URI 부분만 검사 (본문 제외)
+> - `content:"union"; nocase;`: 대소문자 무시하고 "union" 검색
+> - `distance:0;`: 이전 매칭("union") 바로 다음부터 "select" 검색
+> - `classtype:web-application-attack`: 공격 분류
+> - `sid:9000010`: 커스텀 룰 범위(9000000+)의 고유 ID
 
 ```bash
 echo 1 | sudo -S tee -a /etc/suricata/rules/local.rules << 'EOF'
@@ -256,6 +275,13 @@ EOF
 
 ### 6.2 룰 2: XSS 탐지
 
+> **왜 이 룰이 필요한가?**
+> `<script` 태그가 HTTP 요청에 포함되면 XSS(Cross-Site Scripting) 시도로 판단한다.
+> 공격자는 검색창이나 URL 파라미터에 스크립트를 삽입하여 다른 사용자의 브라우저에서 실행시킨다.
+>
+> **한계:** `<script>` 외에도 `<img onerror=`, `javascript:` 등 다양한 XSS 벡터가 있으므로,
+> 실무에서는 여러 개의 룰을 조합해야 한다.
+
 ```bash
 echo 1 | sudo -S tee -a /etc/suricata/rules/local.rules << 'EOF'
 alert http $HOME_NET any -> any any (msg:"CUSTOM - XSS attempt (script tag)"; flow:to_server,established; http.uri; content:"<script"; nocase; classtype:web-application-attack; sid:9000011; rev:1;)
@@ -264,6 +290,13 @@ EOF
 
 ### 6.3 룰 3: 디렉터리 트래버설 탐지
 
+> **왜 이 룰이 필요한가?**
+> `../`는 디렉터리 트래버설(경로 탐색) 공격의 핵심 패턴이다.
+> 공격자가 `../../etc/passwd`를 URI에 넣어 서버의 시스템 파일을 읽으려 시도한다.
+>
+> **오탐 가능성:** 일부 정상 URL에도 `../`가 포함될 수 있다.
+> 실무에서는 `../../../`(3단계 이상)으로 조건을 강화하거나, 특정 경로(/etc/, /proc/)와 조합한다.
+
 ```bash
 echo 1 | sudo -S tee -a /etc/suricata/rules/local.rules << 'EOF'
 alert http $HOME_NET any -> any any (msg:"CUSTOM - Directory Traversal attempt"; flow:to_server,established; http.uri; content:"../"; classtype:web-application-attack; sid:9000012; rev:1;)
@@ -271,6 +304,19 @@ EOF
 ```
 
 ### 6.4 룰 4: SSH 브루트포스 탐지
+
+> **왜 이 룰이 필요한가?**
+> SSH 브루트포스는 가장 흔한 네트워크 공격이다. 같은 IP에서 짧은 시간에 여러 번
+> SSH 연결을 시도하면 비밀번호 추측 공격으로 판단한다.
+>
+> **룰 해석:**
+> - `tcp ... -> $HOME_NET 22`: SSH 포트(22)로 향하는 TCP 트래픽
+> - `flags:S`: SYN 패킷만 카운트 (연결 시도)
+> - `threshold:type threshold, track by_src, count 5, seconds 60`:
+>   **동일 소스 IP에서 60초 내 5회 이상** SYN 패킷이 오면 경보
+>
+> **조정 팁:** count를 낮추면 오탐이 증가하고, 높이면 느린 브루트포스를 놓칠 수 있다.
+> 실무에서는 5~10회/분이 일반적이다.
 
 ```bash
 echo 1 | sudo -S tee -a /etc/suricata/rules/local.rules << 'EOF'

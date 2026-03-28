@@ -106,39 +106,75 @@ secu 서버는 게이트웨이 역할을 한다:
 
 ## 3. NAT 테이블 구성
 
+> **이 실습의 목적:**
+> NAT(Network Address Translation)는 방화벽의 핵심 기능 중 하나이다.
+> 내부 서버가 외부 인터넷에 접근하려면 **SNAT(masquerade)**이 필요하고,
+> 외부에서 내부 서버에 접근하려면 **DNAT(포트 포워딩)**이 필요하다.
+> 이 실습에서는 secu 서버를 게이트웨이로 설정하여, 내부↔외부 통신을 중재하는 방법을 배운다.
+>
+> **실무 활용:** 클라우드 환경의 로드밸런서, VPN 게이트웨이, 리버스 프록시가 모두 NAT를 사용한다.
+> nftables NAT 설정은 Linux 네트워크 관리자의 필수 역량이다.
+
 ### 3.1 NAT 테이블과 체인 생성
 
+> **왜 별도 테이블을 만드는가?**
+> 기존 `inet filter` 테이블은 패킷 필터링(허용/차단)용이고,
+> NAT는 패킷의 IP/포트를 **변환**하는 별도 작업이므로 전용 테이블을 만든다.
+> prerouting(패킷 도착 즉시)과 postrouting(패킷 발송 직전)에 각각 체인을 배치한다.
+
 ```bash
-# NAT 전용 테이블 생성
+# NAT 전용 테이블 생성 (inet = IPv4 + IPv6 동시 처리)
 echo 1 | sudo -S nft add table inet lab_nat
 
-# prerouting 체인 (DNAT용)
+# prerouting 체인: 외부에서 도착하는 패킷의 목적지 IP/포트를 변환 (DNAT)
+# priority -100: filter보다 먼저 실행되어야 NAT된 주소로 필터링됨
 echo 1 | sudo -S nft add chain inet lab_nat prerouting \
   '{ type nat hook prerouting priority -100; policy accept; }'
 
-# postrouting 체인 (SNAT용)
+# postrouting 체인: 내부에서 나가는 패킷의 출발지 IP를 변환 (SNAT/masquerade)
+# priority 100: filter 이후에 실행 (필터링 통과한 패킷만 NAT)
 echo 1 | sudo -S nft add chain inet lab_nat postrouting \
   '{ type nat hook postrouting priority 100; policy accept; }'
 ```
 
+> **확인 포인트:** `nft list tables`에서 `inet lab_nat`이 보이면 성공.
+
 ### 3.2 SNAT (Masquerade)
 
-내부 네트워크(10.20.30.0/24)의 트래픽을 외부로 내보낼 때 IP 변환:
+> **masquerade란?**
+> 내부 서버(10.20.30.x)가 외부 인터넷에 접근할 때, 출발지 IP를 게이트웨이(secu)의
+> 외부 IP로 **자동 변환**한다. 외부에서는 모든 내부 트래픽이 secu에서 온 것으로 보인다.
+> 이것은 가정의 공유기(NAT 라우터)가 하는 일과 동일하다.
+>
+> **왜 masquerade를 사용하는가?**
+> `snat to <고정IP>` 대신 `masquerade`를 사용하면 외부 IP가 바뀌어도
+> 자동으로 현재 IP를 사용하므로, DHCP 환경에서 편리하다.
 
 ```bash
-# masquerade: 나가는 인터페이스의 IP로 자동 변환
+# masquerade: 내부(10.20.30.0/24) → 외부 트래픽의 출발지 IP를 secu의 외부 IP로 자동 변환
 echo 1 | sudo -S nft add rule inet lab_nat postrouting \
   ip saddr 10.20.30.0/24 masquerade
 ```
 
+> **검증 방법:** 내부 서버(web)에서 `curl ifconfig.me`를 실행하면 secu의 외부 IP가 반환되어야 한다.
+
 ### 3.3 DNAT (포트 포워딩)
 
-외부에서 secu 서버의 8080 포트로 접근하면 web 서버(10.20.30.80)의 80 포트로 전달:
+> **포트 포워딩이란?**
+> 외부에서 secu:8080으로 접속하면, 실제로는 web:80으로 전달(forward)되는 설정이다.
+> 외부 사용자는 web 서버의 존재를 모르고, secu만 보인다.
+>
+> **실무 활용:** 웹 서버를 DMZ 뒤에 숨기고, 방화벽의 특정 포트만 외부에 노출하는
+> 보안 아키텍처의 핵심 기법이다.
 
 ```bash
+# DNAT: secu:8080 → web(10.20.30.80):80 으로 목적지 변환
 echo 1 | sudo -S nft add rule inet lab_nat prerouting \
   tcp dport 8080 dnat to 10.20.30.80:80
 ```
+
+> **주의:** DNAT만 설정하면 패킷이 forward 체인에서 차단될 수 있다.
+> `inet filter` 테이블의 forward 체인에서 해당 트래픽을 허용하는 룰도 함께 추가해야 한다.
 
 **확인:**
 ```bash
@@ -161,13 +197,19 @@ table inet lab_nat {
 
 ### 3.4 IP 포워딩 활성화
 
-NAT가 동작하려면 커널의 IP 포워딩이 활성화되어야 한다:
+> **왜 IP 포워딩이 필요한가?**
+> Linux 커널은 기본적으로 자신에게 오지 않은 패킷(다른 IP로 향하는 패킷)을 **버린다**.
+> NAT가 동작하려면 커널이 "이 패킷은 나를 거쳐 다른 서버로 가는 것이니 통과시켜라"를
+> 이해해야 한다. `ip_forward=1`이 이 기능을 활성화한다.
+>
+> **실무 주의:** 재부팅하면 원래 값으로 돌아간다. 영구 적용하려면
+> `/etc/sysctl.conf`에 `net.ipv4.ip_forward=1`을 추가해야 한다.
 
 ```bash
-# 현재 상태 확인
+# 현재 상태 확인 (0=비활성, 1=활성)
 cat /proc/sys/net/ipv4/ip_forward
 
-# 활성화 (즉시)
+# 활성화 (즉시, 재부팅 시 초기화)
 echo 1 | sudo -S sysctl -w net.ipv4.ip_forward=1
 ```
 
@@ -197,6 +239,20 @@ curl -s -o /dev/null -w "%{http_code}" http://10.20.30.80:80
 ---
 
 ## 5. 화이트리스트 정책 (기본 차단)
+
+> **이 실습을 왜 하는가?**
+> "기본 차단, 명시적 허용(default deny, explicit allow)"은 **모든 보안 설계의 제1원칙**이다.
+> 방화벽의 기본 정책을 DROP으로 설정하고, 필요한 서비스만 하나씩 허용하는 것이
+> "화이트리스트 방식"이다. 반대로 ACCEPT를 기본으로 하고 특정 것만 차단하는 것은
+> "블랙리스트 방식"이며, 새로운 위협을 놓칠 수 있어 보안에 부적합하다.
+>
+> **실무 시나리오:**
+> 새 서버를 배포할 때 가장 먼저 해야 할 일:
+> 1. 기본 정책을 DROP으로 설정
+> 2. SSH(22)를 허용 (관리 접근)
+> 3. 필요한 서비스 포트만 추가 허용
+> 4. conntrack으로 수립된 연결 허용
+> **이 순서를 반드시 지켜야 한다** — SSH 허용 전에 DROP을 설정하면 즉시 접속이 끊긴다!
 
 보안에서 가장 중요한 원칙: **기본 차단, 명시적 허용**
 
