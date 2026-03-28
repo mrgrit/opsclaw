@@ -222,6 +222,16 @@ vars:
 
 ### 5.3 NFQUEUE 모드 설정
 
+> **NFQUEUE란?**
+> Suricata가 **인라인 IPS**로 동작하려면, nftables가 패킷을 Suricata에게 전달해야 한다.
+> NFQUEUE는 커널이 패킷을 사용자 공간(Suricata)으로 보내는 큐이다.
+> Suricata가 패킷을 분석한 후 accept(통과) 또는 drop(차단)을 결정한다.
+>
+> **fail-open이 중요한 이유:**
+> Suricata가 죽으면 NFQUEUE에 패킷이 쌓여 **모든 네트워크 트래픽이 멈춘다**.
+> `fail-open: yes`로 설정하면 Suricata 장애 시 패킷이 자동 통과되어 서비스 중단을 방지한다.
+> 보안은 약해지지만 가용성을 유지하는 트레이드오프이다.
+
 ```bash
 echo 1 | sudo -S grep -A 10 "nfq:" /etc/suricata/suricata.yaml
 ```
