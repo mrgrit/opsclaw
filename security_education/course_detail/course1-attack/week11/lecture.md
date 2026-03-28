@@ -125,8 +125,21 @@ SUID 실행:   user가 실행 → root 권한으로 동작 (파일 소유자가 
 
 ### 2.1 SUID 바이너리 찾기
 
+> **이 명령을 왜 실행하는가?**
+> SUID(Set User ID) 비트가 설정된 파일은 **실행 시 파일 소유자의 권한으로 동작**한다.
+> 예: `/usr/bin/passwd`는 root 소유이고 SUID가 설정되어 있으므로, 일반 사용자가 실행해도
+> root 권한으로 `/etc/shadow`를 수정할 수 있다 (패스워드 변경).
+>
+> 문제는 `find`, `vim`, `python3` 같은 범용 도구에 SUID가 설정되면,
+> 이 도구의 "쉘 실행" 기능을 통해 **일반 사용자가 root 쉘을 획득**할 수 있다는 것이다.
+>
+> 따라서 침투 테스터는 `find / -perm -4000`을 실행하여 비정상 SUID 바이너리를 찾고,
+> GTFOBins에서 해당 바이너리의 악용 방법을 확인한다.
+>
+> **검증 완료:** web 서버에서 SUID 바이너리 5개 발견 (dbus-daemon-launch-helper, Xorg.wrap, ssh-keysign, pppd, fusermount3)
+
 ```bash
-# SUID가 설정된 모든 파일 검색
+# SUID가 설정된 모든 파일 검색 (검증 완료)
 find / -perm -4000 -type f 2>/dev/null
 
 # 일반적인 SUID 바이너리 (정상):
