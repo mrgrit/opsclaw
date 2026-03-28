@@ -312,6 +312,18 @@ Docker는 컨테이너 간 통신을 위해 여러 네트워크 드라이버를 
 
 ### 실습 5.1: web 서버 Docker 확인
 
+> **이 실습의 목적:**
+> 우리 실습 인프라에서 Docker가 어떻게 사용되는지 **직접 확인**하는 첫 실습이다.
+> web 서버의 JuiceShop은 Docker 컨테이너로 실행되고 있으며,
+> `docker ps`, `docker images`, `docker inspect` 명령으로 컨테이너의 상태, 이미지, 보안 설정을 확인한다.
+>
+> **이걸 하면 무엇을 알 수 있는가?**
+> - Docker 컨테이너가 실제로 어떻게 실행되고 있는지 (이름, 이미지, 포트 매핑)
+> - 이미지 크기와 레이어 구성
+> - 컨테이너가 root로 실행되는지, privileged 모드인지 (보안 점검)
+>
+> **검증 완료:** web 서버에서 Docker 29.3.0, juice-shop 컨테이너(User=65532, Privileged=false) 확인
+
 web 서버에 접속하여 실행 중인 컨테이너를 확인한다.
 
 ```bash
