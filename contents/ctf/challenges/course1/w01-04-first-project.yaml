@@ -1,0 +1,8 @@
+name: "[C1W01] OpsClaw 첫 프로젝트"
+category: "course1-week01"
+week: 1
+difficulty: medium
+points: 100
+description: |
+  OpsClaw 프로젝트 생성 → dispatch → evidence summary의 total_evidence 제출.
+flag: "FLAG{1}"

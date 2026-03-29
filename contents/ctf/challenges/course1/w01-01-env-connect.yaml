@@ -1,0 +1,8 @@
+name: "[C1W01] 실습 환경 접속"
+category: "course1-week01"
+week: 1
+difficulty: easy
+points: 50
+description: |
+  OpsClaw dispatch로 3대 서버 hostname을 확인하고, v-siem의 hostname을 제출.
+flag: "FLAG{v-siem}"

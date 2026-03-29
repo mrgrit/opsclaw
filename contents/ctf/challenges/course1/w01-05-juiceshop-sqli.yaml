@@ -1,0 +1,8 @@
+name: "[C1W01] JuiceShop 첫 침투"
+category: "course1-week01"
+week: 1
+difficulty: hard
+points: 150
+description: |
+  JuiceShop(:3000)에 SQL Injection으로 관리자 로그인 → admin 이메일 제출.
+flag: "FLAG{admin@juice-sh.op}"

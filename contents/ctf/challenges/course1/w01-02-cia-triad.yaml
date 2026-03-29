@@ -1,0 +1,8 @@
+name: "[C1W01] CIA Triad"
+category: "course1-week01"
+week: 1
+difficulty: easy
+points: 50
+description: |
+  DB 유출=기밀성(C), 변조=무결성(I), DDoS=가용성(A). 앞글자 조합.
+flag: "FLAG{CIA}"
