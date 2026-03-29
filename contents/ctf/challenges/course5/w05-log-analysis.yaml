@@ -1,0 +1,27 @@
+name: "경보 분석 — 브루트포스 탐지"
+category: "course5-soc"
+week: 5
+difficulty: easy
+points: 150
+description: |
+  ## 미션
+  v-siem 서버(192.168.0.109)의 Wazuh 로그에서
+  SSH 브루트포스 공격 경보를 찾으세요.
+
+  OpsClaw dispatch로 Wazuh 경보 로그를 조회하고,
+  rule level 10 이상인 경보의 rule ID를 찾으세요.
+
+  ### 조회 명령 예시
+  ```bash
+  curl -X POST http://localhost:8000/projects/{pid}/dispatch \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: opsclaw-api-key-2026" \
+    -d '{"command":"echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json | python3 -c \"import sys,json; [print(json.loads(l).get(\\\"rule\\\",{}).get(\\\"id\\\",\\\"\\\"), json.loads(l).get(\\\"rule\\\",{}).get(\\\"level\\\",0), json.loads(l).get(\\\"rule\\\",{}).get(\\\"description\\\",\\\"\\\")) for l in sys.stdin if l.strip()]\" 2>/dev/null | head -20","subagent_url":"http://192.168.0.109:8002"}'
+  ```
+
+  ### FLAG 형식
+  `FLAG{rule_id}` (SSH 브루트포스를 탐지하는 Wazuh rule ID)
+flag: "FLAG{5712}"
+hints:
+  - text: "Wazuh의 SSH 관련 룰은 5700번대입니다."
+    cost: 50

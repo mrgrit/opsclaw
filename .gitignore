@@ -16,3 +16,6 @@ build/
 slack-bot/
 data/
 paper/
+
+# CTF flags (answers)
+contents/ctf/flags/

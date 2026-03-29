@@ -1,0 +1,25 @@
+name: "nftables로 IP 차단"
+category: "course2-security-ops"
+week: 2
+difficulty: medium
+points: 200
+description: |
+  ## 미션
+  v-secu 서버(192.168.0.108)에서 nftables를 이용하여
+  공격 IP **203.0.113.50**을 차단하세요.
+
+  OpsClaw dispatch로 nftables 룰을 추가한 후,
+  차단이 적용된 것을 확인하는 명령의 결과에서 FLAG를 찾으세요.
+
+  ### 작업 순서
+  1. OpsClaw 프로젝트 생성
+  2. dispatch로 nftables drop 룰 추가
+  3. `nft list ruleset | grep 203.0.113.50` 결과 확인
+  4. 결과에 포함된 action 키워드를 FLAG로 제출
+
+  ### FLAG 형식
+  `FLAG{action}` (nftables에서 해당 IP에 적용된 action)
+flag: "FLAG{drop}"
+hints:
+  - text: "nft add rule inet filter input ip saddr 203.0.113.50 ???"
+    cost: 50

@@ -1,0 +1,23 @@
+name: "OpsClaw Evidence 수집"
+category: "course7-ai-security"
+week: 9
+difficulty: easy
+points: 100
+description: |
+  ## 미션
+  OpsClaw를 이용하여 v-web 서버(192.168.0.110)의 hostname을 확인하고,
+  생성된 evidence의 success_rate를 확인하세요.
+
+  ### 작업 순서
+  1. 프로젝트 생성 (POST /projects)
+  2. Stage 전환 (plan → execute)
+  3. dispatch로 hostname 확인
+  4. evidence summary 조회 (GET /projects/{pid}/evidence/summary)
+  5. success_rate 값을 FLAG로 제출
+
+  ### FLAG 형식
+  `FLAG{success_rate}` (예: FLAG{100.0%})
+flag: "FLAG{100.0%}"
+hints:
+  - text: "evidence summary API: GET /projects/{pid}/evidence/summary"
+    cost: 30

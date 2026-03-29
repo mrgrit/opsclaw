@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  ctfd:
+    image: ctfd/ctfd:latest
+    container_name: opsclaw-ctfd
+    ports:
+      - "8080:8000"
+    environment:
+      - UPLOAD_FOLDER=/var/uploads
+      - DATABASE_URL=sqlite:////opt/CTFd/CTFd/ctfd.db
+      - LOG_FOLDER=/var/log/CTFd
+      - ACCESS_LOG=-
+      - ERROR_LOG=-
+      - REVERSE_PROXY=true
+    volumes:
+      - ctfd-data:/opt/CTFd/CTFd
+      - ctfd-logs:/var/log/CTFd
+      - ctfd-uploads:/var/uploads
+    restart: always
+    networks:
+      - ctfd-net
+
+networks:
+  ctfd-net:
+    driver: bridge
+
+volumes:
+  ctfd-data:
+  ctfd-logs:
+  ctfd-uploads:

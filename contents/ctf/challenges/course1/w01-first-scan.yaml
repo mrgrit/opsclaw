@@ -1,0 +1,26 @@
+name: "첫 번째 스캔"
+category: "course1-attack"
+week: 1
+difficulty: easy
+points: 100
+description: |
+  ## 미션
+  v-secu 서버(192.168.0.108)에서 열려 있는 포트를 확인하세요.
+
+  OpsClaw를 이용하여 nmap 스캔을 수행하고, **SSH 포트(22)** 외에
+  열려 있는 포트 번호를 FLAG 형식으로 제출하세요.
+
+  ### OpsClaw 사용법
+  ```bash
+  curl -X POST http://localhost:8000/projects/{your-project-id}/dispatch \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: opsclaw-api-key-2026" \
+    -d '{"command":"nmap -sT 192.168.0.108","subagent_url":"http://localhost:8002"}'
+  ```
+
+  ### FLAG 형식
+  `FLAG{포트번호}` (예: FLAG{80})
+flag: "FLAG{8002}"
+hints:
+  - text: "OpsClaw SubAgent가 사용하는 포트를 생각해보세요."
+    cost: 50
