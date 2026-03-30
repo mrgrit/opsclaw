@@ -47,7 +47,7 @@ export default function Chapter() {
     if (!vol || !chapter) return
     setLoading(true)
     setError('')
-    fetch(`/content/novel/${vol}/${chapter}`, { headers: authHeaders() })
+    fetch(`/portal/content/novel/${vol}/${chapter}`, { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()

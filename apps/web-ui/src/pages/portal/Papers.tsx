@@ -47,7 +47,7 @@ export default function Papers() {
   const [forbidden, setForbidden] = useState(false)
 
   useEffect(() => {
-    fetch('/content/papers', { headers: authHeaders() })
+    fetch('/portal/content/papers', { headers: authHeaders() })
       .then(r => {
         if (r.status === 403) {
           setForbidden(true)

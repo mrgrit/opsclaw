@@ -58,7 +58,7 @@ export default function Lecture() {
     if (!course || !week) return
     setLoading(true)
     setError('')
-    fetch(`/content/education/${course}/${week}`, { headers: authHeaders() })
+    fetch(`/portal/content/education/${course}/${week}`, { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()

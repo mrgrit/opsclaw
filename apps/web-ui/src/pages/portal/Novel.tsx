@@ -37,7 +37,7 @@ export default function Novel() {
 
   useEffect(() => {
     setLoading(true)
-    fetch('/content/novel', { headers: authHeaders() })
+    fetch('/portal/content/novel', { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
@@ -49,7 +49,7 @@ export default function Novel() {
 
   useEffect(() => {
     if (!vol) { setChapters([]); return }
-    fetch(`/content/novel/${vol}`, { headers: authHeaders() })
+    fetch(`/portal/content/novel/${vol}`, { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
