@@ -393,7 +393,7 @@ if isinstance(blocks, list):
 ```bash
 # 전체 PoW 체인 무결성 검증
 curl -s -H "X-API-Key: $OPSCLAW_API_KEY" \
-  "http://localhost:8000/pow/verify" \
+  "http://localhost:8000/pow/verify?agent_id=http://localhost:8002" \
   | python3 -m json.tool
 # 정상: {"valid": true, "blocks": N, "orphans": 0, "tampered": []}
 # orphans: 메인 체인에 포함되지 않은 분기 블록 수

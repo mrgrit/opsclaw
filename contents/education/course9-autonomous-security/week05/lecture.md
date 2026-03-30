@@ -95,17 +95,17 @@ Playbook
 ├── version: "1.0"
 ├── steps:
 │   ├── Step 1: 디스크 사용량 확인
-│   │   ├── tool: run_command
+│   │   ├── type: run_command
 │   │   ├── params: {command: "df -h /"}
-│   │   └── subagent_url: "http://10.20.30.1:8002"
+│   │   └── metadata: {subagent_url: "http://10.20.30.1:8002"}
 │   ├── Step 2: 방화벽 규칙 확인
-│   │   ├── tool: run_command
+│   │   ├── type: run_command
 │   │   ├── params: {command: "nft list ruleset | wc -l"}
-│   │   └── subagent_url: "http://10.20.30.1:8002"
+│   │   └── metadata: {subagent_url: "http://10.20.30.1:8002"}
 │   └── Step 3: 웹 서비스 응답 확인
-│       ├── tool: run_command
+│       ├── type: run_command
 │       ├── params: {command: "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000"}
-│       └── subagent_url: "http://10.20.30.80:8002"
+│       └── metadata: {subagent_url: "http://10.20.30.80:8002"}
 └── abort_on_failure: false
 ```
 
@@ -156,38 +156,38 @@ curl -s -X POST http://localhost:8000/playbooks \
     "steps": [
       {
         "order": 1,
-        "tool": "run_command",
-        "description": "전 서버 디스크 사용량 확인",
+        "type": "run_command",
+        "name": "전 서버 디스크 사용량 확인",
         "params": {"command": "df -h / | tail -1"},
-        "subagent_url": "http://10.20.30.1:8002"
+        "metadata": {"subagent_url": "http://10.20.30.1:8002"}
       },
       {
         "order": 2,
-        "tool": "run_command",
-        "description": "secu 방화벽 규칙 수 확인",
+        "type": "run_command",
+        "name": "secu 방화벽 규칙 수 확인",
         "params": {"command": "sudo nft list ruleset | grep -c rule"},
-        "subagent_url": "http://10.20.30.1:8002"
+        "metadata": {"subagent_url": "http://10.20.30.1:8002"}
       },
       {
         "order": 3,
-        "tool": "run_command",
-        "description": "web JuiceShop 서비스 응답 확인",
+        "type": "run_command",
+        "name": "web JuiceShop 서비스 응답 확인",
         "params": {"command": "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000"},
-        "subagent_url": "http://10.20.30.80:8002"
+        "metadata": {"subagent_url": "http://10.20.30.80:8002"}
       },
       {
         "order": 4,
-        "tool": "run_command",
-        "description": "siem Wazuh 에이전트 상태 확인",
+        "type": "run_command",
+        "name": "siem Wazuh 에이전트 상태 확인",
         "params": {"command": "systemctl is-active wazuh-manager 2>/dev/null || echo inactive"},
-        "subagent_url": "http://10.20.30.100:8002"
+        "metadata": {"subagent_url": "http://10.20.30.100:8002"}
       },
       {
         "order": 5,
-        "tool": "run_command",
-        "description": "web 서버 최근 로그인 이력",
+        "type": "run_command",
+        "name": "web 서버 최근 로그인 이력",
         "params": {"command": "last -5 | head -5"},
-        "subagent_url": "http://10.20.30.80:8002"
+        "metadata": {"subagent_url": "http://10.20.30.80:8002"}
       }
     ]
   }' | python3 -m json.tool
@@ -333,38 +333,38 @@ curl -s -X POST http://localhost:8000/playbooks \
     "steps": [
       {
         "order": 1,
-        "tool": "run_command",
-        "description": "공격 IP의 실패 로그 수 확인",
+        "type": "run_command",
+        "name": "공격 IP의 실패 로그 수 확인",
         "params": {"command": "grep \"Failed password\" /var/log/auth.log | grep \"203.0.113.42\" | wc -l"},
-        "subagent_url": "http://10.20.30.80:8002"
+        "metadata": {"subagent_url": "http://10.20.30.80:8002"}
       },
       {
         "order": 2,
-        "tool": "run_command",
-        "description": "nftables로 공격 IP 차단",
+        "type": "run_command",
+        "name": "nftables로 공격 IP 차단",
         "params": {"command": "echo \"[DRY-RUN] sudo nft add rule inet filter input ip saddr 203.0.113.42 drop\""},
-        "subagent_url": "http://10.20.30.1:8002"
+        "metadata": {"subagent_url": "http://10.20.30.1:8002"}
       },
       {
         "order": 3,
-        "tool": "run_command",
-        "description": "차단 규칙 적용 확인",
+        "type": "run_command",
+        "name": "차단 규칙 적용 확인",
         "params": {"command": "sudo nft list ruleset | grep -c \"203.0.113.42\" || echo 0"},
-        "subagent_url": "http://10.20.30.1:8002"
+        "metadata": {"subagent_url": "http://10.20.30.1:8002"}
       },
       {
         "order": 4,
-        "tool": "run_command",
-        "description": "현재 활성 SSH 세션 확인",
+        "type": "run_command",
+        "name": "현재 활성 SSH 세션 확인",
         "params": {"command": "ss -tnp | grep :22 | head -10"},
-        "subagent_url": "http://10.20.30.80:8002"
+        "metadata": {"subagent_url": "http://10.20.30.80:8002"}
       },
       {
         "order": 5,
-        "tool": "run_command",
-        "description": "대응 요약 기록",
+        "type": "run_command",
+        "name": "대응 요약 기록",
         "params": {"command": "echo \"[$(date)] SSH brute force from 203.0.113.42 - blocked\" | tee -a /tmp/incident-log.txt"},
-        "subagent_url": "http://10.20.30.201:8002"
+        "metadata": {"subagent_url": "http://10.20.30.201:8002"}
       }
     ]
   }' | python3 -m json.tool
@@ -433,12 +433,12 @@ cat << 'EOF' > /tmp/daily-security-check-v2.json
   "name": "daily-security-check-v2",
   "description": "일일 보안 점검 Playbook v2: SSL 인증서 만료일 확인 추가",
   "steps": [
-    {"order": 1, "tool": "run_command", "description": "디스크 확인", "params": {"command": "df -h / | tail -1"}, "subagent_url": "http://10.20.30.1:8002"},
-    {"order": 2, "tool": "run_command", "description": "방화벽 확인", "params": {"command": "sudo nft list ruleset | grep -c rule"}, "subagent_url": "http://10.20.30.1:8002"},
-    {"order": 3, "tool": "run_command", "description": "웹 응답 확인", "params": {"command": "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000"}, "subagent_url": "http://10.20.30.80:8002"},
-    {"order": 4, "tool": "run_command", "description": "Wazuh 상태", "params": {"command": "systemctl is-active wazuh-manager 2>/dev/null || echo inactive"}, "subagent_url": "http://10.20.30.100:8002"},
-    {"order": 5, "tool": "run_command", "description": "로그인 이력", "params": {"command": "last -5 | head -5"}, "subagent_url": "http://10.20.30.80:8002"},
-    {"order": 6, "tool": "run_command", "description": "[신규] SSL 인증서 만료일 확인", "params": {"command": "echo | openssl s_client -connect localhost:443 -servername localhost 2>/dev/null | openssl x509 -noout -dates 2>/dev/null || echo no-ssl"}, "subagent_url": "http://10.20.30.80:8002"}
+    {"order": 1, "type": "run_command", "name": "디스크 확인", "params": {"command": "df -h / | tail -1"}, "metadata": {"subagent_url": "http://10.20.30.1:8002"}},
+    {"order": 2, "type": "run_command", "name": "방화벽 확인", "params": {"command": "sudo nft list ruleset | grep -c rule"}, "metadata": {"subagent_url": "http://10.20.30.1:8002"}},
+    {"order": 3, "type": "run_command", "name": "웹 응답 확인", "params": {"command": "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000"}, "metadata": {"subagent_url": "http://10.20.30.80:8002"}},
+    {"order": 4, "type": "run_command", "name": "Wazuh 상태", "params": {"command": "systemctl is-active wazuh-manager 2>/dev/null || echo inactive"}, "metadata": {"subagent_url": "http://10.20.30.100:8002"}},
+    {"order": 5, "type": "run_command", "name": "로그인 이력", "params": {"command": "last -5 | head -5"}, "metadata": {"subagent_url": "http://10.20.30.80:8002"}},
+    {"order": 6, "type": "run_command", "name": "[신규] SSL 인증서 만료일 확인", "params": {"command": "echo | openssl s_client -connect localhost:443 -servername localhost 2>/dev/null | openssl x509 -noout -dates 2>/dev/null || echo no-ssl"}, "metadata": {"subagent_url": "http://10.20.30.80:8002"}}
   ]
 }
 EOF
