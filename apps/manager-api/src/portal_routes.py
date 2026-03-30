@@ -322,6 +322,27 @@ async def list_courses():
     return {"courses": courses}
 
 
+@router.get("/portal/content/education/{course}")
+async def get_course_weeks(course: str):
+    """List weeks for a specific course."""
+    course_dir = CONTENTS_BASE / "education" / course
+    if not course_dir.is_dir():
+        raise HTTPException(404, f"Course not found: {course}")
+    weeks = []
+    for w in sorted(course_dir.iterdir()):
+        if w.is_dir() and w.name.startswith("week"):
+            # 주차 번호 추출
+            num = w.name.replace("week", "")
+            # lecture.md 첫 줄에서 제목 추출
+            lf = w / "lecture.md"
+            title = w.name
+            if lf.is_file():
+                first_line = lf.read_text("utf-8").split("\n", 1)[0]
+                title = first_line.lstrip("# ").strip() if first_line.startswith("#") else w.name
+            weeks.append({"week": num, "title": title, "id": w.name})
+    return {"course": course, "weeks": weeks}
+
+
 @router.get("/portal/content/education/{course}/{week}")
 async def get_lecture(
     course: str,
@@ -355,6 +376,21 @@ async def list_novels():
                 "chapter_count": len(chapters),
             })
     return {"volumes": volumes}
+
+
+@router.get("/portal/content/novel/{vol}")
+async def get_volume_chapters(vol: str):
+    """List chapters for a specific volume."""
+    vol_dir = CONTENTS_BASE / "novel" / vol
+    if not vol_dir.is_dir():
+        raise HTTPException(404, f"Volume not found: {vol}")
+    chapters = []
+    for f in sorted(vol_dir.iterdir()):
+        if f.is_file() and f.suffix == ".md" and not f.name.startswith("00"):
+            first_line = f.read_text("utf-8").split("\n", 1)[0]
+            title = first_line.lstrip("# ").strip() if first_line.startswith("#") else f.stem
+            chapters.append({"id": f.stem, "title": title})
+    return {"volume": vol, "chapters": chapters}
 
 
 @router.get("/portal/content/novel/{vol}/{chapter}")
