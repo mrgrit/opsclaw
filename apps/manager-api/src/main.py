@@ -2573,7 +2573,21 @@ def create_app() -> FastAPI:
 
     _WEB_UI_DIST = Path(__file__).parent.parent.parent.parent / "apps" / "web-ui" / "dist"
     if _WEB_UI_DIST.exists():
-        app.mount("/app", StaticFiles(directory=str(_WEB_UI_DIST), html=True), name="web-ui")
+        # Serve static assets (JS, CSS, images)
+        app.mount("/app/assets", StaticFiles(directory=str(_WEB_UI_DIST / "assets")), name="web-assets")
+
+        # SPA catch-all: any /app/* route returns index.html for client-side routing
+        _index_html = (_WEB_UI_DIST / "index.html").read_text("utf-8")
+
+        @app.get("/app/{full_path:path}", include_in_schema=False)
+        async def spa_catchall(full_path: str):
+            # Check if it's a real static file first
+            static_file = _WEB_UI_DIST / full_path
+            if static_file.is_file() and not full_path.endswith(".html"):
+                from starlette.responses import FileResponse
+                return FileResponse(str(static_file))
+            # Otherwise return index.html for SPA routing
+            return HTMLResponse(content=_index_html)
 
     return app
 
