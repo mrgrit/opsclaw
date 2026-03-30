@@ -27,7 +27,7 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register'
+      const endpoint = mode === 'login' ? '/portal/auth/login' : '/portal/auth/register'
       const body: Record<string, string> = { username, password }
       if (mode === 'register') body.email = email
 
