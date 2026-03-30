@@ -17,7 +17,7 @@ interface Board {
   name: string
   slug: string
   description: string
-  type: 'board' | 'blog'
+  board_type: string
   post_count: number
   icon?: string
   theme_color?: string
@@ -46,8 +46,8 @@ export default function Community() {
       .finally(() => setLoading(false))
   }, [])
 
-  const boardType = boards.filter(b => b.type === 'board')
-  const blogType = boards.filter(b => b.type === 'blog')
+  const boardType = boards.filter(b => b.board_type === 'board')
+  const blogType = boards.filter(b => b.board_type === 'blog')
 
   if (loading) return <div style={{ color: colors.textMuted, textAlign: 'center', padding: 40 }}>Loading...</div>
   if (error) return <div style={{ color: '#f85149', textAlign: 'center', padding: 40 }}>{error}</div>
@@ -68,7 +68,7 @@ export default function Community() {
       onMouseLeave={e => (e.currentTarget.style.borderColor = colors.border)}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <span style={{ fontSize: '1.4rem' }}>{b.icon || (b.type === 'blog' ? '\u270D' : '\uD83D\uDCCB')}</span>
+        <span style={{ fontSize: '1.4rem' }}>{b.icon || (b.board_type === 'blog' ? '\u270D' : '\uD83D\uDCCB')}</span>
         <span style={{ fontSize: '1.1rem', fontWeight: 600, color: b.theme_color || colors.accent }}>{b.name}</span>
       </div>
       <div style={{ color: colors.textMuted, fontSize: '0.85rem', lineHeight: 1.5, marginBottom: 12 }}>
