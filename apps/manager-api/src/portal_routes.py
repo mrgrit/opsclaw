@@ -1633,7 +1633,34 @@ async def get_profile(username: str):
         if row.get(key):
             row[key] = str(row[key])
 
-    return {"profile": row}
+    # Photo history (최근 10장)
+    photos = []
+    try:
+        conn2 = _get_conn()
+        with conn2.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur2:
+            cur2.execute(
+                "SELECT id, photo_url, uploaded_at FROM portal_profile_photos "
+                "WHERE user_id = %s ORDER BY uploaded_at DESC LIMIT 10",
+                (row["id"],),
+            )
+            photos = [dict(p) for p in cur2.fetchall()]
+            for p in photos:
+                if p.get("uploaded_at"):
+                    p["uploaded_at"] = str(p["uploaded_at"])
+        conn2.close()
+    except Exception:
+        pass
+
+    # 프론트 호환 플랫 응답
+    return {
+        "username": row["username"],
+        "email": row.get("email"),
+        "bio": row.get("bio_md", ""),
+        "photo_url": row.get("photo_url", ""),
+        "role_level": row.get("role_level", "general"),
+        "created_at": row.get("created_at", ""),
+        "photos": photos,
+    }
 
 
 @router.put("/portal/profile")
@@ -1680,24 +1707,38 @@ async def upload_profile_photo(
     if len(content) > max_size:
         raise HTTPException(413, "Photo too large (max 5MB)")
 
-    # Save file
+    # Save file with unique name
     ext = Path(file.filename).suffix if file.filename else ".jpg"
-    stored_name = f"user_{user['user_id']}{ext}"
-    dest = UPLOAD_PROFILES_DIR / stored_name
+    unique_name = f"user_{user['user_id']}_{uuid.uuid4().hex[:8]}{ext}"
+    dest = UPLOAD_PROFILES_DIR / unique_name
     dest.write_bytes(content)
 
     # URL for serving (relative)
-    photo_url = f"/data/uploads/profiles/{stored_name}"
+    photo_url = f"/portal/uploads/profiles/{unique_name}"
 
     try:
         conn = _get_conn()
         with conn:
             with conn.cursor() as cur:
+                # 프로필 테이블 업데이트 (현재 사진)
                 cur.execute(
                     "INSERT INTO portal_profiles (user_id, photo_url, updated_at) "
                     "VALUES (%s, %s, now()) "
                     "ON CONFLICT (user_id) DO UPDATE SET photo_url = %s, updated_at = now()",
                     (user["user_id"], photo_url, photo_url),
+                )
+                # 사진 히스토리 추가
+                cur.execute(
+                    "INSERT INTO portal_profile_photos (user_id, photo_url) VALUES (%s, %s)",
+                    (user["user_id"], photo_url),
+                )
+                # 10장 초과 시 오래된 것 삭제
+                cur.execute(
+                    "DELETE FROM portal_profile_photos WHERE id IN ("
+                    "  SELECT id FROM portal_profile_photos WHERE user_id = %s "
+                    "  ORDER BY uploaded_at DESC OFFSET 10"
+                    ")",
+                    (user["user_id"],),
                 )
         conn.close()
     except Exception as e:
@@ -1705,3 +1746,47 @@ async def upload_profile_photo(
         raise HTTPException(500, "Database error")
 
     return {"ok": True, "photo_url": photo_url}
+
+
+# ── Members list ─────────────────────────────────────────────────────────────
+
+@router.get("/portal/members")
+async def list_members():
+    """모든 회원의 프로필 카드 목록 (카카오톡 스타일)."""
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT u.id, u.username, u.role_level, u.created_at, "
+                "p.photo_url, p.bio_md "
+                "FROM portal_users u "
+                "LEFT JOIN portal_profiles p ON p.user_id = u.id "
+                "ORDER BY u.created_at"
+            )
+            members = [dict(r) for r in cur.fetchall()]
+        conn.close()
+    except Exception as e:
+        logger.error("list_members error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    for m in members:
+        if m.get("created_at"):
+            m["created_at"] = str(m["created_at"])
+        m["bio_short"] = (m.get("bio_md") or "")[:100]
+
+    return {"members": members}
+
+
+# ── Static file serving for uploads ──────────────────────────────────────────
+
+UPLOAD_BASE = Path("/home/opsclaw/opsclaw/data/uploads")
+
+@router.get("/portal/uploads/{path:path}")
+async def serve_upload(path: str):
+    """Serve uploaded files (profile photos, post attachments)."""
+    file_path = (UPLOAD_BASE / path).resolve()
+    if not str(file_path).startswith(str(UPLOAD_BASE.resolve())):
+        raise HTTPException(403, "Access denied")
+    if not file_path.is_file():
+        raise HTTPException(404, "File not found")
+    return FileResponse(str(file_path))

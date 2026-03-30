@@ -25,6 +25,7 @@ import PostDetail from './pages/portal/PostDetail'
 import PostWrite from './pages/portal/PostWrite'
 import Profile from './pages/portal/Profile'
 import AdminPanel from './pages/portal/AdminPanel'
+import Members from './pages/portal/Members'
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="community/:slug/:postId" element={<PostDetail />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/:username" element={<Profile />} />
+          <Route path="members" element={<Members />} />
           <Route path="admin-panel" element={<AdminPanel />} />
         </Route>
 

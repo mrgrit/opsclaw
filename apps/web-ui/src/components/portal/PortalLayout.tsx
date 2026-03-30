@@ -10,6 +10,7 @@ const baseNavItems = [
   { to: '/terminal', label: '터미널' },
   { to: '/papers', label: '논문' },
   { to: '/community', label: '커뮤니티' },
+  { to: '/members', label: '멤버' },
 ]
 
 const colors = {

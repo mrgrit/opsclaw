@@ -87,7 +87,7 @@ export default function Profile() {
     try {
       const fd = new FormData()
       fd.append('photo', photoFile)
-      const res = await fetch(`/portal/profile/${targetUser}/photo`, {
+      const res = await fetch(`/portal/profile/photo`, {
         method: 'POST',
         headers: authHeaders(),
         body: fd,
