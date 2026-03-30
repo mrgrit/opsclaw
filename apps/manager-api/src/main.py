@@ -2287,6 +2287,7 @@ def create_app() -> FastAPI:
             request.method == "OPTIONS"
             or path in ("/health", "/", "/ui")
             or path.startswith("/app/")
+            or path.startswith("/portal/")
             or request.headers.get("upgrade", "").lower() == "websocket"
         ):
             return await call_next(request)
@@ -2562,6 +2563,13 @@ def create_app() -> FastAPI:
     @app.get("/", include_in_schema=False)
     def root_redirect():
         return RedirectResponse(url="/app/")
+
+    # Portal routes (education, auth, terminal)
+    try:
+        from .portal_routes import router as portal_router
+        app.include_router(portal_router)
+    except Exception as e:
+        print(f"[WARN] Portal routes not loaded: {e}")
 
     _WEB_UI_DIST = Path(__file__).parent.parent.parent.parent / "apps" / "web-ui" / "dist"
     if _WEB_UI_DIST.exists():
