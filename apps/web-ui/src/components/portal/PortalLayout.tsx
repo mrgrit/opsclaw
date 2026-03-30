@@ -1,5 +1,6 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import ChatBot from './ChatBot'
 
 const navItems = [
   { to: '/', label: '홈', end: true },
@@ -24,8 +25,28 @@ const colors = {
 
 export default function PortalLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [user, setUser] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [pageContext, setPageContext] = useState('')
+
+  // 페이지 변경 시 컨텍스트 로드
+  useEffect(() => {
+    const path = location.pathname
+    let apiUrl = ''
+    // 교안 상세
+    const eduMatch = path.match(/\/education\/([^/]+)\/([^/]+)/)
+    if (eduMatch) apiUrl = `/portal/content/education/${eduMatch[1]}/${eduMatch[2]}`
+    // 소설 챕터
+    const novelMatch = path.match(/\/novel\/([^/]+)\/([^/]+)/)
+    if (novelMatch) apiUrl = `/portal/content/novel/${novelMatch[1]}/${novelMatch[2]}`
+
+    if (apiUrl) {
+      fetch(apiUrl).then(r => r.json()).then(d => setPageContext(d.content || '')).catch(() => setPageContext(''))
+    } else {
+      setPageContext('')
+    }
+  }, [location.pathname])
 
   useEffect(() => {
     const token = localStorage.getItem('portal_token')
@@ -180,6 +201,9 @@ export default function PortalLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* AI 튜터 챗봇 */}
+      <ChatBot pageContext={pageContext} />
     </div>
   )
 }

@@ -40,6 +40,16 @@ JWT_EXPIRE_SECONDS = 60 * 60 * 24  # 24 hours
 
 CONTENTS_BASE = Path("/home/opsclaw/opsclaw/contents")
 
+# LLM Chat config
+OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://192.168.0.105:11434")
+ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "")
+ANTHROPIC_AUTH_TOKEN = os.getenv("ANTHROPIC_AUTH_TOKEN", "")
+
+CHAT_MODELS = {
+    "gpt-oss:120b": {"type": "ollama", "model": "gpt-oss:120b"},
+    "claude": {"type": "claude", "model": "claude-sonnet-4-20250514"},
+}
+
 SSH_HOST_MAP = {
     "v-secu": "192.168.0.108",
     "v-web":  "192.168.0.110",
@@ -546,3 +556,95 @@ async def ws_terminal(
             await ws.close()
         except Exception:
             pass
+
+
+# ── Chat API ─────────────────────────────────────────────────────────────────
+
+
+class ChatRequest(BaseModel):
+    model: str = "gpt-oss:120b"
+    messages: list  # [{"role":"user","content":"..."}]
+    context: str = ""  # 현재 페이지의 마크다운 컨텍스트
+
+
+@router.get("/portal/chat/models")
+async def list_chat_models():
+    """사용 가능한 챗봇 모델 목록."""
+    models = []
+    for name, cfg in CHAT_MODELS.items():
+        models.append({"id": name, "type": cfg["type"], "name": name})
+    return {"models": models}
+
+
+@router.post("/portal/chat")
+async def chat(req: ChatRequest):
+    """페이지 컨텍스트 기반 LLM 채팅."""
+    import httpx
+
+    cfg = CHAT_MODELS.get(req.model)
+    if not cfg:
+        raise HTTPException(400, f"Unknown model: {req.model}. Available: {list(CHAT_MODELS.keys())}")
+
+    # 시스템 프롬프트: 페이지 컨텍스트를 포함
+    system_prompt = (
+        "당신은 OpsClaw 보안 교육 플랫폼의 AI 튜터입니다. "
+        "학생의 질문에 친절하고 정확하게 답변하세요. "
+        "아래는 학생이 현재 보고 있는 페이지의 내용입니다. "
+        "이 내용을 참고하여 답변하되, 필요하면 추가 설명도 해주세요.\n\n"
+    )
+    if req.context:
+        # 컨텍스트가 너무 길면 잘라냄
+        ctx = req.context[:8000]
+        system_prompt += f"--- 현재 페이지 내용 ---\n{ctx}\n--- 끝 ---\n"
+
+    messages = [{"role": "system", "content": system_prompt}] + req.messages
+
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            if cfg["type"] == "ollama":
+                resp = await client.post(
+                    f"{OLLAMA_URL}/v1/chat/completions",
+                    json={"model": cfg["model"], "messages": messages, "stream": False},
+                )
+                data = resp.json()
+                answer = data["choices"][0]["message"]["content"]
+
+            elif cfg["type"] == "claude":
+                if not ANTHROPIC_BASE_URL or not ANTHROPIC_AUTH_TOKEN:
+                    raise HTTPException(503, "Claude API not configured")
+                # Claude Messages API
+                headers = {
+                    "x-api-key": ANTHROPIC_AUTH_TOKEN,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                }
+                # Claude는 system을 별도 필드로
+                user_msgs = [m for m in messages if m["role"] != "system"]
+                body = {
+                    "model": cfg["model"],
+                    "max_tokens": 4096,
+                    "system": system_prompt,
+                    "messages": user_msgs,
+                }
+                resp = await client.post(
+                    f"{ANTHROPIC_BASE_URL}/v1/messages",
+                    json=body,
+                    headers=headers,
+                )
+                data = resp.json()
+                if "content" in data:
+                    answer = data["content"][0]["text"]
+                else:
+                    answer = data.get("error", {}).get("message", str(data))
+            else:
+                raise HTTPException(400, f"Unknown model type: {cfg['type']}")
+
+    except httpx.TimeoutException:
+        raise HTTPException(504, "LLM request timed out")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("chat error: %s", e)
+        raise HTTPException(500, f"Chat error: {str(e)}")
+
+    return {"model": req.model, "answer": answer}
