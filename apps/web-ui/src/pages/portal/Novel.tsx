@@ -11,14 +11,13 @@ const colors = {
 }
 
 interface Volume {
-  id: string
-  title: string
-  chapters: number
-  description?: string
+  name: string
+  chapters: string[]
+  chapter_count: number
 }
 
 interface ChapterItem {
-  chapter: number
+  id: string
   title: string
 }
 
@@ -62,7 +61,7 @@ export default function Novel() {
   if (error) return <div style={{ color: '#f85149' }}>오류: {error}</div>
 
   if (vol) {
-    const volInfo = volumes.find(v => v.id === vol)
+    const volInfo = volumes.find(v => v.name === vol)
     return (
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <button
@@ -75,7 +74,7 @@ export default function Novel() {
           ← 소설 목록으로
         </button>
         <h2 style={{ fontSize: '1.4rem', marginBottom: 24 }}>
-          {volInfo?.title || `Volume ${vol}`}
+          {volInfo?.name || `Volume ${vol}`}
         </h2>
 
         {chapters.length === 0 ? (
@@ -84,8 +83,8 @@ export default function Novel() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {chapters.map(ch => (
               <div
-                key={ch.chapter}
-                onClick={() => navigate(`/novel/${vol}/${ch.chapter}`)}
+                key={ch.id}
+                onClick={() => navigate(`/novel/${vol}/${ch.id}`)}
                 style={{
                   background: colors.card,
                   border: `1px solid ${colors.border}`,
@@ -108,7 +107,7 @@ export default function Novel() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '0.85rem', fontWeight: 600, flexShrink: 0,
                 }}>
-                  {ch.chapter}
+                  {ch.id}
                 </span>
                 <span>{ch.title}</span>
               </div>
@@ -126,8 +125,8 @@ export default function Novel() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
         {volumes.map(v => (
           <div
-            key={v.id}
-            onClick={() => navigate(`/novel/${v.id}`)}
+            key={v.name}
+            onClick={() => navigate(`/novel/${v.name}`)}
             style={{
               background: colors.card,
               border: `1px solid ${colors.border}`,
@@ -140,12 +139,9 @@ export default function Novel() {
             onMouseLeave={e => (e.currentTarget.style.borderColor = colors.border)}
           >
             <div style={{ fontSize: '1rem', fontWeight: 600, color: colors.purple, marginBottom: 8 }}>
-              {v.title}
+              {v.name}
             </div>
-            {v.description && (
-              <div style={{ color: colors.textMuted, fontSize: '0.85rem', marginBottom: 8 }}>{v.description}</div>
-            )}
-            <div style={{ color: colors.textMuted, fontSize: '0.8rem' }}>{v.chapters}개 챕터</div>
+            <div style={{ color: colors.textMuted, fontSize: '0.8rem' }}>{v.chapter_count}개 챕터</div>
           </div>
         ))}
       </div>

@@ -11,15 +11,15 @@ const colors = {
 }
 
 interface Course {
-  id: string
   name: string
-  weeks: number
-  description?: string
+  weeks: string[]
+  week_count: number
 }
 
 interface WeekItem {
-  week: number
+  week: string
   title: string
+  id: string
 }
 
 function authHeaders(): HeadersInit {
@@ -64,7 +64,7 @@ export default function Education() {
 
   // If a course is selected, show its weeks
   if (course) {
-    const courseInfo = courses.find(c => c.id === course)
+    const courseInfo = courses.find(c => c.name === course)
     return (
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <button
@@ -87,7 +87,7 @@ export default function Education() {
             {weeks.map(w => (
               <div
                 key={w.week}
-                onClick={() => navigate(`/education/${course}/${w.week}`)}
+                onClick={() => navigate(`/education/${course}/${w.id}`)}
                 style={{
                   background: colors.card,
                   border: `1px solid ${colors.border}`,
@@ -129,8 +129,8 @@ export default function Education() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
         {courses.map(c => (
           <div
-            key={c.id}
-            onClick={() => navigate(`/education/${c.id}`)}
+            key={c.name}
+            onClick={() => navigate(`/education/${c.name}`)}
             style={{
               background: colors.card,
               border: `1px solid ${colors.border}`,
@@ -143,10 +143,7 @@ export default function Education() {
             onMouseLeave={e => (e.currentTarget.style.borderColor = colors.border)}
           >
             <div style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>{c.name}</div>
-            {c.description && (
-              <div style={{ color: colors.textMuted, fontSize: '0.85rem', marginBottom: 8 }}>{c.description}</div>
-            )}
-            <div style={{ color: colors.green, fontSize: '0.8rem' }}>{c.weeks}주 과정</div>
+            <div style={{ color: colors.green, fontSize: '0.8rem' }}>{c.week_count}주 과정</div>
           </div>
         ))}
       </div>

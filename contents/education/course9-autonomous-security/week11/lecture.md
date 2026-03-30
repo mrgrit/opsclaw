@@ -367,13 +367,12 @@ curl -s -X POST "$MGR/notifications/channels" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
     "name": "blue-agent-slack",
-    "type": "slack",
+    "channel_type": "slack",
     "config": {
       "channel": "#bot-cc",
       "severity_filter": "high"
     },
-    "enabled": true,
-    "description": "Blue Agent 고위험 경보 Slack 알림"
+    "enabled": true
   }' | python3 -m json.tool
 # Slack 알림 채널이 등록된다
 ```
