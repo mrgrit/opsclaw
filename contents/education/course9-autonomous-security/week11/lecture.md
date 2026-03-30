@@ -354,15 +354,15 @@ Slack 알림 전송
 OpsClaw의 Notification API를 활용하여 Slack 알림을 설정한다.
 
 ```bash
-# 1. Notification 목록 조회
-curl -s "$MGR/notifications" \
+# 1. Notification 채널 목록 조회
+curl -s "$MGR/notifications/channels" \
   -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool
 # 현재 등록된 알림 채널 확인
 ```
 
 ```bash
-# 2. Slack Notification 등록
-curl -s -X POST "$MGR/notifications" \
+# 2. Slack Notification 채널 등록
+curl -s -X POST "$MGR/notifications/channels" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{

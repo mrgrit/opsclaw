@@ -145,15 +145,15 @@ curl -s -X POST "$MGR/schedules" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
-    "name": "secu-firewall-check-5m",
+    "project_name": "secu-firewall-check-5m",
+    "schedule_type": "cron",
     "cron_expr": "*/5 * * * *",
-    "task_template": {
+    "metadata": {
       "instruction_prompt": "nft list ruleset | wc -l && echo rules-ok",
       "risk_level": "low",
-      "subagent_url": "http://10.20.30.1:8002"
-    },
-    "enabled": true,
-    "description": "5분마다 secu 서버 nftables 규칙 수 확인"
+      "subagent_url": "http://10.20.30.1:8002",
+      "description": "5분마다 secu 서버 nftables 규칙 수 확인"
+    }
   }' | python3 -m json.tool
 # Schedule ID를 확인한다
 ```
@@ -164,15 +164,15 @@ curl -s -X POST "$MGR/schedules" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
-    "name": "web-health-hourly",
+    "project_name": "web-health-hourly",
+    "schedule_type": "cron",
     "cron_expr": "0 */1 * * *",
-    "task_template": {
+    "metadata": {
       "instruction_prompt": "curl -so /dev/null -w \"%{http_code}\" http://localhost:3000 && echo ok || echo fail",
       "risk_level": "low",
-      "subagent_url": "http://10.20.30.80:8002"
-    },
-    "enabled": true,
-    "description": "매시간 JuiceShop(3000) HTTP 상태 코드 확인"
+      "subagent_url": "http://10.20.30.80:8002",
+      "description": "매시간 JuiceShop(3000) HTTP 상태 코드 확인"
+    }
   }' | python3 -m json.tool
 # 매시간 정각에 웹 서버 상태를 확인하는 Schedule이 등록된다
 ```
@@ -183,15 +183,15 @@ curl -s -X POST "$MGR/schedules" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
-    "name": "siem-daily-summary",
+    "project_name": "siem-daily-summary",
+    "schedule_type": "cron",
     "cron_expr": "0 2 * * *",
-    "task_template": {
+    "metadata": {
       "instruction_prompt": "ls -la /var/ossec/logs/alerts/ 2>/dev/null | tail -5 || echo log-check-done",
       "risk_level": "low",
-      "subagent_url": "http://10.20.30.100:8002"
-    },
-    "enabled": true,
-    "description": "매일 02:00 Wazuh 경보 로그 현황 확인"
+      "subagent_url": "http://10.20.30.100:8002",
+      "description": "매일 02:00 Wazuh 경보 로그 현황 확인"
+    }
   }' | python3 -m json.tool
 ```
 
@@ -360,19 +360,21 @@ curl -s -X POST "$MGR/watchers" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
-    "name": "web-disk-high",
-    "check_command": "df / | awk \"NR==2{print \\$5}\" | tr -d \"%\"",
-    "threshold": 80,
-    "operator": ">",
-    "subagent_url": "http://10.20.30.80:8002",
-    "interval_seconds": 300,
-    "action": "create_project",
-    "action_config": {
-      "project_name": "auto-disk-alert-web",
-      "request_text": "web 서버 디스크 사용량 80% 초과 탐지 — 자동 생성"
-    },
-    "enabled": true,
-    "description": "web 서버 디스크 80% 초과 시 인시던트 자동 생성"
+    "project_name": "web-disk-high",
+    "watch_type": "threshold",
+    "metadata": {
+      "check_command": "df / | awk \"NR==2{print \\$5}\" | tr -d \"%\"",
+      "threshold": 80,
+      "operator": ">",
+      "subagent_url": "http://10.20.30.80:8002",
+      "interval_seconds": 300,
+      "action": "create_project",
+      "action_config": {
+        "project_name": "auto-disk-alert-web",
+        "request_text": "web 서버 디스크 사용량 80% 초과 탐지 — 자동 생성"
+      },
+      "description": "web 서버 디스크 80% 초과 시 인시던트 자동 생성"
+    }
   }' | python3 -m json.tool
 # Watcher ID를 확인한다
 ```
@@ -383,19 +385,21 @@ curl -s -X POST "$MGR/watchers" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
-    "name": "secu-ssh-brute",
-    "check_command": "journalctl -u sshd --since \"5 min ago\" --no-pager 2>/dev/null | grep -c \"Failed password\" || echo 0",
-    "threshold": 5,
-    "operator": ">=",
-    "subagent_url": "http://10.20.30.1:8002",
-    "interval_seconds": 300,
-    "action": "create_project",
-    "action_config": {
-      "project_name": "auto-ssh-brute-alert",
-      "request_text": "SSH 브루트포스 탐지 — 5분간 로그인 실패 5회 이상"
-    },
-    "enabled": true,
-    "description": "5분간 SSH 로그인 실패 5회 이상 시 인시던트 생성"
+    "project_name": "secu-ssh-brute",
+    "watch_type": "threshold",
+    "metadata": {
+      "check_command": "journalctl -u sshd --since \"5 min ago\" --no-pager 2>/dev/null | grep -c \"Failed password\" || echo 0",
+      "threshold": 5,
+      "operator": ">=",
+      "subagent_url": "http://10.20.30.1:8002",
+      "interval_seconds": 300,
+      "action": "create_project",
+      "action_config": {
+        "project_name": "auto-ssh-brute-alert",
+        "request_text": "SSH 브루트포스 탐지 — 5분간 로그인 실패 5회 이상"
+      },
+      "description": "5분간 SSH 로그인 실패 5회 이상 시 인시던트 생성"
+    }
   }' | python3 -m json.tool
 ```
 
@@ -405,19 +409,21 @@ curl -s -X POST "$MGR/watchers" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{
-    "name": "siem-high-alert",
-    "check_command": "grep -c \"level.*\\\"1[2-5]\\\"\" /var/ossec/logs/alerts/alerts.json 2>/dev/null || echo 0",
-    "threshold": 1,
-    "operator": ">=",
-    "subagent_url": "http://10.20.30.100:8002",
-    "interval_seconds": 300,
-    "action": "create_project",
-    "action_config": {
-      "project_name": "auto-wazuh-high-alert",
-      "request_text": "Wazuh Level 12+ 고위험 경보 탐지 — 자동 분석 필요"
-    },
-    "enabled": true,
-    "description": "Wazuh Level 12 이상 경보 발생 시 분석 프로젝트 생성"
+    "project_name": "siem-high-alert",
+    "watch_type": "threshold",
+    "metadata": {
+      "check_command": "grep -c \"level.*\\\"1[2-5]\\\"\" /var/ossec/logs/alerts/alerts.json 2>/dev/null || echo 0",
+      "threshold": 1,
+      "operator": ">=",
+      "subagent_url": "http://10.20.30.100:8002",
+      "interval_seconds": 300,
+      "action": "create_project",
+      "action_config": {
+        "project_name": "auto-wazuh-high-alert",
+        "request_text": "Wazuh Level 12+ 고위험 경보 탐지 — 자동 분석 필요"
+      },
+      "description": "Wazuh Level 12 이상 경보 발생 시 분석 프로젝트 생성"
+    }
   }' | python3 -m json.tool
 ```
 
