@@ -1077,9 +1077,9 @@ def _can_access_board(board_role: str, user_role_level: str) -> bool:
 
 
 @router.get("/portal/boards")
-async def list_boards(user: dict = Depends(get_current_user)):
+async def list_boards(user: Optional[dict] = Depends(get_optional_user)):
     """List all boards filtered by read permission."""
-    role_level = _get_user_role_level(user["user_id"])
+    role_level = _get_user_role_level(user["user_id"]) if user else "general"
     try:
         conn = _get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -1103,9 +1103,9 @@ async def list_boards(user: dict = Depends(get_current_user)):
 
 
 @router.get("/portal/boards/{slug}")
-async def get_board(slug: str, user: dict = Depends(get_current_user)):
+async def get_board(slug: str, user: Optional[dict] = Depends(get_optional_user)):
     """Get board detail + recent posts."""
-    role_level = _get_user_role_level(user["user_id"])
+    role_level = _get_user_role_level(user["user_id"]) if user else "general"
     try:
         conn = _get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -1157,10 +1157,10 @@ async def list_posts(
     slug: str,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    user: dict = Depends(get_current_user),
+    user: Optional[dict] = Depends(get_optional_user),
 ):
     """List posts in a board (paginated)."""
-    role_level = _get_user_role_level(user["user_id"])
+    role_level = _get_user_role_level(user["user_id"]) if user else "general"
     offset = (page - 1) * limit
     try:
         conn = _get_conn()
@@ -1260,7 +1260,7 @@ async def create_post(
 
 
 @router.get("/portal/posts/{post_id}")
-async def get_post(post_id: int, user: dict = Depends(get_current_user)):
+async def get_post(post_id: int, user: Optional[dict] = Depends(get_optional_user)):
     """Get post detail + comments + files."""
     try:
         conn = _get_conn()
