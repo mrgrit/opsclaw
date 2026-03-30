@@ -330,7 +330,7 @@ PROJECT=$(curl -s -X POST http://localhost:8000/projects \
     "request_text": "opsclaw 서버의 디스크와 메모리 상태를 확인해줘",
     "master_mode": "external"
   }')
-PID_EXT=$(echo $PROJECT | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PID_EXT=$(echo $PROJECT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "External Project: $PID_EXT"
 
 # 2. Stage 전환
@@ -381,7 +381,7 @@ PROJECT_N=$(curl -s -X POST http://localhost:8000/projects \
     "request_text": "opsclaw 서버의 보안 상태를 점검해줘. 디스크, 메모리, 열린 포트, 최근 로그인 기록을 확인하라.",
     "master_mode": "native"
   }')
-PID_NAT=$(echo $PROJECT_N | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PID_NAT=$(echo $PROJECT_N | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Native Project: $PID_NAT"
 
 # Native Mode에서는 Master Service가 자동으로 plan/execute 진행

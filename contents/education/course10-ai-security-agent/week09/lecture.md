@@ -796,7 +796,7 @@ RESP=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"week09-approval-test","request_text":"Approval Gate 테스트","master_mode":"external"}')
 # 프로젝트 ID 추출
-PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Project ID: $PID"
 
 # 2. Stage 전환

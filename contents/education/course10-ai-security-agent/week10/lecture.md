@@ -277,7 +277,7 @@ RESP=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"week10-red-agent","request_text":"Red Agent 공격 시뮬레이션","master_mode":"external"}')
 # 프로젝트 ID 추출
-RED_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+RED_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 
 # Stage 전환
 curl -s -X POST "http://localhost:8000/projects/${RED_PID}/plan" \
@@ -328,7 +328,7 @@ RESP=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"week10-blue-agent","request_text":"Blue Agent 방어 모니터링","master_mode":"external"}')
 # 프로젝트 ID 추출
-BLUE_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+BLUE_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 
 # Stage 전환
 curl -s -X POST "http://localhost:8000/projects/${BLUE_PID}/plan" \
@@ -708,7 +708,7 @@ RESP=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"week10-workflow","request_text":"워크플로우 실습","master_mode":"external"}')
 # 프로젝트 ID 추출
-WF_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+WF_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Project: $WF_PID"
 
 # 1. plan 단계 전환

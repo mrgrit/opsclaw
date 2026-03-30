@@ -334,7 +334,7 @@ RESP=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"project-C-education-agent","request_text":"보안 교육 AI 튜터 에이전트","master_mode":"external"}')
 # 프로젝트 ID 추출
-PC_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PC_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Project C ID: $PC_PID"
 
 # Stage 전환

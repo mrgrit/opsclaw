@@ -562,7 +562,7 @@ PROJECT=$(curl -s -X POST http://localhost:8000/projects \
     "master_mode": "external"
   }')
 # 프로젝트 ID 추출
-PID=$(echo $PROJECT | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PID=$(echo $PROJECT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Project ID: $PID"
 
 # 2. Stage 전환 (Task 생명주기)

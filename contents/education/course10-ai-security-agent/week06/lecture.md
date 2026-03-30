@@ -316,7 +316,7 @@ PROJECT=$(curl -s -X POST http://localhost:8000/projects \
     "request_text": "PoW 보상 시스템 실습",
     "master_mode": "external"
   }')
-PID=$(echo $PROJECT | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PID=$(echo $PROJECT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Project: $PID"
 
 # Stage 전환

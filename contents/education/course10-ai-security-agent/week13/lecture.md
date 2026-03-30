@@ -237,7 +237,7 @@ RESP=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"project-A-incident-response","request_text":"자율 인시던트 대응 에이전트 프로젝트","master_mode":"external"}')
 # 프로젝트 ID 추출
-PA_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PA_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Project A ID: $PA_PID"
 
 # Stage 전환

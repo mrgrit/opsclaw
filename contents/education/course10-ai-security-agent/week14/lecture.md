@@ -114,7 +114,7 @@ RESP=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"project-B-ctf-agent","request_text":"CTF 자동 풀이 Red Agent","master_mode":"external"}')
 # 프로젝트 ID 추출
-PB_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PB_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Project B ID: $PB_PID"
 
 # Stage 전환

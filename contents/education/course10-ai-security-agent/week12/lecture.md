@@ -632,7 +632,7 @@ RESP_A=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"week12-ab-variant-A","request_text":"A/B 테스트 Variant A","master_mode":"external"}')
 # 프로젝트 A ID 추출
-PID_A=$(echo "$RESP_A" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PID_A=$(echo "$RESP_A" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 
 # Variant B 프로젝트
 RESP_B=$(curl -s -X POST http://localhost:8000/projects \
@@ -640,7 +640,7 @@ RESP_B=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"week12-ab-variant-B","request_text":"A/B 테스트 Variant B","master_mode":"external"}')
 # 프로젝트 B ID 추출
-PID_B=$(echo "$RESP_B" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+PID_B=$(echo "$RESP_B" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 
 # 양쪽 프로젝트 Stage 전환
 for PID in $PID_A $PID_B; do

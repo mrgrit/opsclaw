@@ -627,7 +627,7 @@ RESP=$(curl -s -X POST http://localhost:8000/projects \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
   -d '{"name":"week11-rag-agent","request_text":"RAG 기반 보안 분석","master_mode":"external"}')
 # 프로젝트 ID 추출
-RAG_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+RAG_PID=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 
 # Stage 전환
 curl -s -X POST "http://localhost:8000/projects/${RAG_PID}/plan" \
