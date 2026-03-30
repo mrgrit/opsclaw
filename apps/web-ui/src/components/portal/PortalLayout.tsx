@@ -2,12 +2,12 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 
 const navItems = [
-  { to: '/portal', label: '홈', end: true },
-  { to: '/portal/education', label: '교육과정' },
-  { to: '/portal/novel', label: '소설' },
-  { to: '/portal/ctf', label: 'CTF' },
-  { to: '/portal/terminal', label: '터미널' },
-  { to: '/portal/papers', label: '논문' },
+  { to: '/', label: '홈', end: true },
+  { to: '/education', label: '교육과정' },
+  { to: '/novel', label: '소설' },
+  { to: '/ctf', label: 'CTF' },
+  { to: '/terminal', label: '터미널' },
+  { to: '/papers', label: '논문' },
 ]
 
 const colors = {
@@ -40,7 +40,7 @@ export default function PortalLayout() {
     localStorage.removeItem('portal_username')
     setUser(null)
     setMenuOpen(false)
-    navigate('/portal')
+    navigate('/')
   }
 
   return (
@@ -159,7 +159,7 @@ export default function PortalLayout() {
             </div>
           ) : (
             <NavLink
-              to="/portal/login"
+              to="/login"
               style={{
                 background: colors.accent,
                 color: '#fff',

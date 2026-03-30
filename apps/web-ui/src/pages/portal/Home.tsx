@@ -21,11 +21,11 @@ const stats = [
 ]
 
 const sections = [
-  { to: '/portal/education', title: '교육과정', desc: '사이버보안 10개 과목, 15주 분량의 체계적 교육과정', color: colors.accent },
-  { to: '/portal/novel', title: '소설', desc: '보안 관련 소설 10권 — 읽으면서 배우는 사이버보안', color: colors.purple },
-  { to: '/portal/ctf', title: 'CTF', desc: 'Capture The Flag 실습 환경 (CTFd)', color: colors.red },
-  { to: '/portal/terminal', title: '웹 터미널', desc: '실습 서버에 직접 접속하여 명령 실행', color: colors.green },
-  { to: '/portal/papers', title: '논문', desc: 'OpsClaw 연구 논문 (관리자 전용)', color: colors.orange },
+  { to: '/education', title: '교육과정', desc: '사이버보안 10개 과목, 15주 분량의 체계적 교육과정', color: colors.accent },
+  { to: '/novel', title: '소설', desc: '보안 관련 소설 10권 — 읽으면서 배우는 사이버보안', color: colors.purple },
+  { to: '/ctf', title: 'CTF', desc: 'Capture The Flag 실습 환경 (CTFd)', color: colors.red },
+  { to: '/terminal', title: '웹 터미널', desc: '실습 서버에 직접 접속하여 명령 실행', color: colors.green },
+  { to: '/papers', title: '논문', desc: 'OpsClaw 연구 논문 (관리자 전용)', color: colors.orange },
 ]
 
 export default function Home() {
@@ -58,7 +58,7 @@ export default function Home() {
         }}>
           <span>로그인하면 모든 콘텐츠에 접근할 수 있습니다.</span>
           <button
-            onClick={() => navigate('/portal/login')}
+            onClick={() => navigate('/login')}
             style={{
               background: colors.accent,
               color: '#fff',

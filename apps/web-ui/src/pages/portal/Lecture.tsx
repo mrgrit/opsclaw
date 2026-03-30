@@ -58,7 +58,7 @@ export default function Lecture() {
     if (!course || !week) return
     setLoading(true)
     setError('')
-    fetch(`/portal/content/education/${course}/${week}`, { headers: authHeaders() })
+    fetch(`/content/education/${course}/${week}`, { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
@@ -74,7 +74,7 @@ export default function Lecture() {
 
   const navButton = (label: string, targetWeek: number, disabled: boolean) => (
     <button
-      onClick={() => navigate(`/portal/education/${course}/${targetWeek}`)}
+      onClick={() => navigate(`/education/${course}/${targetWeek}`)}
       disabled={disabled}
       style={{
         background: disabled ? colors.card : colors.accent,
@@ -93,7 +93,7 @@ export default function Lecture() {
   return (
     <div style={{ maxWidth: 860, margin: '0 auto' }}>
       <button
-        onClick={() => navigate(`/portal/education/${course}`)}
+        onClick={() => navigate(`/education/${course}`)}
         style={{
           background: 'none', border: 'none', color: colors.accent,
           cursor: 'pointer', fontSize: '0.9rem', marginBottom: 16, padding: 0,

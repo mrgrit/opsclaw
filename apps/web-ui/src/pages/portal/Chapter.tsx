@@ -47,7 +47,7 @@ export default function Chapter() {
     if (!vol || !chapter) return
     setLoading(true)
     setError('')
-    fetch(`/portal/content/novel/${vol}/${chapter}`, { headers: authHeaders() })
+    fetch(`/content/novel/${vol}/${chapter}`, { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
@@ -63,7 +63,7 @@ export default function Chapter() {
 
   const navButton = (label: string, targetChapter: number, disabled: boolean) => (
     <button
-      onClick={() => navigate(`/portal/novel/${vol}/${targetChapter}`)}
+      onClick={() => navigate(`/novel/${vol}/${targetChapter}`)}
       disabled={disabled}
       style={{
         background: disabled ? colors.card : colors.purple,
@@ -82,7 +82,7 @@ export default function Chapter() {
   return (
     <div style={{ maxWidth: 860, margin: '0 auto' }}>
       <button
-        onClick={() => navigate(`/portal/novel/${vol}`)}
+        onClick={() => navigate(`/novel/${vol}`)}
         style={{
           background: 'none', border: 'none', color: colors.purple,
           cursor: 'pointer', fontSize: '0.9rem', marginBottom: 16, padding: 0,

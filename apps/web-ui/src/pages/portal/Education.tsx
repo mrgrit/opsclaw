@@ -38,7 +38,7 @@ export default function Education() {
   useEffect(() => {
     setLoading(true)
     setError('')
-    fetch('/portal/content/education', { headers: authHeaders() })
+    fetch('/content/education', { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
@@ -50,7 +50,7 @@ export default function Education() {
 
   useEffect(() => {
     if (!course) { setWeeks([]); return }
-    fetch(`/portal/content/education/${course}`, { headers: authHeaders() })
+    fetch(`/content/education/${course}`, { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
@@ -68,7 +68,7 @@ export default function Education() {
     return (
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <button
-          onClick={() => navigate('/portal/education')}
+          onClick={() => navigate('/education')}
           style={{
             background: 'none', border: 'none', color: colors.accent,
             cursor: 'pointer', fontSize: '0.9rem', marginBottom: 16, padding: 0,
@@ -87,7 +87,7 @@ export default function Education() {
             {weeks.map(w => (
               <div
                 key={w.week}
-                onClick={() => navigate(`/portal/education/${course}/${w.week}`)}
+                onClick={() => navigate(`/education/${course}/${w.week}`)}
                 style={{
                   background: colors.card,
                   border: `1px solid ${colors.border}`,
@@ -130,7 +130,7 @@ export default function Education() {
         {courses.map(c => (
           <div
             key={c.id}
-            onClick={() => navigate(`/portal/education/${c.id}`)}
+            onClick={() => navigate(`/education/${c.id}`)}
             style={{
               background: colors.card,
               border: `1px solid ${colors.border}`,

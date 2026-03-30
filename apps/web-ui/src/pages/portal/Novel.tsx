@@ -37,7 +37,7 @@ export default function Novel() {
 
   useEffect(() => {
     setLoading(true)
-    fetch('/portal/content/novel', { headers: authHeaders() })
+    fetch('/content/novel', { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
@@ -49,7 +49,7 @@ export default function Novel() {
 
   useEffect(() => {
     if (!vol) { setChapters([]); return }
-    fetch(`/portal/content/novel/${vol}`, { headers: authHeaders() })
+    fetch(`/content/novel/${vol}`, { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
@@ -66,7 +66,7 @@ export default function Novel() {
     return (
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <button
-          onClick={() => navigate('/portal/novel')}
+          onClick={() => navigate('/novel')}
           style={{
             background: 'none', border: 'none', color: colors.purple,
             cursor: 'pointer', fontSize: '0.9rem', marginBottom: 16, padding: 0,
@@ -85,7 +85,7 @@ export default function Novel() {
             {chapters.map(ch => (
               <div
                 key={ch.chapter}
-                onClick={() => navigate(`/portal/novel/${vol}/${ch.chapter}`)}
+                onClick={() => navigate(`/novel/${vol}/${ch.chapter}`)}
                 style={{
                   background: colors.card,
                   border: `1px solid ${colors.border}`,
@@ -127,7 +127,7 @@ export default function Novel() {
         {volumes.map(v => (
           <div
             key={v.id}
-            onClick={() => navigate(`/portal/novel/${v.id}`)}
+            onClick={() => navigate(`/novel/${v.id}`)}
             style={{
               background: colors.card,
               border: `1px solid ${colors.border}`,

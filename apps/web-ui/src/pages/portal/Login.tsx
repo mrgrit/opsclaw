@@ -27,7 +27,7 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const endpoint = mode === 'login' ? '/portal/auth/login' : '/portal/auth/register'
+      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register'
       const body: Record<string, string> = { username, password }
       if (mode === 'register') body.email = email
 
@@ -45,7 +45,7 @@ export default function Login() {
       const data = await res.json()
       localStorage.setItem('portal_token', data.token || data.access_token)
       localStorage.setItem('portal_username', data.username || username)
-      navigate('/portal')
+      navigate('/')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
