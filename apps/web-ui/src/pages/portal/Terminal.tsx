@@ -51,7 +51,7 @@ export default function Terminal() {
 
     const token = localStorage.getItem('portal_token') || ''
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/api/portal/ws/terminal?host=${server}&token=${token}`
+    const wsUrl = `${protocol}//${window.location.host}/portal/ws/terminal?host=${server}&token=${token}`
 
     addOutput(`[*] ${server}에 연결 중...`)
 

@@ -24,19 +24,8 @@ export default function App() {
   return (
     <BrowserRouter basename="/app">
       <Routes>
-        {/* Admin console */}
-        <Route element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="projects" element={<Projects />} />
-          <Route path="playbooks" element={<Playbooks />} />
-          <Route path="replay" element={<Replay />} />
-          <Route path="pow" element={<PoW />} />
-          <Route path="agents" element={<Agents />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-
-        {/* Education Portal */}
-        <Route path="portal" element={<PortalLayout />}>
+        {/* Education Portal — 기본 페이지 */}
+        <Route element={<PortalLayout />}>
           <Route index element={<PortalHome />} />
           <Route path="login" element={<PortalLogin />} />
           <Route path="education" element={<PortalEducation />} />
@@ -48,6 +37,17 @@ export default function App() {
           <Route path="ctf" element={<PortalCTF />} />
           <Route path="terminal" element={<PortalTerminal />} />
           <Route path="papers" element={<PortalPapers />} />
+        </Route>
+
+        {/* Admin console */}
+        <Route path="admin" element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="projects" element={<Projects />} />
+          <Route path="playbooks" element={<Playbooks />} />
+          <Route path="replay" element={<Replay />} />
+          <Route path="pow" element={<PoW />} />
+          <Route path="agents" element={<Agents />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

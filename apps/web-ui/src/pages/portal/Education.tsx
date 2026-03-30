@@ -38,7 +38,7 @@ export default function Education() {
   useEffect(() => {
     setLoading(true)
     setError('')
-    fetch('/api/portal/content/education', { headers: authHeaders() })
+    fetch('/portal/content/education', { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
@@ -50,7 +50,7 @@ export default function Education() {
 
   useEffect(() => {
     if (!course) { setWeeks([]); return }
-    fetch(`/api/portal/content/education/${course}`, { headers: authHeaders() })
+    fetch(`/portal/content/education/${course}`, { headers: authHeaders() })
       .then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
         return r.json()
