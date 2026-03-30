@@ -19,6 +19,12 @@ import PortalChapter from './pages/portal/Chapter'
 import PortalCTF from './pages/portal/CTF'
 import PortalTerminal from './pages/portal/Terminal'
 import PortalPapers from './pages/portal/Papers'
+import Community from './pages/portal/Community'
+import Board from './pages/portal/Board'
+import PostDetail from './pages/portal/PostDetail'
+import PostWrite from './pages/portal/PostWrite'
+import Profile from './pages/portal/Profile'
+import AdminPanel from './pages/portal/AdminPanel'
 
 export default function App() {
   return (
@@ -37,6 +43,13 @@ export default function App() {
           <Route path="ctf" element={<PortalCTF />} />
           <Route path="terminal" element={<PortalTerminal />} />
           <Route path="papers" element={<PortalPapers />} />
+          <Route path="community" element={<Community />} />
+          <Route path="community/:slug" element={<Board />} />
+          <Route path="community/:slug/write" element={<PostWrite />} />
+          <Route path="community/:slug/:postId" element={<PostDetail />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="profile/:username" element={<Profile />} />
+          <Route path="admin-panel" element={<AdminPanel />} />
         </Route>
 
         {/* Admin console */}

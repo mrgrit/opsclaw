@@ -2,13 +2,14 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import ChatBot from './ChatBot'
 
-const navItems = [
+const baseNavItems = [
   { to: '/', label: '홈', end: true },
   { to: '/education', label: '교육과정' },
   { to: '/novel', label: '소설' },
   { to: '/ctf', label: 'CTF' },
   { to: '/terminal', label: '터미널' },
   { to: '/papers', label: '논문' },
+  { to: '/community', label: '커뮤니티' },
 ]
 
 const colors = {
@@ -27,6 +28,7 @@ export default function PortalLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [user, setUser] = useState<string | null>(null)
+  const [roleLevel, setRoleLevel] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const [pageContext, setPageContext] = useState('')
 
@@ -53,6 +55,11 @@ export default function PortalLayout() {
     const username = localStorage.getItem('portal_username')
     if (token && username) {
       setUser(username)
+      // Fetch role level for admin nav
+      fetch('/portal/profile/' + username, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.role_level) setRoleLevel(data.role_level) })
+        .catch(() => {})
     }
   }, [])
 
@@ -60,6 +67,7 @@ export default function PortalLayout() {
     localStorage.removeItem('portal_token')
     localStorage.removeItem('portal_username')
     setUser(null)
+    setRoleLevel(0)
     setMenuOpen(false)
     navigate('/')
   }
@@ -87,7 +95,11 @@ export default function PortalLayout() {
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '12px 0' }}>
-          {navItems.map(({ to, label, end }) => (
+          {[
+            ...baseNavItems,
+            ...(user ? [{ to: '/profile', label: '내 프로필' }] : []),
+            ...(roleLevel >= 9 ? [{ to: '/admin-panel', label: '관리자' }] : []),
+          ].map(({ to, label, end }) => (
             <NavLink
               key={to}
               to={to}

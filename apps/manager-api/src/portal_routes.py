@@ -12,9 +12,11 @@ import hmac
 import json
 import logging
 import os
+import shutil
 import time
+import uuid
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import psycopg2
 import psycopg2.extras
@@ -23,10 +25,13 @@ from fastapi import (
     Depends,
     HTTPException,
     Query,
+    UploadFile,
+    File,
     WebSocket,
     WebSocketDisconnect,
     status,
 )
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
@@ -159,16 +164,36 @@ async def get_current_user(
         payload = _jwt_decode(credentials.credentials)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
+    user = {
+        "user_id": payload["sub"],
+        "username": payload["username"],
+        "role": payload.get("role", "student"),
+        "role_level": payload.get("role_level", "general"),
+    }
+    return user
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> Optional[dict]:
+    """Like get_current_user but returns None instead of raising."""
+    if credentials is None:
+        return None
+    try:
+        payload = _jwt_decode(credentials.credentials)
+    except ValueError:
+        return None
     return {
         "user_id": payload["sub"],
         "username": payload["username"],
         "role": payload.get("role", "student"),
+        "role_level": payload.get("role_level", "general"),
     }
 
 
 async def admin_required(user: dict = Depends(get_current_user)) -> dict:
     """Check that the authenticated user has admin role."""
-    if user.get("role") != "admin":
+    if user.get("role") != "admin" and user.get("role_level") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
@@ -221,7 +246,8 @@ async def register(req: RegisterRequest):
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO portal_users (username, email, password_hash) "
-                    "VALUES (%s, %s, %s) RETURNING id, role",
+                    "VALUES (%s, %s, %s) RETURNING id, role, "
+                    "COALESCE(role_level, 'general')",
                     (req.username, req.email, password_hash),
                 )
                 row = cur.fetchone()
@@ -232,11 +258,12 @@ async def register(req: RegisterRequest):
         logger.error("register error: %s", e)
         raise HTTPException(500, "Database error")
 
-    user_id, role = row
+    user_id, role, role_level = row
     token = _jwt_encode({
         "sub": user_id,
         "username": req.username,
         "role": role,
+        "role_level": role_level,
         "exp": time.time() + JWT_EXPIRE_SECONDS,
     })
     return TokenResponse(access_token=token, username=req.username, role=role)
@@ -250,7 +277,9 @@ async def login(req: LoginRequest):
         conn = _get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
             cur.execute(
-                "SELECT id, username, role FROM portal_users "
+                "SELECT id, username, role, "
+                "COALESCE(role_level, 'general') AS role_level "
+                "FROM portal_users "
                 "WHERE username = %s AND password_hash = %s",
                 (req.username, password_hash),
             )
@@ -267,6 +296,7 @@ async def login(req: LoginRequest):
         "sub": row["id"],
         "username": row["username"],
         "role": row["role"],
+        "role_level": row["role_level"],
         "exp": time.time() + JWT_EXPIRE_SECONDS,
     })
     return TokenResponse(
@@ -648,3 +678,1030 @@ async def chat(req: ChatRequest):
         raise HTTPException(500, f"Chat error: {str(e)}")
 
     return {"model": req.model, "answer": answer}
+
+
+# ── Upload directories ───────────────────────────────────────────────────────
+
+UPLOAD_POSTS_DIR = Path("/home/opsclaw/opsclaw/data/uploads/posts")
+UPLOAD_PROFILES_DIR = Path("/home/opsclaw/opsclaw/data/uploads/profiles")
+UPLOAD_POSTS_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ── RBAC Pydantic models ────────────────────────────────────────────────────
+
+
+class UpdateUserRoleRequest(BaseModel):
+    role_level: str  # general, ycdc, admin, demo
+
+
+class CreateGroupRequest(BaseModel):
+    name: str
+    description: str = ""
+    permissions: dict = {}
+
+
+class UpdateGroupRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    permissions: Optional[dict] = None
+
+
+class AddMemberRequest(BaseModel):
+    user_id: int
+
+
+class CreatePostRequest(BaseModel):
+    title: str
+    content: str
+    pinned: bool = False
+
+
+class UpdatePostRequest(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    pinned: Optional[bool] = None
+
+
+class CreateCommentRequest(BaseModel):
+    content: str
+
+
+class UpdateProfileRequest(BaseModel):
+    bio_md: str = ""
+
+
+# ── Permission helper ────────────────────────────────────────────────────────
+
+# All known course slugs and novel volume slugs (used for "all" grants)
+ALL_COURSES = [
+    "course1-attack", "course2-security-ops", "course3-network",
+    "course4-cloud", "course5-forensics", "course6-compliance",
+]
+ALL_NOVELS = ["vol01", "vol02", "vol03", "vol04", "vol05"]
+
+# Default permissions by role_level
+ROLE_LEVEL_DEFAULTS = {
+    "general": {
+        "courses": ["course1-attack"],
+        "novel": ["vol01"],
+        "ctf": False,
+        "terminal": False,
+        "papers": False,
+    },
+    "demo": {
+        "courses": ["course1-attack"],
+        "novel": ["vol01"],
+        "ctf": True,
+        "terminal": False,
+        "papers": False,
+    },
+    "ycdc": {
+        "courses": ALL_COURSES[:],
+        "novel": ALL_NOVELS[:],
+        "ctf": True,
+        "terminal": True,
+        "papers": False,
+    },
+    "admin": {
+        "courses": ALL_COURSES[:],
+        "novel": ALL_NOVELS[:],
+        "ctf": True,
+        "terminal": True,
+        "papers": True,
+    },
+}
+
+
+def _merge_permissions(base: dict, group_perms: list[dict]) -> dict:
+    """Merge base role permissions with additive group permissions."""
+    result = {
+        "courses": list(base.get("courses", [])),
+        "novel": list(base.get("novel", [])),
+        "ctf": base.get("ctf", False),
+        "terminal": base.get("terminal", False),
+        "papers": base.get("papers", False),
+    }
+    for gp in group_perms:
+        if not gp:
+            continue
+        # Additive: union of list fields
+        for key in ("courses", "novel"):
+            extras = gp.get(key, [])
+            if isinstance(extras, list):
+                for item in extras:
+                    if item not in result[key]:
+                        result[key].append(item)
+        # Boolean fields: OR
+        for key in ("ctf", "terminal", "papers"):
+            if gp.get(key):
+                result[key] = True
+    return result
+
+
+def _get_user_permissions(user_id: int, role_level: str) -> dict:
+    """Get effective permissions for a user: role defaults + group grants."""
+    base = ROLE_LEVEL_DEFAULTS.get(role_level, ROLE_LEVEL_DEFAULTS["general"])
+    # If admin, short-circuit
+    if role_level == "admin":
+        return base.copy()
+
+    group_perms = []
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT g.permissions FROM portal_groups g "
+                "JOIN portal_user_groups ug ON ug.group_id = g.id "
+                "WHERE ug.user_id = %s",
+                (user_id,),
+            )
+            for row in cur.fetchall():
+                if row["permissions"]:
+                    group_perms.append(row["permissions"])
+        conn.close()
+    except Exception as e:
+        logger.warning("Failed to fetch group permissions: %s", e)
+
+    return _merge_permissions(base, group_perms)
+
+
+def _get_user_role_level(user_id: int) -> str:
+    """Fetch role_level from DB for a user."""
+    try:
+        conn = _get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COALESCE(role_level, 'general') FROM portal_users WHERE id = %s",
+                (user_id,),
+            )
+            row = cur.fetchone()
+        conn.close()
+        return row[0] if row else "general"
+    except Exception:
+        return "general"
+
+
+# ── RBAC — Permission check endpoint ────────────────────────────────────────
+
+
+@router.get("/portal/permissions")
+async def get_permissions(user: dict = Depends(get_current_user)):
+    """Return current user's effective permissions (role defaults + groups)."""
+    role_level = user.get("role_level", "general")
+    # Re-fetch from DB to ensure freshness
+    db_role_level = _get_user_role_level(user["user_id"])
+    if db_role_level:
+        role_level = db_role_level
+    perms = _get_user_permissions(user["user_id"], role_level)
+    return perms
+
+
+# ── RBAC — Admin user management ────────────────────────────────────────────
+
+
+@router.get("/portal/admin/users")
+async def admin_list_users(_admin: dict = Depends(admin_required)):
+    """List all portal users (admin only)."""
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, username, email, role, "
+                "COALESCE(role_level, 'general') AS role_level, "
+                "created_at FROM portal_users ORDER BY id"
+            )
+            users = cur.fetchall()
+        conn.close()
+    except Exception as e:
+        logger.error("admin_list_users error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    # Convert datetime to string for JSON serialization
+    for u in users:
+        if u.get("created_at"):
+            u["created_at"] = str(u["created_at"])
+    return {"users": users}
+
+
+@router.put("/portal/admin/users/{user_id}")
+async def admin_update_user_role(
+    user_id: int,
+    req: UpdateUserRoleRequest,
+    _admin: dict = Depends(admin_required),
+):
+    """Update a user's role_level (admin only)."""
+    valid_levels = ("general", "ycdc", "admin", "demo")
+    if req.role_level not in valid_levels:
+        raise HTTPException(400, f"Invalid role_level. Must be one of: {valid_levels}")
+
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE portal_users SET role_level = %s WHERE id = %s RETURNING id",
+                    (req.role_level, user_id),
+                )
+                row = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        logger.error("admin_update_user_role error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    if not row:
+        raise HTTPException(404, "User not found")
+    return {"ok": True, "user_id": user_id, "role_level": req.role_level}
+
+
+# ── RBAC — Group management ─────────────────────────────────────────────────
+
+
+@router.get("/portal/admin/groups")
+async def admin_list_groups(user: dict = Depends(get_current_user)):
+    """List all groups. Any authenticated user can view."""
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT g.id, g.name, g.description, g.permissions, "
+                "COALESCE(array_agg(ug.user_id) FILTER (WHERE ug.user_id IS NOT NULL), '{}') AS member_ids "
+                "FROM portal_groups g "
+                "LEFT JOIN portal_user_groups ug ON ug.group_id = g.id "
+                "GROUP BY g.id ORDER BY g.id"
+            )
+            groups = cur.fetchall()
+        conn.close()
+    except Exception as e:
+        logger.error("admin_list_groups error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    # Convert arrays
+    for g in groups:
+        if g.get("member_ids") and isinstance(g["member_ids"], list):
+            g["member_ids"] = [int(x) for x in g["member_ids"] if x]
+    return {"groups": groups}
+
+
+@router.post("/portal/admin/groups")
+async def admin_create_group(
+    req: CreateGroupRequest,
+    _admin: dict = Depends(admin_required),
+):
+    """Create a new group (admin only)."""
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "INSERT INTO portal_groups (name, description, permissions) "
+                    "VALUES (%s, %s, %s) RETURNING id, name, description, permissions",
+                    (req.name, req.description, json.dumps(req.permissions)),
+                )
+                group = cur.fetchone()
+        conn.close()
+    except psycopg2.errors.UniqueViolation:
+        raise HTTPException(409, "Group name already exists")
+    except Exception as e:
+        logger.error("admin_create_group error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {"ok": True, "group": group}
+
+
+@router.put("/portal/admin/groups/{group_id}")
+async def admin_update_group(
+    group_id: int,
+    req: UpdateGroupRequest,
+    _admin: dict = Depends(admin_required),
+):
+    """Update group name, description, or permissions (admin only)."""
+    updates = []
+    params = []
+    if req.name is not None:
+        updates.append("name = %s")
+        params.append(req.name)
+    if req.description is not None:
+        updates.append("description = %s")
+        params.append(req.description)
+    if req.permissions is not None:
+        updates.append("permissions = %s")
+        params.append(json.dumps(req.permissions))
+
+    if not updates:
+        raise HTTPException(400, "No fields to update")
+
+    params.append(group_id)
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    f"UPDATE portal_groups SET {', '.join(updates)} "
+                    f"WHERE id = %s RETURNING id, name, description, permissions",
+                    params,
+                )
+                group = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        logger.error("admin_update_group error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    if not group:
+        raise HTTPException(404, "Group not found")
+    return {"ok": True, "group": group}
+
+
+@router.post("/portal/admin/groups/{group_id}/members")
+async def admin_add_member(
+    group_id: int,
+    req: AddMemberRequest,
+    _admin: dict = Depends(admin_required),
+):
+    """Add a user to a group (admin only)."""
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO portal_user_groups (user_id, group_id) "
+                    "VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (req.user_id, group_id),
+                )
+        conn.close()
+    except Exception as e:
+        logger.error("admin_add_member error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {"ok": True, "group_id": group_id, "user_id": req.user_id}
+
+
+@router.delete("/portal/admin/groups/{group_id}/members/{user_id}")
+async def admin_remove_member(
+    group_id: int,
+    user_id: int,
+    _admin: dict = Depends(admin_required),
+):
+    """Remove a user from a group (admin only)."""
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM portal_user_groups "
+                    "WHERE user_id = %s AND group_id = %s",
+                    (user_id, group_id),
+                )
+                deleted = cur.rowcount
+        conn.close()
+    except Exception as e:
+        logger.error("admin_remove_member error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    if deleted == 0:
+        raise HTTPException(404, "Membership not found")
+    return {"ok": True, "group_id": group_id, "user_id": user_id}
+
+
+# ── Community — Boards ───────────────────────────────────────────────────────
+
+# Role level hierarchy for permission checks
+ROLE_LEVEL_ORDER = {"general": 0, "demo": 1, "ycdc": 2, "admin": 3}
+
+
+def _can_access_board(board_role: str, user_role_level: str) -> bool:
+    """Check if user's role_level meets the board's required role."""
+    if user_role_level == "admin":
+        return True
+    return ROLE_LEVEL_ORDER.get(user_role_level, 0) >= ROLE_LEVEL_ORDER.get(board_role, 0)
+
+
+@router.get("/portal/boards")
+async def list_boards(user: dict = Depends(get_current_user)):
+    """List all boards filtered by read permission."""
+    role_level = _get_user_role_level(user["user_id"])
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, slug, name, description, board_type, theme, "
+                "allow_upload, write_role, read_role, sort_order "
+                "FROM portal_boards ORDER BY sort_order, id"
+            )
+            boards = cur.fetchall()
+        conn.close()
+    except Exception as e:
+        logger.error("list_boards error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    # Filter by read permission
+    visible = [
+        b for b in boards
+        if _can_access_board(b.get("read_role", "general"), role_level)
+    ]
+    return {"boards": visible}
+
+
+@router.get("/portal/boards/{slug}")
+async def get_board(slug: str, user: dict = Depends(get_current_user)):
+    """Get board detail + recent posts."""
+    role_level = _get_user_role_level(user["user_id"])
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, slug, name, description, board_type, theme, "
+                "allow_upload, write_role, read_role, sort_order "
+                "FROM portal_boards WHERE slug = %s",
+                (slug,),
+            )
+            board = cur.fetchone()
+            if not board:
+                raise HTTPException(404, f"Board not found: {slug}")
+
+            if not _can_access_board(board.get("read_role", "general"), role_level):
+                raise HTTPException(403, "No read permission for this board")
+
+            # Recent posts (latest 20)
+            cur.execute(
+                "SELECT p.id, p.title, p.pinned, p.view_count, "
+                "p.created_at, p.updated_at, "
+                "u.username AS author "
+                "FROM portal_posts p "
+                "JOIN portal_users u ON u.id = p.author_id "
+                "WHERE p.board_id = %s "
+                "ORDER BY p.pinned DESC, p.created_at DESC LIMIT 20",
+                (board["id"],),
+            )
+            posts = cur.fetchall()
+        conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_board error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    for p in posts:
+        for key in ("created_at", "updated_at"):
+            if p.get(key):
+                p[key] = str(p[key])
+
+    return {"board": board, "posts": posts}
+
+
+# ── Community — Posts ────────────────────────────────────────────────────────
+
+
+@router.get("/portal/boards/{slug}/posts")
+async def list_posts(
+    slug: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    user: dict = Depends(get_current_user),
+):
+    """List posts in a board (paginated)."""
+    role_level = _get_user_role_level(user["user_id"])
+    offset = (page - 1) * limit
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # Get board
+            cur.execute(
+                "SELECT id, read_role, write_role FROM portal_boards WHERE slug = %s",
+                (slug,),
+            )
+            board = cur.fetchone()
+            if not board:
+                raise HTTPException(404, f"Board not found: {slug}")
+            if not _can_access_board(board.get("read_role", "general"), role_level):
+                raise HTTPException(403, "No read permission for this board")
+
+            # Total count
+            cur.execute(
+                "SELECT COUNT(*) FROM portal_posts WHERE board_id = %s",
+                (board["id"],),
+            )
+            total = cur.fetchone()["count"]
+
+            # Posts
+            cur.execute(
+                "SELECT p.id, p.title, p.pinned, p.view_count, "
+                "p.created_at, p.updated_at, "
+                "u.username AS author "
+                "FROM portal_posts p "
+                "JOIN portal_users u ON u.id = p.author_id "
+                "WHERE p.board_id = %s "
+                "ORDER BY p.pinned DESC, p.created_at DESC "
+                "LIMIT %s OFFSET %s",
+                (board["id"], limit, offset),
+            )
+            posts = cur.fetchall()
+        conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("list_posts error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    for p in posts:
+        for key in ("created_at", "updated_at"):
+            if p.get(key):
+                p[key] = str(p[key])
+
+    return {
+        "posts": posts,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 1,
+    }
+
+
+@router.post("/portal/boards/{slug}/posts")
+async def create_post(
+    slug: str,
+    req: CreatePostRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Create a new post in a board."""
+    role_level = _get_user_role_level(user["user_id"])
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT id, write_role FROM portal_boards WHERE slug = %s",
+                    (slug,),
+                )
+                board = cur.fetchone()
+                if not board:
+                    raise HTTPException(404, f"Board not found: {slug}")
+                if not _can_access_board(board.get("write_role", "general"), role_level):
+                    raise HTTPException(403, "No write permission for this board")
+
+                cur.execute(
+                    "INSERT INTO portal_posts (board_id, author_id, title, content, pinned) "
+                    "VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at",
+                    (board["id"], user["user_id"], req.title, req.content, req.pinned),
+                )
+                row = cur.fetchone()
+        conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("create_post error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {
+        "ok": True,
+        "post_id": row["id"],
+        "created_at": str(row["created_at"]),
+    }
+
+
+@router.get("/portal/posts/{post_id}")
+async def get_post(post_id: int, user: dict = Depends(get_current_user)):
+    """Get post detail + comments + files."""
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # Get post with author info
+                cur.execute(
+                    "SELECT p.id, p.board_id, p.title, p.content, p.pinned, "
+                    "p.view_count, p.created_at, p.updated_at, "
+                    "p.author_id, u.username AS author "
+                    "FROM portal_posts p "
+                    "JOIN portal_users u ON u.id = p.author_id "
+                    "WHERE p.id = %s",
+                    (post_id,),
+                )
+                post = cur.fetchone()
+                if not post:
+                    raise HTTPException(404, "Post not found")
+
+                # Increment view count
+                cur.execute(
+                    "UPDATE portal_posts SET view_count = view_count + 1 WHERE id = %s",
+                    (post_id,),
+                )
+
+                # Get comments
+                cur.execute(
+                    "SELECT c.id, c.content, c.created_at, "
+                    "c.author_id, u.username AS author "
+                    "FROM portal_comments c "
+                    "JOIN portal_users u ON u.id = c.author_id "
+                    "WHERE c.post_id = %s ORDER BY c.created_at",
+                    (post_id,),
+                )
+                comments = cur.fetchall()
+
+                # Get files
+                cur.execute(
+                    "SELECT id, filename, filesize, mimetype, uploaded_at "
+                    "FROM portal_files WHERE post_id = %s ORDER BY uploaded_at",
+                    (post_id,),
+                )
+                files = cur.fetchall()
+        conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_post error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    # Serialize datetimes
+    for key in ("created_at", "updated_at"):
+        if post.get(key):
+            post[key] = str(post[key])
+    for c in comments:
+        if c.get("created_at"):
+            c["created_at"] = str(c["created_at"])
+    for f in files:
+        if f.get("uploaded_at"):
+            f["uploaded_at"] = str(f["uploaded_at"])
+
+    return {"post": post, "comments": comments, "files": files}
+
+
+@router.put("/portal/posts/{post_id}")
+async def update_post(
+    post_id: int,
+    req: UpdatePostRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Edit a post (author or admin only)."""
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT author_id FROM portal_posts WHERE id = %s",
+                    (post_id,),
+                )
+                post = cur.fetchone()
+                if not post:
+                    raise HTTPException(404, "Post not found")
+
+                role_level = _get_user_role_level(user["user_id"])
+                if post["author_id"] != user["user_id"] and role_level != "admin":
+                    raise HTTPException(403, "Only the author or admin can edit")
+
+                updates = []
+                params = []
+                if req.title is not None:
+                    updates.append("title = %s")
+                    params.append(req.title)
+                if req.content is not None:
+                    updates.append("content = %s")
+                    params.append(req.content)
+                if req.pinned is not None:
+                    updates.append("pinned = %s")
+                    params.append(req.pinned)
+
+                if not updates:
+                    raise HTTPException(400, "No fields to update")
+
+                updates.append("updated_at = now()")
+                params.append(post_id)
+                cur.execute(
+                    f"UPDATE portal_posts SET {', '.join(updates)} "
+                    f"WHERE id = %s RETURNING id, updated_at",
+                    params,
+                )
+                row = cur.fetchone()
+        conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("update_post error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {"ok": True, "post_id": row["id"], "updated_at": str(row["updated_at"])}
+
+
+@router.delete("/portal/posts/{post_id}")
+async def delete_post(post_id: int, user: dict = Depends(get_current_user)):
+    """Delete a post (author or admin only)."""
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT author_id FROM portal_posts WHERE id = %s",
+                    (post_id,),
+                )
+                post = cur.fetchone()
+                if not post:
+                    raise HTTPException(404, "Post not found")
+
+                role_level = _get_user_role_level(user["user_id"])
+                if post["author_id"] != user["user_id"] and role_level != "admin":
+                    raise HTTPException(403, "Only the author or admin can delete")
+
+                # Delete associated comments and files first
+                cur.execute("DELETE FROM portal_comments WHERE post_id = %s", (post_id,))
+                cur.execute(
+                    "SELECT filepath FROM portal_files WHERE post_id = %s",
+                    (post_id,),
+                )
+                file_rows = cur.fetchall()
+                cur.execute("DELETE FROM portal_files WHERE post_id = %s", (post_id,))
+                cur.execute("DELETE FROM portal_posts WHERE id = %s", (post_id,))
+        conn.close()
+
+        # Remove physical files
+        for fr in file_rows:
+            fpath = Path(fr["filepath"])
+            if fpath.is_file():
+                fpath.unlink(missing_ok=True)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("delete_post error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {"ok": True, "post_id": post_id}
+
+
+# ── Community — Comments ─────────────────────────────────────────────────────
+
+
+@router.post("/portal/posts/{post_id}/comments")
+async def create_comment(
+    post_id: int,
+    req: CreateCommentRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Add a comment to a post."""
+    if not req.content.strip():
+        raise HTTPException(400, "Comment content cannot be empty")
+
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # Verify post exists
+                cur.execute("SELECT id FROM portal_posts WHERE id = %s", (post_id,))
+                if not cur.fetchone():
+                    raise HTTPException(404, "Post not found")
+
+                cur.execute(
+                    "INSERT INTO portal_comments (post_id, author_id, content) "
+                    "VALUES (%s, %s, %s) RETURNING id, created_at",
+                    (post_id, user["user_id"], req.content),
+                )
+                row = cur.fetchone()
+        conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("create_comment error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {
+        "ok": True,
+        "comment_id": row["id"],
+        "created_at": str(row["created_at"]),
+    }
+
+
+@router.delete("/portal/comments/{comment_id}")
+async def delete_comment(
+    comment_id: int,
+    user: dict = Depends(get_current_user),
+):
+    """Delete a comment (author or admin only)."""
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT author_id FROM portal_comments WHERE id = %s",
+                    (comment_id,),
+                )
+                comment = cur.fetchone()
+                if not comment:
+                    raise HTTPException(404, "Comment not found")
+
+                role_level = _get_user_role_level(user["user_id"])
+                if comment["author_id"] != user["user_id"] and role_level != "admin":
+                    raise HTTPException(403, "Only the author or admin can delete")
+
+                cur.execute("DELETE FROM portal_comments WHERE id = %s", (comment_id,))
+        conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("delete_comment error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {"ok": True, "comment_id": comment_id}
+
+
+# ── Community — File upload / download ───────────────────────────────────────
+
+
+@router.post("/portal/posts/{post_id}/files")
+async def upload_post_file(
+    post_id: int,
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    """Upload a file attachment to a post."""
+    # Verify post exists
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT p.id, p.board_id, b.allow_upload "
+                "FROM portal_posts p "
+                "JOIN portal_boards b ON b.id = p.board_id "
+                "WHERE p.id = %s",
+                (post_id,),
+            )
+            post = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        logger.error("upload_post_file check error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    if not post:
+        raise HTTPException(404, "Post not found")
+    if not post.get("allow_upload", True):
+        raise HTTPException(403, "File upload not allowed on this board")
+
+    # Max file size: 50MB
+    max_size = 50 * 1024 * 1024
+    content = await file.read()
+    if len(content) > max_size:
+        raise HTTPException(413, "File too large (max 50MB)")
+
+    # Save file
+    file_uuid = str(uuid.uuid4())
+    ext = Path(file.filename).suffix if file.filename else ""
+    stored_name = f"{file_uuid}{ext}"
+    post_dir = UPLOAD_POSTS_DIR / str(post_id)
+    post_dir.mkdir(parents=True, exist_ok=True)
+    dest = post_dir / stored_name
+    dest.write_bytes(content)
+
+    # Record in DB
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "INSERT INTO portal_files (post_id, filename, filepath, filesize, mimetype) "
+                    "VALUES (%s, %s, %s, %s, %s) RETURNING id, uploaded_at",
+                    (post_id, file.filename, str(dest), len(content), file.content_type),
+                )
+                row = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        logger.error("upload_post_file db error: %s", e)
+        dest.unlink(missing_ok=True)
+        raise HTTPException(500, "Database error")
+
+    return {
+        "ok": True,
+        "file_id": row["id"],
+        "filename": file.filename,
+        "filesize": len(content),
+        "uploaded_at": str(row["uploaded_at"]),
+    }
+
+
+@router.get("/portal/files/{file_id}/download")
+async def download_file(file_id: int):
+    """Download a file attachment."""
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT filename, filepath, mimetype FROM portal_files WHERE id = %s",
+                (file_id,),
+            )
+            row = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        logger.error("download_file error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    if not row:
+        raise HTTPException(404, "File not found")
+
+    fpath = Path(row["filepath"])
+    if not fpath.is_file():
+        raise HTTPException(404, "File missing from disk")
+
+    return FileResponse(
+        path=str(fpath),
+        filename=row["filename"],
+        media_type=row.get("mimetype", "application/octet-stream"),
+    )
+
+
+# ── Community — User Profile ────────────────────────────────────────────────
+
+
+@router.get("/portal/profile/{username}")
+async def get_profile(username: str):
+    """Get a user's public profile."""
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT u.id, u.username, u.created_at, "
+                "p.bio_md, p.photo_url, p.updated_at AS profile_updated_at "
+                "FROM portal_users u "
+                "LEFT JOIN portal_profiles p ON p.user_id = u.id "
+                "WHERE u.username = %s",
+                (username,),
+            )
+            row = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        logger.error("get_profile error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    if not row:
+        raise HTTPException(404, "User not found")
+
+    for key in ("created_at", "profile_updated_at"):
+        if row.get(key):
+            row[key] = str(row[key])
+
+    return {"profile": row}
+
+
+@router.put("/portal/profile")
+async def update_profile(
+    req: UpdateProfileRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Update own profile (bio_md)."""
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "INSERT INTO portal_profiles (user_id, bio_md, updated_at) "
+                    "VALUES (%s, %s, now()) "
+                    "ON CONFLICT (user_id) DO UPDATE SET bio_md = %s, updated_at = now() "
+                    "RETURNING user_id, bio_md, updated_at",
+                    (user["user_id"], req.bio_md, req.bio_md),
+                )
+                row = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        logger.error("update_profile error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    if row.get("updated_at"):
+        row["updated_at"] = str(row["updated_at"])
+    return {"ok": True, "profile": row}
+
+
+@router.post("/portal/profile/photo")
+async def upload_profile_photo(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    """Upload profile photo."""
+    # Validate image type
+    allowed_types = ("image/jpeg", "image/png", "image/gif", "image/webp")
+    if file.content_type not in allowed_types:
+        raise HTTPException(400, f"Invalid file type. Allowed: {allowed_types}")
+
+    content = await file.read()
+    max_size = 5 * 1024 * 1024  # 5MB
+    if len(content) > max_size:
+        raise HTTPException(413, "Photo too large (max 5MB)")
+
+    # Save file
+    ext = Path(file.filename).suffix if file.filename else ".jpg"
+    stored_name = f"user_{user['user_id']}{ext}"
+    dest = UPLOAD_PROFILES_DIR / stored_name
+    dest.write_bytes(content)
+
+    # URL for serving (relative)
+    photo_url = f"/data/uploads/profiles/{stored_name}"
+
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO portal_profiles (user_id, photo_url, updated_at) "
+                    "VALUES (%s, %s, now()) "
+                    "ON CONFLICT (user_id) DO UPDATE SET photo_url = %s, updated_at = now()",
+                    (user["user_id"], photo_url, photo_url),
+                )
+        conn.close()
+    except Exception as e:
+        logger.error("upload_profile_photo error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {"ok": True, "photo_url": photo_url}
