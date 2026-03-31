@@ -251,7 +251,7 @@ async def mission_reddit_hot(agent):
         return
 
     title = f"🔥 오늘의 보안 핫토픽 ({datetime.now().strftime('%m/%d %H:%M')})"
-    create_post(agent["id"], "free", title, content)
+    create_post(agent["id"], "security-info", title, content)
 
 
 async def mission_react_to_human_posts(agent):
