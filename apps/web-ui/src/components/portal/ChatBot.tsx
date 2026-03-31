@@ -23,24 +23,23 @@ export default function ChatBot({ pageContext }: { pageContext: string }) {
 
   // 드래그 선택 → "AI튜터에게 질문하기" 팝업
   useEffect(() => {
-    const handleMouseUp = () => {
-      const sel = window.getSelection()
-      const text = sel?.toString().trim()
-      if (text && text.length > 5) {
-        const range = sel!.getRangeAt(0)
-        const rect = range.getBoundingClientRect()
-        setSelectionPopup({ text, x: rect.left + rect.width / 2, y: rect.top - 10 })
-      } else {
-        setSelectionPopup(null)
-      }
+    const handleMouseUp = (e: MouseEvent) => {
+      // 팝업 버튼 클릭 시에는 무시
+      if ((e.target as HTMLElement)?.closest('.ai-tutor-popup')) return
+      setTimeout(() => {
+        const sel = window.getSelection()
+        const text = sel?.toString().trim()
+        if (text && text.length > 3) {
+          const range = sel!.getRangeAt(0)
+          const rect = range.getBoundingClientRect()
+          setSelectionPopup({ text, x: rect.left + rect.width / 2, y: rect.top + window.scrollY - 10 })
+        } else {
+          setSelectionPopup(null)
+        }
+      }, 10)
     }
-    const handleMouseDown = () => setSelectionPopup(null)
     document.addEventListener('mouseup', handleMouseUp)
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => {
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.removeEventListener('mousedown', handleMouseDown)
-    }
+    return () => document.removeEventListener('mouseup', handleMouseUp)
   }, [])
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -91,12 +90,16 @@ export default function ChatBot({ pageContext }: { pageContext: string }) {
     }
   }
 
-  // 드래그 선택 → 채팅창에 복사
-  const handleSelectionToChat = () => {
+  // 드래그 선택 → 채팅창에 복사 → 채팅 열기
+  const handleSelectionToChat = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     if (selectionPopup) {
-      setInput(prev => prev ? `${prev}\n\n"${selectionPopup.text}"` : `"${selectionPopup.text}"\n\n`)
+      const quoted = `"${selectionPopup.text}"\n\n이 부분에 대해 설명해주세요: `
+      setInput(quoted)
       setOpen(true)
-      setSelectionPopup(null)
+      // 약간의 딜레이 후 팝업 닫기
+      setTimeout(() => setSelectionPopup(null), 100)
     }
   }
 
@@ -106,9 +109,10 @@ export default function ChatBot({ pageContext }: { pageContext: string }) {
       <>
         {selectionPopup && (
           <button
-            onClick={handleSelectionToChat}
+            className="ai-tutor-popup"
+            onMouseDown={handleSelectionToChat}
             style={{
-              position: 'fixed',
+              position: 'absolute',
               left: selectionPopup.x - 70,
               top: selectionPopup.y - 36,
               background: colors.accent,
