@@ -19,6 +19,29 @@ const colors = {
 
 export default function ChatBot({ pageContext }: { pageContext: string }) {
   const [open, setOpen] = useState(false)
+  const [selectionPopup, setSelectionPopup] = useState<{text: string, x: number, y: number} | null>(null)
+
+  // 드래그 선택 → "AI튜터에게 질문하기" 팝업
+  useEffect(() => {
+    const handleMouseUp = () => {
+      const sel = window.getSelection()
+      const text = sel?.toString().trim()
+      if (text && text.length > 5) {
+        const range = sel!.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
+        setSelectionPopup({ text, x: rect.left + rect.width / 2, y: rect.top - 10 })
+      } else {
+        setSelectionPopup(null)
+      }
+    }
+    const handleMouseDown = () => setSelectionPopup(null)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('mousedown', handleMouseDown)
+    }
+  }, [])
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -68,22 +91,55 @@ export default function ChatBot({ pageContext }: { pageContext: string }) {
     }
   }
 
-  // Floating button
+  // 드래그 선택 → 채팅창에 복사
+  const handleSelectionToChat = () => {
+    if (selectionPopup) {
+      setInput(prev => prev ? `${prev}\n\n"${selectionPopup.text}"` : `"${selectionPopup.text}"\n\n`)
+      setOpen(true)
+      setSelectionPopup(null)
+    }
+  }
+
+  // Floating button + 선택 팝업
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        style={{
-          position: 'fixed', bottom: 24, right: 24, width: 56, height: 56,
-          borderRadius: '50%', background: colors.accent, border: 'none',
-          color: '#fff', fontSize: '1.5rem', cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)', zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-        title="AI 튜터"
-      >
-        💬
-      </button>
+      <>
+        {selectionPopup && (
+          <button
+            onClick={handleSelectionToChat}
+            style={{
+              position: 'fixed',
+              left: selectionPopup.x - 70,
+              top: selectionPopup.y - 36,
+              background: colors.accent,
+              color: '#fff',
+              border: 'none',
+              padding: '4px 10px',
+              borderRadius: 6,
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+              zIndex: 1001,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🤖 AI튜터에게 질문하기
+          </button>
+        )}
+        <button
+          onClick={() => setOpen(true)}
+          style={{
+            position: 'fixed', bottom: 24, right: 24, width: 56, height: 56,
+            borderRadius: '50%', background: colors.accent, border: 'none',
+            color: '#fff', fontSize: '1.5rem', cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)', zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          title="AI 튜터"
+        >
+          💬
+        </button>
+      </>
     )
   }
 

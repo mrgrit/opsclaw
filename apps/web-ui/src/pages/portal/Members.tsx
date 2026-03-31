@@ -118,7 +118,7 @@ export default function Members() {
                 overflow: 'hidden', textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap', marginTop: 4,
               }}>
-                {m.bio_short}
+                {m.bio_short.replace(/\\n/g, ' ').replace(/[#*>]/g, '')}
               </div>
             )}
           </div>

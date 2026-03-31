@@ -2,15 +2,45 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import ChatBot from './ChatBot'
 
-const baseNavItems = [
-  { to: '/', label: '홈', end: true },
-  { to: '/education', label: '교육과정' },
-  { to: '/novel', label: '소설' },
-  { to: '/ctf', label: 'CTF' },
-  { to: '/terminal', label: '터미널' },
-  { to: '/papers', label: '논문' },
-  { to: '/community', label: '커뮤니티' },
-  { to: '/members', label: '멤버' },
+interface NavGroup {
+  icon: string
+  label: string
+  children: { to: string; label: string; adminOnly?: boolean }[]
+}
+
+const navGroups: NavGroup[] = [
+  {
+    icon: '\u{1F4DA}',
+    label: '\uD559\uC2B5',
+    children: [
+      { to: '/education', label: '\uAD50\uC721\uACFC\uC815' },
+      { to: '/novel', label: '\uC2DC\uB098\uB9AC\uC624' },
+      { to: '/ctf', label: 'CTF' },
+    ],
+  },
+  {
+    icon: '\u{1F3E2}',
+    label: '\uCEE4\uBBA4\uB2C8\uD2F0',
+    children: [
+      { to: '/community', label: '\uAC8C\uC2DC\uD310' },
+      { to: '/members', label: '\uBA64\uBC84' },
+    ],
+  },
+  {
+    icon: '\u{1F4BB}',
+    label: '\uB3C4\uAD6C',
+    children: [
+      { to: '/terminal', label: '\uD130\uBBF8\uB110' },
+      { to: '/admin-panel', label: '\uAD00\uB9AC \uCF58\uC194', adminOnly: true },
+    ],
+  },
+  {
+    icon: '\u{1F4C4}',
+    label: '\uC790\uB8CC',
+    children: [
+      { to: '/papers', label: '\uC5F0\uAD6C\uC790\uB8CC', adminOnly: true },
+    ],
+  },
 ]
 
 const colors = {
@@ -32,20 +62,61 @@ export default function PortalLayout() {
   const [roleLevel, setRoleLevel] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const [pageContext, setPageContext] = useState('')
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    '\uD559\uC2B5': true,
+    '\uCEE4\uBBA4\uB2C8\uD2F0': true,
+    '\uB3C4\uAD6C': true,
+    '\uC790\uB8CC': true,
+  })
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }))
+  }
 
   // 페이지 변경 시 컨텍스트 로드
   useEffect(() => {
     const path = location.pathname
     let apiUrl = ''
-    // 교안 상세
-    const eduMatch = path.match(/\/education\/([^/]+)\/([^/]+)/)
-    if (eduMatch) apiUrl = `/portal/content/education/${eduMatch[1]}/${eduMatch[2]}`
-    // 소설 챕터
-    const novelMatch = path.match(/\/novel\/([^/]+)\/([^/]+)/)
-    if (novelMatch) apiUrl = `/portal/content/novel/${novelMatch[1]}/${novelMatch[2]}`
+
+    // 교안 상세: /education/{course}/{week}
+    const eduDetailMatch = path.match(/\/education\/([^/]+)\/([^/]+)/)
+    if (eduDetailMatch) {
+      apiUrl = `/portal/content/education/${eduDetailMatch[1]}/${eduDetailMatch[2]}`
+    }
+    // 교육과정 상세: /education/{course}
+    else if (path.match(/\/education\/([^/]+)$/)) {
+      const courseMatch = path.match(/\/education\/([^/]+)$/)!
+      apiUrl = `/portal/content/education/${courseMatch[1]}`
+    }
+    // 교육과정 목록: /education
+    else if (path === '/education') {
+      apiUrl = `/portal/content/education`
+    }
+    // 소설 챕터: /novel/{volume}/{chapter}
+    else if (path.match(/\/novel\/([^/]+)\/([^/]+)/)) {
+      const novelMatch = path.match(/\/novel\/([^/]+)\/([^/]+)/)!
+      apiUrl = `/portal/content/novel/${novelMatch[1]}/${novelMatch[2]}`
+    }
+    // 소설 볼륨 목록: /novel or /novel/{volume}
+    else if (path.match(/\/novel(\/[^/]+)?$/)) {
+      const volMatch = path.match(/\/novel(\/([^/]+))?$/)
+      apiUrl = volMatch && volMatch[2]
+        ? `/portal/content/novel/${volMatch[2]}`
+        : `/portal/content/novel`
+    }
+    // 커뮤니티 게시판: /community
+    else if (path.match(/\/community(\/[^/]+)?$/)) {
+      const boardMatch = path.match(/\/community(\/([^/]+))?$/)
+      apiUrl = boardMatch && boardMatch[2]
+        ? `/portal/content/community/${boardMatch[2]}`
+        : `/portal/content/community`
+    }
 
     if (apiUrl) {
-      fetch(apiUrl).then(r => r.json()).then(d => setPageContext(d.content || '')).catch(() => setPageContext(''))
+      fetch(apiUrl)
+        .then(r => r.json())
+        .then(d => setPageContext(d.content || d.summary || JSON.stringify(d)))
+        .catch(() => setPageContext(''))
     } else {
       setPageContext('')
     }
@@ -95,16 +166,80 @@ export default function PortalLayout() {
           <span style={{ fontSize: '0.75rem', color: colors.textMuted, background: colors.card, padding: '2px 8px', borderRadius: 4 }}>Portal</span>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '12px 0' }}>
-          {[
-            ...baseNavItems,
-            ...(user ? [{ to: '/profile', label: '내 프로필' }] : []),
-            ...(roleLevel >= 9 ? [{ to: '/admin-panel', label: '관리자' }] : []),
-          ].map(({ to, label, end }) => (
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '12px 0' }}>
+          <NavLink
+            to="/"
+            end
+            style={({ isActive }) => ({
+              padding: '10px 20px',
+              color: isActive ? colors.accent : colors.text,
+              background: isActive ? colors.accentBg : 'transparent',
+              textDecoration: 'none',
+              fontSize: '0.9rem',
+              borderLeft: isActive ? `3px solid ${colors.accent}` : '3px solid transparent',
+              transition: 'background 0.15s',
+            })}
+          >
+            {'\u{1F3E0}'} 홈
+          </NavLink>
+
+          {navGroups.map(group => {
+            const visibleChildren = group.children.filter(
+              c => !c.adminOnly || roleLevel >= 9
+            )
+            if (visibleChildren.length === 0) return null
+            const isOpen = openGroups[group.label] ?? false
+            return (
+              <div key={group.label}>
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%',
+                    background: 'none',
+                    border: 'none',
+                    color: colors.textMuted,
+                    padding: '10px 20px',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    gap: 6,
+                  }}
+                >
+                  <span>{group.icon}</span>
+                  <span>{group.label}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.65rem' }}>
+                    {isOpen ? '\u25B2' : '\u25BC'}
+                  </span>
+                </button>
+                {isOpen && visibleChildren.map(child => (
+                  <NavLink
+                    key={child.to}
+                    to={child.to}
+                    style={({ isActive }) => ({
+                      padding: '8px 20px 8px 40px',
+                      color: isActive ? colors.accent : colors.text,
+                      background: isActive ? colors.accentBg : 'transparent',
+                      textDecoration: 'none',
+                      fontSize: '0.85rem',
+                      borderLeft: isActive ? `3px solid ${colors.accent}` : '3px solid transparent',
+                      display: 'block',
+                      transition: 'background 0.15s',
+                    })}
+                  >
+                    {child.label}
+                  </NavLink>
+                ))}
+              </div>
+            )
+          })}
+
+          {user && (
             <NavLink
-              key={to}
-              to={to}
-              end={end}
+              to="/profile"
               style={({ isActive }) => ({
                 padding: '10px 20px',
                 color: isActive ? colors.accent : colors.text,
@@ -113,16 +248,17 @@ export default function PortalLayout() {
                 fontSize: '0.9rem',
                 borderLeft: isActive ? `3px solid ${colors.accent}` : '3px solid transparent',
                 transition: 'background 0.15s',
+                marginTop: 8,
               })}
             >
-              {label}
+              내 프로필
             </NavLink>
-          ))}
+          )}
         </nav>
 
         <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: `1px solid ${colors.border}` }}>
           <NavLink
-            to="/"
+            to="/admin"
             style={{ color: colors.textMuted, textDecoration: 'none', fontSize: '0.8rem' }}
           >
             OpsClaw 관리 콘솔로 이동

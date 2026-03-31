@@ -11,7 +11,7 @@ const colors = {
 
 export default function CTF() {
   const [mode, setMode] = useState<'iframe' | 'link'>('iframe')
-  const ctfdUrl = 'http://localhost:8080'
+  const ctfdUrl = `${window.location.protocol}//${window.location.hostname}:8080`
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>

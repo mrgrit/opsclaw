@@ -100,7 +100,142 @@ def _ensure_portal_tables():
         logger.warning("portal table init failed (will retry on first request): %s", e)
 
 
+def _ensure_rag_table():
+    """Create portal_rag_index table for RAG full-text search."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS portal_rag_index (
+        id SERIAL PRIMARY KEY,
+        source_type VARCHAR(20) NOT NULL,
+        source_path VARCHAR(300) NOT NULL,
+        title VARCHAR(300) DEFAULT '',
+        content TEXT NOT NULL,
+        content_tsv tsvector,
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(source_type, source_path)
+    );
+    CREATE INDEX IF NOT EXISTS idx_rag_tsv ON portal_rag_index USING gin(content_tsv);
+    """
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(ddl)
+        conn.close()
+    except Exception as e:
+        logger.warning("RAG table init failed: %s", e)
+
+
+def _rag_index_all():
+    """Index all education, novel, manual content for RAG search."""
+    indexed = 0
+    rows = []  # (source_type, source_path, title, content)
+
+    # 1. Education: contents/education/**/lecture.md
+    edu_dir = CONTENTS_BASE / "education"
+    if edu_dir.is_dir():
+        for course_dir in sorted(edu_dir.iterdir()):
+            if not course_dir.is_dir() or course_dir.name.startswith((".", "00")):
+                continue
+            for week_dir in sorted(course_dir.iterdir()):
+                if not week_dir.is_dir() or not week_dir.name.startswith("week"):
+                    continue
+                lf = week_dir / "lecture.md"
+                if lf.is_file():
+                    text = lf.read_text("utf-8", errors="replace")
+                    first_line = text.split("\n", 1)[0]
+                    title = first_line.lstrip("# ").strip() if first_line.startswith("#") else week_dir.name
+                    source_path = f"{course_dir.name}/{week_dir.name}"
+                    rows.append(("education", source_path, title, text))
+
+    # 2. Novel: contents/novel/**/ch*.md
+    novel_dir = CONTENTS_BASE / "novel"
+    if novel_dir.is_dir():
+        for vol_dir in sorted(novel_dir.iterdir()):
+            if not vol_dir.is_dir() or not vol_dir.name.startswith("vol"):
+                continue
+            for f in sorted(vol_dir.iterdir()):
+                if f.is_file() and f.suffix == ".md" and f.stem.startswith("ch"):
+                    text = f.read_text("utf-8", errors="replace")
+                    first_line = text.split("\n", 1)[0]
+                    title = first_line.lstrip("# ").strip() if first_line.startswith("#") else f.stem
+                    source_path = f"{vol_dir.name}/{f.stem}"
+                    rows.append(("novel", source_path, title, text))
+
+    # 3. Manual: contents/manual/**/*.md
+    manual_dir = CONTENTS_BASE / "manual"
+    if manual_dir.is_dir():
+        for md_file in sorted(manual_dir.rglob("*.md")):
+            if md_file.is_file():
+                text = md_file.read_text("utf-8", errors="replace")
+                first_line = text.split("\n", 1)[0]
+                title = first_line.lstrip("# ").strip() if first_line.startswith("#") else md_file.stem
+                source_path = str(md_file.relative_to(manual_dir))
+                rows.append(("manual", source_path, title, text))
+
+    if not rows:
+        logger.info("RAG index: no content files found")
+        return 0
+
+    try:
+        conn = _get_conn()
+        with conn:
+            with conn.cursor() as cur:
+                for source_type, source_path, title, content in rows:
+                    cur.execute(
+                        "INSERT INTO portal_rag_index "
+                        "(source_type, source_path, title, content, content_tsv, updated_at) "
+                        "VALUES (%s, %s, %s, %s, to_tsvector('simple', %s), NOW()) "
+                        "ON CONFLICT (source_type, source_path) DO UPDATE SET "
+                        "title = EXCLUDED.title, content = EXCLUDED.content, "
+                        "content_tsv = to_tsvector('simple', EXCLUDED.content), "
+                        "updated_at = NOW()",
+                        (source_type, source_path, title, content, content),
+                    )
+                    indexed += 1
+        conn.close()
+    except Exception as e:
+        logger.error("RAG indexing error: %s", e)
+        return -1
+
+    logger.info("RAG index: indexed %d documents", indexed)
+    return indexed
+
+
+def _rag_search(query: str, limit: int = 3) -> list:
+    """Full-text search across all indexed RAG content."""
+    if not query or not query.strip():
+        return []
+    query = query.strip()
+    results = []
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT source_type, source_path, title, "
+                "LEFT(content, 500) AS snippet "
+                "FROM portal_rag_index "
+                "WHERE content_tsv @@ plainto_tsquery('simple', %s) "
+                "   OR content ILIKE %s "
+                "ORDER BY "
+                "  ts_rank(content_tsv, plainto_tsquery('simple', %s)) DESC "
+                "LIMIT %s",
+                (query, f"%{query}%", query, limit),
+            )
+            results = [dict(r) for r in cur.fetchall()]
+        conn.close()
+    except Exception as e:
+        logger.warning("RAG search error: %s", e)
+    return results
+
+
 _ensure_portal_tables()
+
+# Initialize RAG table and index on startup
+try:
+    _ensure_rag_table()
+    _rag_index_all()
+except Exception as e:
+    logger.warning("RAG startup indexing skipped: %s", e)
 
 # ── Password hashing ─────────────────────────────────────────────────────────
 
@@ -627,6 +762,25 @@ async def chat(req: ChatRequest):
         ctx = req.context[:8000]
         system_prompt += f"--- 현재 페이지 내용 ---\n{ctx}\n--- 끝 ---\n"
 
+    # RAG: search for related content using the latest user message
+    user_messages = [m for m in req.messages if m.get("role") == "user"]
+    if user_messages:
+        last_user_msg = user_messages[-1].get("content", "")
+        rag_results = _rag_search(last_user_msg, limit=3)
+        if rag_results:
+            _type_labels = {
+                "education": "교육과정",
+                "novel": "시나리오",
+                "manual": "매뉴얼",
+            }
+            rag_block = "\n--- 관련 학습 자료 ---\n"
+            for r in rag_results:
+                label = _type_labels.get(r["source_type"], r["source_type"])
+                rag_block += f"[{label}: {r['source_path']}] {r['title']}\n"
+                rag_block += f"{r['snippet']}\n\n"
+            rag_block += "---\n"
+            system_prompt += rag_block
+
     messages = [{"role": "system", "content": system_prompt}] + req.messages
 
     try:
@@ -678,6 +832,46 @@ async def chat(req: ChatRequest):
         raise HTTPException(500, f"Chat error: {str(e)}")
 
     return {"model": req.model, "answer": answer}
+
+
+# ── RAG Admin endpoints ─────────────────────────────────────────────────────
+
+
+@router.post("/portal/admin/rag/rebuild")
+async def admin_rag_rebuild(_admin: dict = Depends(admin_required)):
+    """Rebuild the RAG full-text index from all content files (admin only)."""
+    count = _rag_index_all()
+    if count < 0:
+        raise HTTPException(500, "RAG indexing failed — check logs")
+    return {"ok": True, "indexed": count}
+
+
+@router.get("/portal/admin/rag/status")
+async def admin_rag_status(_admin: dict = Depends(admin_required)):
+    """RAG index statistics (admin only)."""
+    try:
+        conn = _get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT source_type, COUNT(*) AS doc_count, "
+                "MAX(updated_at) AS last_updated "
+                "FROM portal_rag_index GROUP BY source_type ORDER BY source_type"
+            )
+            by_type = [dict(r) for r in cur.fetchall()]
+            cur.execute("SELECT COUNT(*) AS total FROM portal_rag_index")
+            total = cur.fetchone()["total"]
+            cur.execute("SELECT MAX(updated_at) AS last_updated FROM portal_rag_index")
+            last = cur.fetchone()["last_updated"]
+        conn.close()
+    except Exception as e:
+        logger.error("rag_status error: %s", e)
+        raise HTTPException(500, "Database error")
+
+    return {
+        "total_documents": total,
+        "last_updated": str(last) if last else None,
+        "by_type": by_type,
+    }
 
 
 # ── Upload directories ───────────────────────────────────────────────────────
