@@ -33,6 +33,33 @@ MANAGER_URL = "http://localhost:8000"
 OLLAMA_URL = os.getenv("OLLAMA_BASE_URL", "http://192.168.0.105:11434")
 LLM_MODEL = "gpt-oss:120b"
 
+# RSS 피드 — 에이전트별 할당
+AGENT_RSS_FEEDS = {
+    "agent-secu": {
+        "board": "security-info",
+        "feeds": [
+            {"name": "The Hacker News", "url": "https://thehackernews.com/feeds/posts/default?alt=rss"},
+            {"name": "CISA Advisories", "url": "https://www.cisa.gov/cybersecurity-advisories/all.xml"},
+            {"name": "BleepingComputer", "url": "https://www.bleepingcomputer.com/feed/"},
+        ],
+    },
+    "agent-web": {
+        "board": "security-info",
+        "feeds": [
+            {"name": "Dark Reading", "url": "https://www.darkreading.com/rss.xml"},
+            {"name": "Hacker News", "url": "https://hnrss.org/frontpage?points=100"},
+        ],
+    },
+    "agent-siem": {
+        "board": "ai-info",
+        "feeds": [
+            {"name": "VentureBeat AI", "url": "https://venturebeat.com/category/ai/feed/"},
+            {"name": "AI Snake Oil", "url": "https://aisnakeoil.substack.com/feed"},
+            {"name": "404 Media", "url": "https://www.404media.co/rss/"},
+        ],
+    },
+}
+
 DB_CONFIG = {
     "host": "127.0.0.1", "port": 5432,
     "user": "opsclaw", "password": "opsclaw", "dbname": "opsclaw",
@@ -368,6 +395,160 @@ async def mission_opinion_exchange(agent_manager, agents):
         break  # 한 번에 하나만
 
 
+# ── RSS 수집 + 분석 미션 ──
+
+async def fetch_rss_entries(feed_url, limit=5):
+    """RSS 피드에서 최신 항목 가져오기."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(feed_url, headers={"User-Agent": "OpsClaw-Agent/1.0"})
+            text = resp.text
+        # 간단한 XML 파싱 (정규식 기반, 외부 라이브러리 불필요)
+        import re
+        items = []
+        for item_match in re.finditer(r'<item>(.*?)</item>', text, re.DOTALL)[:limit]:
+            item_xml = item_match.group(1)
+            title = re.search(r'<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>', item_xml)
+            link = re.search(r'<link>(.*?)</link>', item_xml)
+            desc = re.search(r'<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</description>', item_xml, re.DOTALL)
+            items.append({
+                "title": title.group(1).strip() if title else "",
+                "link": link.group(1).strip() if link else "",
+                "description": re.sub(r'<[^>]+>', '', desc.group(1).strip()[:300]) if desc else "",
+            })
+        return items[:limit]
+    except Exception as e:
+        log.error(f"RSS fetch error ({feed_url}): {e}")
+        return []
+
+
+async def mission_rss_analysis(agent, feeds_config):
+    """에이전트가 RSS 피드를 수집하고 트렌드 분석 글을 작성."""
+    log.info(f"[{agent['username']}] RSS 수집 시작 ({len(feeds_config['feeds'])}개 소스)")
+
+    all_entries = []
+    for feed in feeds_config["feeds"]:
+        entries = await fetch_rss_entries(feed["url"], limit=5)
+        for e in entries:
+            e["source"] = feed["name"]
+        all_entries.extend(entries)
+        log.info(f"  [{feed['name']}] {len(entries)}건")
+
+    if not all_entries:
+        log.info(f"[{agent['username']}] RSS 수집 결과 없음")
+        return
+
+    # LLM으로 트렌드 분석
+    entries_text = "\n".join(
+        f"- [{e['source']}] {e['title']}\n  {e['description'][:150]}\n  {e['link']}"
+        for e in all_entries[:15]
+    )
+
+    prompt = f"""다음은 최신 보안/AI 뉴스 피드에서 수집한 항목들이야:
+
+{entries_text}
+
+이 중에서 가장 중요하고 트렌디한 3-5개를 골라서:
+1. 각 항목에 대해 한국어로 요약 (2-3문장)
+2. 왜 보안 전문가들이 관심을 가져야 하는지 설명
+3. 관련 MITRE ATT&CK 기법이나 OWASP 항목이 있다면 매핑
+
+마크다운 형식으로 작성해줘. 출처 링크를 포함해줘."""
+
+    system = f"당신의 페르소나: {agent['persona']}\n보안/AI 전문가로서 인사이트를 제공하세요."
+
+    content = await llm_generate(prompt, system)
+    if not content:
+        return
+
+    now = datetime.now()
+    board = feeds_config["board"]
+    title = f"📰 {agent['username']} 트렌드 리포트 ({now.strftime('%m/%d %H:%M')})"
+    create_post(agent["id"], board, title, content)
+    log.info(f"[{agent['username']}] RSS 분석 글 작성 완료 → {board}")
+
+
+async def mission_manager_weekly_analysis(manager):
+    """매니저가 지난 2주간 에이전트 글을 통합 분석 → OpsClaw 개선 제안."""
+    log.info("[agent-manager] 통합 분석 + OpsClaw 개선 제안 시작")
+
+    # 지난 2주간 보안정보/AI정보 게시판의 에이전트 글 수집
+    conn = get_conn()
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("""
+            SELECT p.title, p.content, u.username, b.slug, p.created_at
+            FROM portal_posts p
+            JOIN portal_users u ON p.author_id = u.id
+            JOIN portal_boards b ON p.board_id = b.id
+            WHERE u.is_agent = TRUE
+              AND b.slug IN ('security-info', 'ai-info', 'free')
+              AND p.created_at > now() - interval '14 days'
+            ORDER BY p.created_at DESC
+            LIMIT 30
+        """)
+        posts = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    if not posts:
+        log.info("[agent-manager] 분석할 글 없음")
+        return
+
+    # 글 요약 (너무 길면 잘라냄)
+    posts_summary = "\n\n".join(
+        f"### [{p['username']}] {p['title']} ({p['slug']})\n{p['content'][:400]}"
+        for p in posts[:20]
+    )
+
+    # OpsClaw 시스템 정보
+    system_info = """
+OpsClaw 시스템 구성:
+- Control Plane: Manager API (FastAPI), Master Service (Ollama LLM)
+- 보안 장비: v-secu (nftables, Suricata), v-web (Apache, ModSecurity, JuiceShop), v-siem (Wazuh)
+- 기능: PoW 작업증명, 강화학습(RL), Experience 메모리, Playbook, Schedule/Watcher
+- 교육: 10과목 150강, 시나리오 10권, CTFd
+- CLI: opsclaw run/dispatch
+
+현재 보안 스택:
+- 방화벽: nftables (zone-based)
+- IPS: Suricata 6.x + ET Open 룰셋
+- WAF: Apache ModSecurity + OWASP CRS
+- SIEM: Wazuh 4.11.2
+- CTI: OpenCTI
+"""
+
+    prompt = f"""지난 2주간 에이전트들이 수집한 보안/AI 트렌드 정보:
+
+{posts_summary}
+
+---
+
+{system_info}
+
+위 트렌드 정보를 분석하여:
+
+1. **트렌드 종합 요약** (3-5줄): 지난 2주간 가장 중요한 보안/AI 트렌드
+2. **OpsClaw 시스템 적용 가능한 제안** (구체적으로):
+   - 새로운 Suricata 룰 추가가 필요한 위협이 있는가?
+   - nftables에 추가할 차단 정책이 있는가?
+   - Wazuh에 새 탐지 룰이 필요한가?
+   - OpsClaw의 기능(Playbook, RL, Agent) 개선 아이디어가 있는가?
+3. **관계없거나 적용 불가능한 항목**은 SKIP (언급하지 마)
+4. **구체적 실행 계획**: OpsClaw dispatch나 execute-plan으로 실행할 수 있는 명령어 예시
+
+마크다운으로 작성. 실행 가능한 제안만."""
+
+    system = f"당신의 페르소나: {manager['persona']}\nSOC 매니저로서 실용적이고 구체적인 개선 제안을 하세요."
+
+    content = await llm_generate(prompt, system)
+    if not content:
+        return
+
+    now = datetime.now()
+    title = f"🔧 OpsClaw 개선 제안 — {now.strftime('%Y/%m/%d')} 트렌드 분석 기반"
+    create_post(manager["id"], "opsclaw-proposals", title, content)
+    log.info("[agent-manager] OpsClaw 개선 제안 작성 완료")
+
+
 # ── 메인 루프 ──
 
 async def run_cycle():
@@ -385,35 +566,52 @@ async def run_cycle():
     now = datetime.now()
     minute = now.minute
 
-    # 10분마다: Reddit 핫토픽 (agent-secu)
-    if secu and minute == 0 and now.hour % 2 == 0:
+    # === 12시간 단위: RSS 수집 + 분석 (09시, 21시) ===
+    if minute == 0 and now.hour in (9, 21):
+        for agent_name, feeds_config in AGENT_RSS_FEEDS.items():
+            agent = agents.get(agent_name)
+            if agent:
+                try:
+                    await mission_rss_analysis(agent, feeds_config)
+                except Exception as e:
+                    log.error(f"rss_analysis error ({agent_name}): {e}")
+                await asyncio.sleep(5)
+
+    # === 12시간 단위: Reddit 핫토픽 (09:30, 21:30) ===
+    if secu and minute == 30 and now.hour in (9, 21):
         try:
             await mission_reddit_hot(secu)
         except Exception as e:
             log.error(f"reddit_hot error: {e}")
 
-    # 15분마다: 의견 교환 (agent-manager)
+    # === 하루 1회: Manager 통합 분석 → OpsClaw 개선 제안 (10시) ===
+    if manager and minute == 0 and now.hour == 10:
+        try:
+            await mission_manager_weekly_analysis(manager)
+        except Exception as e:
+            log.error(f"manager_analysis error: {e}")
+
+    # === 2시간마다: 의견 교환 (짝수시 05분) ===
     if manager and minute == 5 and now.hour % 2 == 0:
         try:
             await mission_opinion_exchange(manager, agents)
         except Exception as e:
             log.error(f"opinion_exchange error: {e}")
 
-    # 5분마다: Human 글에 반응 (agent-web)
+    # === 2시간마다: Human 글에 반응 ===
     if web and minute == 10 and now.hour % 2 == 0:
         try:
             await mission_react_to_human_posts(web)
         except Exception as e:
             log.error(f"web react error: {e}")
 
-    # 8분마다: Human 글에 반응 (agent-siem)
     if siem and minute == 15 and now.hour % 2 == 0:
         try:
             await mission_react_to_human_posts(siem)
         except Exception as e:
             log.error(f"siem react error: {e}")
 
-    # 매시 정각: 하루 소회 (랜덤 에이전트 1명)
+    # === 하루 1회: 소회 (18시) ===
     if minute == 0 and now.hour == 18:
         lucky = random.choice(list(agents.values()))
         try:
