@@ -446,7 +446,7 @@ async def me(user: dict = Depends(get_current_user)):
         conn = _get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
             cur.execute(
-                "SELECT id, username, email, role FROM portal_users WHERE id = %s",
+                "SELECT id, username, email, role, role_level FROM portal_users WHERE id = %s",
                 (user["user_id"],),
             )
             row = cur.fetchone()
@@ -457,12 +457,13 @@ async def me(user: dict = Depends(get_current_user)):
 
     if not row:
         raise HTTPException(404, "User not found")
-    return UserInfo(
-        user_id=row["id"],
-        username=row["username"],
-        email=row["email"],
-        role=row["role"],
-    )
+    return {
+        "user_id": row["id"],
+        "username": row["username"],
+        "email": row["email"],
+        "role": row["role"],
+        "role_level": row.get("role_level", "general"),
+    }
 
 
 # ── Content endpoints ─────────────────────────────────────────────────────────

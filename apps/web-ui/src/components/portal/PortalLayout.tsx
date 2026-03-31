@@ -59,7 +59,7 @@ export default function PortalLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [user, setUser] = useState<string | null>(null)
-  const [roleLevel, setRoleLevel] = useState(0)
+  const [roleLevel, setRoleLevel] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [pageContext, setPageContext] = useState('')
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -128,9 +128,9 @@ export default function PortalLayout() {
     if (token && username) {
       setUser(username)
       // Fetch role level for admin nav
-      fetch('/portal/profile/' + username, { headers: { Authorization: `Bearer ${token}` } })
+      fetch('/portal/auth/me', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data?.role_level) setRoleLevel(data.role_level) })
+        .then(data => { if (data?.role_level) setRoleLevel(data.role_level || '') })
         .catch(() => {})
     }
   }, [])
@@ -185,7 +185,7 @@ export default function PortalLayout() {
 
           {navGroups.map(group => {
             const visibleChildren = group.children.filter(
-              c => !c.adminOnly || roleLevel >= 9
+              c => !c.adminOnly || roleLevel === 'admin'
             )
             if (visibleChildren.length === 0) return null
             const isOpen = openGroups[group.label] ?? false
