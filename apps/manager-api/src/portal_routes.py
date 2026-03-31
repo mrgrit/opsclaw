@@ -836,9 +836,112 @@ async def list_chat_models():
     return {"models": models}
 
 
+@router.post("/portal/chat/stream")
+async def chat_stream(req: ChatRequest):
+    """SSE 스트리밍 채팅."""
+    import httpx
+    from starlette.responses import StreamingResponse
+
+    cfg = CHAT_MODELS.get(req.model)
+    if not cfg:
+        raise HTTPException(400, f"Unknown model: {req.model}")
+
+    system_prompt = _build_chat_system_prompt(req.context, req.messages)
+    messages = [{"role": "system", "content": system_prompt}] + req.messages
+
+    async def generate():
+        try:
+            async with httpx.AsyncClient(timeout=300) as client:
+                if cfg["type"] == "ollama":
+                    async with client.stream(
+                        "POST",
+                        f"{OLLAMA_URL}/v1/chat/completions",
+                        json={"model": cfg["model"], "messages": messages, "stream": True},
+                    ) as resp:
+                        async for line in resp.aiter_lines():
+                            if line.startswith("data: "):
+                                data_str = line[6:]
+                                if data_str.strip() == "[DONE]":
+                                    yield "data: [DONE]\n\n"
+                                    break
+                                try:
+                                    chunk = json.loads(data_str)
+                                    delta = chunk.get("choices", [{}])[0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    if content:
+                                        yield f"data: {json.dumps({'content': content})}\n\n"
+                                except Exception:
+                                    pass
+
+                elif cfg["type"] == "claude":
+                    if not ANTHROPIC_BASE_URL or not ANTHROPIC_AUTH_TOKEN:
+                        yield f"data: {json.dumps({'content': 'Claude API not configured'})}\n\n"
+                        return
+                    headers = {
+                        "x-api-key": ANTHROPIC_AUTH_TOKEN,
+                        "anthropic-version": "2023-06-01",
+                        "Content-Type": "application/json",
+                    }
+                    user_msgs = [m for m in messages if m["role"] != "system"]
+                    body = {
+                        "model": cfg["model"],
+                        "max_tokens": 4096,
+                        "system": system_prompt,
+                        "messages": user_msgs,
+                        "stream": True,
+                    }
+                    async with client.stream(
+                        "POST", f"{ANTHROPIC_BASE_URL}/v1/messages",
+                        json=body, headers=headers,
+                    ) as resp:
+                        async for line in resp.aiter_lines():
+                            if line.startswith("data: "):
+                                try:
+                                    chunk = json.loads(line[6:])
+                                    if chunk.get("type") == "content_block_delta":
+                                        text = chunk.get("delta", {}).get("text", "")
+                                        if text:
+                                            yield f"data: {json.dumps({'content': text})}\n\n"
+                                except Exception:
+                                    pass
+
+        except Exception as e:
+            yield f"data: {json.dumps({'content': f'[Error: {e}]'})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+def _build_chat_system_prompt(context: str, messages: list) -> str:
+    """채팅 시스템 프롬프트 빌드 (RAG 포함)."""
+    system_prompt = (
+        "당신은 OpsClaw 보안 교육 플랫폼의 AI 튜터입니다. "
+        "학생의 질문에 친절하고 정확하게 답변하세요. "
+        "아래는 학생이 현재 보고 있는 페이지의 내용입니다. "
+        "이 내용을 참고하여 답변하되, 필요하면 추가 설명도 해주세요.\n\n"
+    )
+    if context:
+        ctx = context[:8000]
+        system_prompt += f"--- 현재 페이지 내용 ---\n{ctx}\n--- 끝 ---\n"
+
+    user_messages = [m for m in messages if m.get("role") == "user"]
+    if user_messages:
+        last_user_msg = user_messages[-1].get("content", "")
+        rag_results = _rag_search(last_user_msg, limit=3)
+        if rag_results:
+            _type_labels = {"education": "교육과정", "novel": "시나리오", "manual": "매뉴얼"}
+            rag_block = "\n--- 관련 학습 자료 ---\n"
+            for r in rag_results:
+                label = _type_labels.get(r["source_type"], r["source_type"])
+                rag_block += f"[{label}: {r['source_path']}] {r['title']}\n{r['snippet']}\n\n"
+            rag_block += "---\n"
+            system_prompt += rag_block
+    return system_prompt
+
+
 @router.post("/portal/chat")
 async def chat(req: ChatRequest):
-    """페이지 컨텍스트 기반 LLM 채팅."""
+    """페이지 컨텍스트 기반 LLM 채팅 (non-streaming)."""
     import httpx
 
     cfg = CHAT_MODELS.get(req.model)

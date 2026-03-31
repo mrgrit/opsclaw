@@ -67,8 +67,12 @@ export default function ChatBot({ pageContext }: { pageContext: string }) {
     setInput('')
     setLoading(true)
 
+    // 스트리밍 응답
+    const assistantMsg: Message = { role: 'assistant', content: '' }
+    setMessages([...newMsgs, assistantMsg])
+
     try {
-      const res = await fetch('/portal/chat', {
+      const res = await fetch('/portal/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -77,14 +81,51 @@ export default function ChatBot({ pageContext }: { pageContext: string }) {
           context: pageContext,
         }),
       })
-      const data = await res.json()
-      if (data.answer) {
-        setMessages([...newMsgs, { role: 'assistant', content: data.answer }])
-      } else {
-        setMessages([...newMsgs, { role: 'assistant', content: `오류: ${data.detail || JSON.stringify(data)}` }])
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setMessages(prev => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: `오류: ${err.detail || res.status}` }
+          return updated
+        })
+        return
+      }
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullText = ''
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = decoder.decode(value, { stream: true })
+          for (const line of chunk.split('\n')) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim()
+              if (data === '[DONE]') break
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.content) {
+                  fullText += parsed.content
+                  setMessages(prev => {
+                    const updated = [...prev]
+                    updated[updated.length - 1] = { role: 'assistant', content: fullText }
+                    return updated
+                  })
+                }
+              } catch {}
+            }
+          }
+        }
       }
     } catch (e) {
-      setMessages([...newMsgs, { role: 'assistant', content: `연결 오류: ${e}` }])
+      setMessages(prev => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: 'assistant', content: `연결 오류: ${e}` }
+        return updated
+      })
     } finally {
       setLoading(false)
     }
