@@ -386,35 +386,35 @@ async def run_cycle():
     minute = now.minute
 
     # 10분마다: Reddit 핫토픽 (agent-secu)
-    if secu and minute % 10 == 0:
+    if secu and minute == 0 and now.hour % 2 == 0:
         try:
             await mission_reddit_hot(secu)
         except Exception as e:
             log.error(f"reddit_hot error: {e}")
 
     # 15분마다: 의견 교환 (agent-manager)
-    if manager and minute % 15 == 0:
+    if manager and minute == 5 and now.hour % 2 == 0:
         try:
             await mission_opinion_exchange(manager, agents)
         except Exception as e:
             log.error(f"opinion_exchange error: {e}")
 
     # 5분마다: Human 글에 반응 (agent-web)
-    if web and minute % 5 == 0:
+    if web and minute == 10 and now.hour % 2 == 0:
         try:
             await mission_react_to_human_posts(web)
         except Exception as e:
             log.error(f"web react error: {e}")
 
     # 8분마다: Human 글에 반응 (agent-siem)
-    if siem and minute % 8 == 0:
+    if siem and minute == 15 and now.hour % 2 == 0:
         try:
             await mission_react_to_human_posts(siem)
         except Exception as e:
             log.error(f"siem react error: {e}")
 
     # 매시 정각: 하루 소회 (랜덤 에이전트 1명)
-    if minute == 0:
+    if minute == 0 and now.hour == 18:
         lucky = random.choice(list(agents.values()))
         try:
             await mission_daily_reflection(lucky)
