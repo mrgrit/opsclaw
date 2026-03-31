@@ -94,7 +94,7 @@ export default function Terminal() {
     if (!input.trim()) return
 
     addOutput(`$ ${input}`)
-    wsRef.current.send(input)
+    wsRef.current.send(input + '\n')
     setInput('')
   }
 
