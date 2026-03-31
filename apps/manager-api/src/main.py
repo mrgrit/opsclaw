@@ -2590,7 +2590,8 @@ def create_app() -> FastAPI:
             )
             excluded = {"transfer-encoding", "content-encoding", "content-length"}
             headers = {k: v for k, v in resp.headers.items() if k.lower() not in excluded}
-            return Response(content=resp.content, status_code=resp.status_code, headers=headers)
+            from starlette.responses import Response as RawResponse
+            return RawResponse(content=resp.content, status_code=resp.status_code, headers=headers)
 
     _WEB_UI_DIST = Path(__file__).parent.parent.parent.parent / "apps" / "web-ui" / "dist"
     if _WEB_UI_DIST.exists():
