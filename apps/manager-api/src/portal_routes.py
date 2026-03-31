@@ -359,6 +359,7 @@ class UserInfo(BaseModel):
     username: str
     email: str
     role: str
+    role_level: str = "general"
 
 
 # ── Router ────────────────────────────────────────────────────────────────────

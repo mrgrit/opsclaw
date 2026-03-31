@@ -139,7 +139,7 @@ export default function PortalLayout() {
     localStorage.removeItem('portal_token')
     localStorage.removeItem('portal_username')
     setUser(null)
-    setRoleLevel(0)
+    setRoleLevel('')
     setMenuOpen(false)
     navigate('/')
   }
