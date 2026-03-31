@@ -51,7 +51,10 @@ export default function Terminal() {
 
     const token = localStorage.getItem('portal_token') || ''
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/portal/ws/terminal?host=${server}&token=${token}`
+    // 서버별 SSH 사용자 매핑
+    const sshUsers: Record<string, string> = { 'v-secu': 'secu', 'v-web': 'web', 'v-siem': 'siem' }
+    const sshUser = sshUsers[server] || 'root'
+    const wsUrl = `${protocol}//${window.location.host}/portal/ws/terminal?host=${server}&user=${sshUser}&password=1&token=${token}`
 
     addOutput(`[*] ${server}에 연결 중...`)
 

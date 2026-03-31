@@ -476,25 +476,120 @@ def _safe_path(base: Path, *parts: str) -> Path:
     return resolved
 
 
+COURSE_META = {
+    "course1-attack": {
+        "title": "사이버 공격/해킹/침투 테스트",
+        "group": "공격 기술",
+        "icon": "⚔️",
+        "color": "#f85149",
+        "description": "SQL Injection, XSS, 권한 상승, 네트워크 공격 등 실제 해킹 기법을 학습하고, MITRE ATT&CK 프레임워크에 매핑하여 체계적으로 이해합니다.",
+    },
+    "course2-security-ops": {
+        "title": "보안 시스템/솔루션 운영",
+        "group": "방어 운영",
+        "icon": "🛡️",
+        "color": "#3fb950",
+        "description": "nftables 방화벽, Suricata IPS, Wazuh SIEM, ModSecurity WAF, OpenCTI 등 실제 보안 솔루션을 설치하고 운영합니다.",
+    },
+    "course3-web-vuln": {
+        "title": "웹 취약점 점검",
+        "group": "공격 기술",
+        "icon": "🕷️",
+        "color": "#f85149",
+        "description": "OWASP Top 10 기반 웹 취약점을 체계적으로 점검하고, JuiceShop에서 실습하며, 점검 보고서를 작성합니다.",
+    },
+    "course4-compliance": {
+        "title": "보안 표준/컴플라이언스",
+        "group": "거버넌스",
+        "icon": "📋",
+        "color": "#d29922",
+        "description": "ISO 27001, ISMS-P, NIST CSF, SOC 2, HIPAA, GDPR 등 국내외 보안 표준과 인증 체계를 학습합니다.",
+    },
+    "course5-soc": {
+        "title": "보안관제(SOC) 운영",
+        "group": "방어 운영",
+        "icon": "📊",
+        "color": "#3fb950",
+        "description": "SOC 분석가의 업무 — 로그 분석, 경보 분류, 인시던트 대응(NIST IR), SIGMA 룰, 위협 인텔리전스를 실습합니다.",
+    },
+    "course6-cloud-container": {
+        "title": "클라우드/컨테이너 보안",
+        "group": "인프라 보안",
+        "icon": "☁️",
+        "color": "#58a6ff",
+        "description": "Docker 컨테이너 보안, Kubernetes 보안, 클라우드(AWS) 설정 오류, IaC 보안을 실습합니다.",
+    },
+    "course7-ai-security": {
+        "title": "AI 보안 자동화",
+        "group": "AI 보안",
+        "icon": "🤖",
+        "color": "#bc8cff",
+        "description": "OpsClaw를 활용한 보안 자동화 — Ollama LLM, 프롬프트 엔지니어링, 탐지 룰 자동 생성, 자율 에이전트를 구축합니다.",
+    },
+    "course8-ai-safety": {
+        "title": "AI Safety",
+        "group": "AI 보안",
+        "icon": "🧠",
+        "color": "#bc8cff",
+        "description": "LLM 탈옥, 프롬프트 인젝션, 가드레일, 적대적 입력, 모델 도난, RAG 보안, AI Red Teaming을 학습합니다.",
+    },
+    "course9-autonomous-security": {
+        "title": "자율보안시스템",
+        "group": "AI 보안",
+        "icon": "⚡",
+        "color": "#bc8cff",
+        "description": "OpsClaw의 핵심 — PoW 작업증명, 강화학습(RL), Experience 메모리, 자율 Red/Blue/Purple Team을 구축합니다.",
+    },
+    "course10-ai-security-agent": {
+        "title": "AI보안에이전트",
+        "group": "AI 보안",
+        "icon": "🕹️",
+        "color": "#bc8cff",
+        "description": "AI 에이전트 기본부터 하네스 구축(OpsClaw/Claude Code), 멀티에이전트, RAG, 에이전트 보안까지 실습 중심으로 학습합니다.",
+    },
+}
+
+
 @router.get("/portal/content/education")
 async def list_courses():
-    """List all courses under contents/education/."""
+    """List all courses with metadata and grouping."""
     edu_dir = CONTENTS_BASE / "education"
     if not edu_dir.is_dir():
-        return {"courses": []}
+        return {"courses": [], "groups": []}
 
     courses = []
     for d in sorted(edu_dir.iterdir()):
-        if d.is_dir() and not d.name.startswith((".", "00")):
+        if d.is_dir() and not d.name.startswith((".", "00", "slides", "papers")):
             weeks = sorted(
                 w.name for w in d.iterdir() if w.is_dir() and w.name.startswith("week")
             )
+            meta = COURSE_META.get(d.name, {})
             courses.append({
                 "name": d.name,
+                "title": meta.get("title", d.name),
+                "group": meta.get("group", "기타"),
+                "icon": meta.get("icon", "📘"),
+                "color": meta.get("color", "#58a6ff"),
+                "description": meta.get("description", ""),
                 "weeks": weeks,
                 "week_count": len(weeks),
             })
-    return {"courses": courses}
+
+    # 그룹 순서
+    group_order = ["공격 기술", "방어 운영", "거버넌스", "인프라 보안", "AI 보안"]
+    groups = []
+    seen = set()
+    for g in group_order:
+        group_courses = [c for c in courses if c["group"] == g]
+        if group_courses:
+            groups.append({"name": g, "courses": group_courses})
+            seen.add(g)
+    # 나머지
+    others = [c for c in courses if c["group"] not in seen]
+    if others:
+        groups.append({"name": "기타", "courses": others})
+
+    return {"courses": courses, "groups": groups}
 
 
 @router.get("/portal/content/education/{course}")
