@@ -71,10 +71,11 @@ export default function PortalLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pageContext, setPageContext] = useState('')
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    '\uD559\uC2B5': true,
-    '\uCEE4\uBBA4\uB2C8\uD2F0': true,
-    '\uB3C4\uAD6C': true,
-    '\uC790\uB8CC': true,
+    '소개': true,
+    '학습': true,
+    '커뮤니티': true,
+    '도구': true,
+    '자료': true,
   })
 
   const toggleGroup = (label: string) => {
