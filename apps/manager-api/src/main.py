@@ -2571,6 +2571,27 @@ def create_app() -> FastAPI:
     except Exception as e:
         print(f"[WARN] Portal routes not loaded: {e}")
 
+    # CTFd reverse proxy — /ctfd/* → localhost:8080
+    import httpx as _httpx
+
+    @app.api_route("/ctfd/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], include_in_schema=False)
+    async def ctfd_proxy(request: Request, path: str):
+        """Reverse proxy to CTFd so it works through port 8000."""
+        url = f"http://localhost:8080/{path}"
+        qs = str(request.url.query)
+        if qs:
+            url += f"?{qs}"
+        async with _httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            resp = await client.request(
+                method=request.method,
+                url=url,
+                headers={k: v for k, v in request.headers.items() if k.lower() not in ("host",)},
+                content=await request.body(),
+            )
+            excluded = {"transfer-encoding", "content-encoding", "content-length"}
+            headers = {k: v for k, v in resp.headers.items() if k.lower() not in excluded}
+            return Response(content=resp.content, status_code=resp.status_code, headers=headers)
+
     _WEB_UI_DIST = Path(__file__).parent.parent.parent.parent / "apps" / "web-ui" / "dist"
     if _WEB_UI_DIST.exists():
         # Serve static assets (JS, CSS, images)
