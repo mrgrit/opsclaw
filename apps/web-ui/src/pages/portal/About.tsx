@@ -80,7 +80,7 @@ export default function About() {
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <div style={{
         background: colors.card,
-        border: \`1px solid \${colors.border}\`,
+        border: `1px solid ${colors.border}`,
         borderRadius: 8,
         padding: '24px 32px',
       }}>
