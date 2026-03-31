@@ -10,7 +10,7 @@ const colors = {
 }
 
 export default function CTF() {
-  const [mode, setMode] = useState<'iframe' | 'link'>('iframe')
+  const [mode, setMode] = useState<'iframe' | 'link'>('link')
   const ctfdUrl = `${window.location.protocol}//${window.location.host}/ctfd`
 
   return (
