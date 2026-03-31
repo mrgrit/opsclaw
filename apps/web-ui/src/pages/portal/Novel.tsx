@@ -71,7 +71,7 @@ export default function Novel() {
             cursor: 'pointer', fontSize: '0.9rem', marginBottom: 16, padding: 0,
           }}
         >
-          ← 소설 목록으로
+          ← 시나리오 목록으로
         </button>
         <h2 style={{ fontSize: '1.4rem', marginBottom: 24 }}>
           {volInfo?.name || `Volume ${vol}`}
@@ -120,7 +120,11 @@ export default function Novel() {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
-      <h2 style={{ fontSize: '1.4rem', marginBottom: 24 }}>소설</h2>
+      <h1 style={{ fontSize: "1.6rem", fontWeight: 700, marginBottom: 8 }}>보안 시나리오: OpsClaw</h1>
+      <p style={{ color: colors.textMuted, fontSize: '0.95rem', lineHeight: 1.7, marginBottom: 24 }}>
+        넥서스AI SOC팀의 보안 사건을 다룬 10부작 사이버보안 시나리오.<br/>
+        120개 교육 주제가 스토리에 자연스럽게 녹아들어, 읽기만 해도 보안의 핵심을 배울 수 있습니다.
+      </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
         {volumes.map(v => (

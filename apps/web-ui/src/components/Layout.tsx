@@ -1,13 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom'
 
 const nav = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/projects', label: 'Projects' },
-  { to: '/playbooks', label: 'Playbooks' },
-  { to: '/agents', label: 'Agents' },
-  { to: '/replay', label: 'PoW Replay' },
-  { to: '/pow', label: 'PoW Blocks' },
-  { to: '/settings', label: 'Settings' },
+  { to: '/admin', label: 'Dashboard' },
+  { to: '/admin/projects', label: 'Projects' },
+  { to: '/admin/playbooks', label: 'Playbooks' },
+  { to: '/admin/agents', label: 'Agents' },
+  { to: '/admin/replay', label: 'PoW Replay' },
+  { to: '/admin/pow', label: 'PoW Blocks' },
+  { to: '/admin/settings', label: 'Settings' },
 ]
 
 export default function Layout() {
@@ -44,6 +44,11 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid #374151' }}>
+          <NavLink to="/" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.8rem' }}>
+            ← 교육 포탈로 이동
+          </NavLink>
+        </div>
       </aside>
       <main style={{ flex: 1, padding: 32, background: '#f9fafb', overflowY: 'auto' }}>
         <Outlet />

@@ -46,7 +46,7 @@ export default function Chapter() {
         onClick={() => navigate(`/novel/${vol}`)}
         style={{ background: 'none', border: 'none', color: colors.purple, cursor: 'pointer', fontSize: '0.9rem', marginBottom: 16, padding: 0 }}
       >
-        ← 챕터 목록으로
+        ← 시나리오 목록으로
       </button>
 
       {loading ? (
