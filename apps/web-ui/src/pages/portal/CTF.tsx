@@ -1,5 +1,3 @@
-import { useState } from 'react'
-
 const colors = {
   card: '#21262d',
   border: '#30363d',
@@ -10,101 +8,77 @@ const colors = {
 }
 
 export default function CTF() {
-  const [mode, setMode] = useState<'iframe' | 'link'>('link')
-  const ctfdUrl = `${window.location.protocol}//${window.location.host}/ctfd`
+  // VS Code 포트포워딩: 같은 호스트에서 8080 포트로 접근
+  // localhost -> localhost:8080, xxx.devtunnels.ms -> 같은 호스트의 8080 포워딩
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol
+  
+  // VS Code devtunnels의 경우 포트가 URL에 포함됨
+  // 일반 접근의 경우 :8080
+  let ctfdUrl = `${protocol}//${hostname}:8080`
+  
+  // devtunnels.ms 같은 경우 포트 번호가 URL에 인코딩됨
+  if (hostname.includes('devtunnels.ms') || hostname.includes('github.dev')) {
+    // VS Code 포워딩: 8000 -> 다른포트, 8080 -> 다른포트
+    // 현재 URL에서 8000 포트 부분을 8080으로 바꾸기
+    const currentUrl = window.location.href
+    ctfdUrl = currentUrl.replace(/\/app\/.*/, '').replace('8000', '8080')
+  }
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ fontSize: '1.4rem', margin: 0 }}>CTF (Capture The Flag)</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => setMode(mode === 'iframe' ? 'link' : 'iframe')}
-            style={{
-              background: colors.card,
-              border: `1px solid ${colors.border}`,
-              color: colors.text,
-              padding: '6px 14px',
-              borderRadius: 6,
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-            }}
-          >
-            {mode === 'iframe' ? '링크 모드' : '임베드 모드'}
-          </button>
-          <a
-            href={ctfdUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: colors.red,
-              color: '#fff',
-              padding: '6px 14px',
-              borderRadius: 6,
-              textDecoration: 'none',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            새 탭에서 열기
-          </a>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 8 }}>CTF (Capture The Flag)</h1>
+      <p style={{ color: colors.textMuted, fontSize: '0.95rem', lineHeight: 1.7, marginBottom: 24 }}>
+        OpsClaw 보안 교육 CTF 플랫폼. 교안과 시나리오에서 배운 내용을 실전 문제로 풀어보세요.
+      </p>
+
+      <div style={{
+        background: colors.card,
+        border: `1px solid ${colors.border}`,
+        borderRadius: 12,
+        padding: 40,
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: '3rem', marginBottom: 16 }}>🏴</div>
+        <h2 style={{ fontSize: '1.3rem', marginBottom: 12 }}>OpsClaw Security CTF</h2>
+        <p style={{ color: colors.textMuted, marginBottom: 24, fontSize: '0.9rem' }}>
+          CTFd 플랫폼에서 문제를 풀고 FLAG를 제출하세요.<br/>
+          OpsClaw dispatch로 실제 서버를 조작하여 답을 찾을 수 있습니다.
+        </p>
+        
+        <a
+          href={ctfdUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-block',
+            background: colors.red,
+            color: '#fff',
+            padding: '14px 40px',
+            borderRadius: 8,
+            textDecoration: 'none',
+            fontSize: '1.1rem',
+            fontWeight: 600,
+          }}
+        >
+          CTFd 접속하기 →
+        </a>
+
+        <div style={{ marginTop: 16, color: colors.textMuted, fontSize: '0.8rem' }}>
+          별도 탭에서 열립니다 · 회원가입 후 문제 풀이 가능
         </div>
       </div>
 
-      {mode === 'iframe' ? (
-        <div style={{
-          flex: 1,
-          border: `1px solid ${colors.border}`,
-          borderRadius: 8,
-          overflow: 'hidden',
-          background: '#000',
-        }}>
-          <iframe
-            src={ctfdUrl}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-            }}
-            title="CTFd"
-          />
+      <div style={{ marginTop: 24, padding: 20, background: colors.card, border: `1px solid ${colors.border}`, borderRadius: 8 }}>
+        <h3 style={{ fontSize: '1rem', marginBottom: 12 }}>💡 CTF 문제 풀이 방법</h3>
+        <div style={{ color: colors.textMuted, fontSize: '0.88rem', lineHeight: 1.8 }}>
+          1. CTFd에서 문제를 확인합니다<br/>
+          2. 웹 터미널 또는 OpsClaw CLI로 서버에 접속합니다<br/>
+          3. 문제에서 요구하는 작업을 수행합니다<br/>
+          4. FLAG를 찾아 CTFd에 제출합니다<br/>
+          5. OpsClaw evidence가 자동으로 기록됩니다
         </div>
-      ) : (
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: colors.card,
-          border: `1px solid ${colors.border}`,
-          borderRadius: 8,
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: 16, color: colors.red }}>CTFd</div>
-            <p style={{ color: colors.textMuted, marginBottom: 24 }}>
-              CTF 플랫폼은 별도 서비스로 운영됩니다.
-            </p>
-            <a
-              href={ctfdUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                background: colors.red,
-                color: '#fff',
-                padding: '12px 32px',
-                borderRadius: 8,
-                textDecoration: 'none',
-                fontSize: '1rem',
-                fontWeight: 600,
-              }}
-            >
-              CTFd 접속하기
-            </a>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
