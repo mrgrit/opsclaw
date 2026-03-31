@@ -25,8 +25,23 @@ export default function Terminal() {
   const wsRef = useRef<WebSocket | null>(null)
   const outputRef = useRef<HTMLPreElement>(null)
 
-  const addOutput = useCallback((line: string) => {
-    setOutput(prev => [...prev, line])
+  const addOutput = useCallback((text: string) => {
+    setOutput(prev => {
+      // 이전 출력과 합쳐서 하나의 문자열로
+      const last = prev.length > 0 ? prev[prev.length - 1] : ''
+      // 시스템 메시지([*], [+] 등)는 새 줄
+      if (text.startsWith('[') || last.startsWith('[')) {
+        return [...prev, text]
+      }
+      // SSH 출력은 이전에 이어붙이기
+      const updated = [...prev]
+      if (updated.length > 0 && !updated[updated.length - 1].startsWith('[')) {
+        updated[updated.length - 1] += text
+      } else {
+        updated.push(text)
+      }
+      return updated
+    })
   }, [])
 
   useEffect(() => {
@@ -66,8 +81,17 @@ export default function Terminal() {
       addOutput(`[+] ${server} 연결 완료`)
     }
 
+    ws.binaryType = 'arraybuffer'
     ws.onmessage = (event) => {
-      addOutput(event.data)
+      // SSH 출력은 binary(bytes)로 올 수 있음
+      if (event.data instanceof ArrayBuffer) {
+        const text = new TextDecoder().decode(event.data)
+        addOutput(text)
+      } else if (event.data instanceof Blob) {
+        event.data.text().then(text => addOutput(text))
+      } else {
+        addOutput(event.data)
+      }
     }
 
     ws.onerror = () => {
@@ -93,7 +117,6 @@ export default function Terminal() {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
     if (!input.trim()) return
 
-    addOutput(`$ ${input}`)
     wsRef.current.send(input + '\n')
     setInput('')
   }
