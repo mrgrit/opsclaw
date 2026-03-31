@@ -401,12 +401,13 @@ async def fetch_rss_entries(feed_url, limit=5):
     """RSS 피드에서 최신 항목 가져오기."""
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.get(feed_url, headers={"User-Agent": "OpsClaw-Agent/1.0"})
+            resp = await client.get(feed_url, headers={"User-Agent": "Mozilla/5.0 OpsClaw-Agent/1.0"}, follow_redirects=True)
             text = resp.text
         # 간단한 XML 파싱 (정규식 기반, 외부 라이브러리 불필요)
         import re
         items = []
-        for item_match in re.finditer(r'<item>(.*?)</item>', text, re.DOTALL)[:limit]:
+        for i, item_match in enumerate(re.finditer(r"<item>(.*?)</item>", text, re.DOTALL)):
+            if i >= limit: break
             item_xml = item_match.group(1)
             title = re.search(r'<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>', item_xml)
             link = re.search(r'<link>(.*?)</link>', item_xml)
