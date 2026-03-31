@@ -236,7 +236,7 @@ export default function ChatBot({ pageContext }: { pageContext: string }) {
         {messages.length === 0 && (
           <div style={{ color: colors.textMuted, fontSize: '0.85rem', textAlign: 'center', marginTop: 40 }}>
             현재 페이지 내용에 대해 질문하세요.<br/>
-            AI가 교안/소설 내용을 참고하여 답변합니다.
+            AI가 교안/시나리오 내용을 참고하여 답변합니다.
           </div>
         )}
         {messages.map((m, i) => (

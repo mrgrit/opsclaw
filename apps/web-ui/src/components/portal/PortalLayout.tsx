@@ -92,12 +92,12 @@ export default function PortalLayout() {
     else if (path === '/education') {
       apiUrl = `/portal/content/education`
     }
-    // 소설 챕터: /novel/{volume}/{chapter}
+    // 시나리오 챕터: /novel/{volume}/{chapter}
     else if (path.match(/\/novel\/([^/]+)\/([^/]+)/)) {
       const novelMatch = path.match(/\/novel\/([^/]+)\/([^/]+)/)!
       apiUrl = `/portal/content/novel/${novelMatch[1]}/${novelMatch[2]}`
     }
-    // 소설 볼륨 목록: /novel or /novel/{volume}
+    // 시나리오 볼륨 목록: /novel or /novel/{volume}
     else if (path.match(/\/novel(\/[^/]+)?$/)) {
       const volMatch = path.match(/\/novel(\/([^/]+))?$/)
       apiUrl = volMatch && volMatch[2]

@@ -16,13 +16,13 @@ const colors = {
 const stats = [
   { label: '교육과정', value: '10', unit: '과목', color: colors.accent },
   { label: '강의자료', value: '150', unit: '개', color: colors.green },
-  { label: '소설', value: '10', unit: '권', color: colors.purple },
+  { label: '시나리오', value: '10', unit: '부작', color: colors.purple },
   { label: 'CTF', value: 'Live', unit: '', color: colors.red },
 ]
 
 const sections = [
   { to: '/education', title: '교육과정', desc: '사이버보안 10개 과목, 15주 분량의 체계적 교육과정', color: colors.accent },
-  { to: '/novel', title: '소설', desc: '보안 관련 소설 10권 — 읽으면서 배우는 사이버보안', color: colors.purple },
+  { to: '/novel', title: '시나리오', desc: '보안 시나리오 10부작 — 읽으면서 배우는 사이버보안', color: colors.purple },
   { to: '/ctf', title: 'CTF', desc: 'Capture The Flag 실습 환경 (CTFd)', color: colors.red },
   { to: '/terminal', title: '웹 터미널', desc: '실습 서버에 직접 접속하여 명령 실행', color: colors.green },
   { to: '/papers', title: '논문', desc: 'OpsClaw 연구 논문 (관리자 전용)', color: colors.orange },
@@ -42,7 +42,7 @@ export default function Home() {
         OpsClaw Education Portal
       </h1>
       <p style={{ color: colors.textMuted, marginBottom: 32, fontSize: '1rem' }}>
-        사이버보안 교육, 소설, CTF 실습을 한곳에서
+        사이버보안 교육, 시나리오, CTF 실습을 한곳에서
       </p>
 
       {!loggedIn && (
