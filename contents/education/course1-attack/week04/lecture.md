@@ -1,4 +1,4 @@
-# Week 04: OWASP Top 10 (1) - SQL Injection (상세 버전)
+# Week 04: OWASP Top 10 (1) - SQL Injection
 
 ## 학습 목표
 - SQL의 기본 문법(SELECT, WHERE, UNION)을 이해한다

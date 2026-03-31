@@ -1,4 +1,4 @@
-# Week 06: 적대적 입력 (Adversarial Inputs) (상세 버전)
+# Week 06: 적대적 입력 (Adversarial Inputs)
 
 ## 학습 목표
 - 적대적 예제(Adversarial Examples)의 원리를 이해한다

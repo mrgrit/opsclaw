@@ -1,4 +1,4 @@
-# Week 14: AI Safety 평가 프레임워크 (상세 버전)
+# Week 14: AI Safety 평가 프레임워크
 
 ## 학습 목표
 - CyberSecEval, AgentHarm, HarmBench 등 주요 벤치마크를 이해한다

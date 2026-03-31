@@ -1,4 +1,4 @@
-# Week 05: Suricata IPS (2) — 룰 작성 (상세 버전)
+# Week 05: Suricata IPS (2) — 룰 작성
 
 ## 학습 목표
 - Suricata 룰의 전체 문법 구조를 이해한다

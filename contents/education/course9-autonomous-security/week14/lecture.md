@@ -1,4 +1,4 @@
-# Week 14: RL Steering과 정책 최적화 (상세 버전)
+# Week 14: RL Steering과 정책 최적화
 
 ## 학습 목표
 

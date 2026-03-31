@@ -1,4 +1,4 @@
-# Week 14: 자동화 관제 - OpsClaw Agent Daemon (상세 버전)
+# Week 14: 자동화 관제 - OpsClaw Agent Daemon
 
 ## 학습 목표
 - AI 기반 자율 보안 관제의 개념을 이해한다

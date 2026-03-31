@@ -1,4 +1,4 @@
-# Week 05: Playbook 자동화 (상세 버전)
+# Week 05: Playbook 자동화
 
 ## 학습 목표
 - Playbook의 개념과 보안 자동화에서의 역할을 이해한다

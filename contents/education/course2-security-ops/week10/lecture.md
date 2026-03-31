@@ -1,4 +1,4 @@
-# Week 10: Wazuh SIEM (2) — 탐지 룰 (상세 버전)
+# Week 10: Wazuh SIEM (2) — 탐지 룰
 
 ## 학습 목표
 - Wazuh 룰의 XML 구조를 이해한다

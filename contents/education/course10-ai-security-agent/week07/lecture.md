@@ -1,4 +1,4 @@
-# Week 07: 클라이언트 사이드 하네스 활용 — Claude Code (상세 버전)
+# Week 07: 클라이언트 사이드 하네스 활용 — Claude Code
 
 ## 학습 목표
 - Claude Code의 설치와 기본 설정을 완료할 수 있다

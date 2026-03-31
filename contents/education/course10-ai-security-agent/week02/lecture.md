@@ -1,4 +1,4 @@
-# Week 02: LLM API와 Tool Calling (상세 버전)
+# Week 02: LLM API와 Tool Calling
 
 ## 학습 목표
 - Ollama OpenAI-호환 API의 구조와 매개변수를 이해한다

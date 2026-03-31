@@ -1,4 +1,4 @@
-# Week 07: Docker 보안 점검 (상세 버전)
+# Week 07: Docker 보안 점검
 
 ## 학습 목표
 - CIS Docker Benchmark의 주요 항목을 이해한다

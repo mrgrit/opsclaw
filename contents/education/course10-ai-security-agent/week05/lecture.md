@@ -1,4 +1,4 @@
-# Week 05: 서버 사이드 하네스 구축 (1) — OpsClaw (상세 버전)
+# Week 05: 서버 사이드 하네스 구축 (1) — OpsClaw
 
 ## 학습 목표
 - OpsClaw Native Mode의 구조와 설정 방법을 이해한다

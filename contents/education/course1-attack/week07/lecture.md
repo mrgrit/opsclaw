@@ -1,4 +1,4 @@
-# Week 07: OWASP Top 10 (4) - SSRF, 파일 업로드, 경로 탐색 (상세 버전)
+# Week 07: OWASP Top 10 (4) - SSRF, 파일 업로드, 경로 탐색
 
 ## 학습 목표
 - SSRF(Server-Side Request Forgery)의 개념과 위험성을 이해한다

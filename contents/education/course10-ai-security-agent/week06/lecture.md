@@ -1,4 +1,4 @@
-# Week 06: 서버 사이드 하네스 구축 (2) — Playbook+RL (상세 버전)
+# Week 06: 서버 사이드 하네스 구축 (2) — Playbook+RL
 
 ## 학습 목표
 - Playbook을 설계하고 OpsClaw에 등록할 수 있다

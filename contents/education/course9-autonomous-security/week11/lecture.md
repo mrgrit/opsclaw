@@ -1,4 +1,4 @@
-# Week 11: 자율 Blue Agent (상세 버전)
+# Week 11: 자율 Blue Agent
 
 ## 학습 목표
 

@@ -1,4 +1,4 @@
-# Week 13: MITRE ATT&CK 프레임워크 (상세 버전)
+# Week 13: MITRE ATT&CK 프레임워크
 
 ## 학습 목표
 - MITRE ATT&CK 프레임워크의 구조(전술, 기법, 하위기법)를 이해한다

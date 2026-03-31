@@ -1,4 +1,4 @@
-# Week 11: Kubernetes 보안 기초 (상세 버전)
+# Week 11: Kubernetes 보안 기초
 
 ## 학습 목표
 - Kubernetes(K8s)의 기본 구조와 보안 관련 구성요소를 이해한다

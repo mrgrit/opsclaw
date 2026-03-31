@@ -1,4 +1,4 @@
-# Week 05: OWASP Top 10 (2) - XSS (Cross-Site Scripting) (상세 버전)
+# Week 05: OWASP Top 10 (2) - XSS (Cross-Site Scripting)
 
 ## 학습 목표
 - XSS(Cross-Site Scripting)의 개념과 위험성을 이해한다

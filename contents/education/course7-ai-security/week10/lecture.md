@@ -1,4 +1,4 @@
-# Week 10: OpsClaw (2) - Playbook + RL (상세 버전)
+# Week 10: OpsClaw (2) - Playbook + RL
 
 ## 학습 목표
 - OpsClaw Playbook의 개념과 구조를 이해한다

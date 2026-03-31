@@ -1,4 +1,4 @@
-# Week 05: Docker 네트워크 보안 (상세 버전)
+# Week 05: Docker 네트워크 보안
 
 ## 학습 목표
 - Docker 네트워크 드라이버(bridge, host, none)를 이해한다

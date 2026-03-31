@@ -1,4 +1,4 @@
-# Week 09: Wazuh SIEM (1) — 설치와 구성 (상세 버전)
+# Week 09: Wazuh SIEM (1) — 설치와 구성
 
 ## 학습 목표
 - SIEM의 역할과 필요성을 이해한다

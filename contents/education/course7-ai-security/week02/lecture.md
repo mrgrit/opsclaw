@@ -1,4 +1,4 @@
-# Week 02: LLM 기초 + Ollama (상세 버전)
+# Week 02: LLM 기초 + Ollama
 
 ## 학습 목표
 - 대규모 언어 모델(LLM)의 기본 원리를 이해한다

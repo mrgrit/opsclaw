@@ -1,4 +1,4 @@
-# Week 14: IaC 보안 (상세 버전)
+# Week 14: IaC 보안
 
 ## 학습 목표
 - Infrastructure as Code(IaC)의 개념과 보안 이점을 이해한다

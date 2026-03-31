@@ -1,4 +1,4 @@
-# Week 03: nftables 방화벽 (2) — 실전 (상세 버전)
+# Week 03: nftables 방화벽 (2) — 실전
 
 ## 학습 목표
 - NAT(SNAT/DNAT)와 포트 포워딩을 구성할 수 있다

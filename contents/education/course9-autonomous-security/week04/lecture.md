@@ -1,4 +1,4 @@
-# Week 04: SubAgent와 원격 실행 (상세 버전)
+# Week 04: SubAgent와 원격 실행
 
 ## 학습 목표
 - A2A(Agent-to-Agent) 프로토콜의 구조와 동작 원리를 이해한다

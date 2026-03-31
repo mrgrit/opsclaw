@@ -1,4 +1,4 @@
-# Week 07: NIST CSF - 사이버보안 프레임워크 (상세 버전)
+# Week 07: NIST CSF - 사이버보안 프레임워크
 
 ## 학습 목표
 - NIST CSF(Cybersecurity Framework)의 5가지 기능을 이해한다

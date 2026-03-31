@@ -1,4 +1,4 @@
-# Week 07: Apache+ModSecurity WAF — 웹 애플리케이션 방화벽 (상세 버전)
+# Week 07: Apache+ModSecurity WAF — 웹 애플리케이션 방화벽
 
 ## 학습 목표
 - WAF의 역할과 동작 원리를 이해한다

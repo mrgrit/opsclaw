@@ -1,4 +1,4 @@
-# Week 10: Schedule과 Watcher (상세 버전)
+# Week 10: Schedule과 Watcher
 
 ## 학습 목표
 

@@ -1,4 +1,4 @@
-# Week 14: RL Steering (상세 버전)
+# Week 14: RL Steering
 
 ## 학습 목표
 - 강화학습 보상 함수(Reward Function)의 설계 원칙을 이해한다

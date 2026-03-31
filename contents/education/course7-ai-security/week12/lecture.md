@@ -1,4 +1,4 @@
-# Week 12: Agent Daemon (상세 버전)
+# Week 12: Agent Daemon
 
 ## 학습 목표
 - Agent Daemon의 3가지 모드(explore, daemon, stimulate)를 이해한다

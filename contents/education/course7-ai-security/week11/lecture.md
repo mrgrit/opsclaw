@@ -1,4 +1,4 @@
-# Week 11: 자율 미션 (상세 버전)
+# Week 11: 자율 미션
 
 ## 학습 목표
 - 자율 미션(Autonomous Mission)의 개념을 이해한다

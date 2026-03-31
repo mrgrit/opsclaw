@@ -1,4 +1,4 @@
-# Week 09: Experience와 4-Layer Memory (상세 버전)
+# Week 09: Experience와 4-Layer Memory
 
 ## 학습 목표
 

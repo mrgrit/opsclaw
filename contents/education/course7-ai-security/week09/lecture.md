@@ -1,4 +1,4 @@
-# Week 09: OpsClaw (1) - 기본 (상세 버전)
+# Week 09: OpsClaw (1) - 기본
 
 ## 학습 목표
 - OpsClaw의 프로젝트 생명주기를 이해한다

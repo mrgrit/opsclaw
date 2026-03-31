@@ -1,4 +1,4 @@
-# Week 15: 기말 - 종합 침투 테스트 (상세 버전)
+# Week 15: 기말 - 종합 침투 테스트
 
 ## 학습 목표
 - PTES(Penetration Testing Execution Standard) 방법론을 이해한다

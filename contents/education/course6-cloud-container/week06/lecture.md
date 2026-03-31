@@ -1,4 +1,4 @@
-# Week 06: Docker Compose 보안 (상세 버전)
+# Week 06: Docker Compose 보안
 
 ## 학습 목표
 - Docker Compose를 사용하여 다중 컨테이너 환경을 구성할 수 있다

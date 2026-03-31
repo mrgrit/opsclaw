@@ -1,4 +1,4 @@
-# Week 12: 자율 Red Agent (상세 버전)
+# Week 12: 자율 Red Agent
 
 ## 학습 목표
 

@@ -1,4 +1,4 @@
-# Week 01: AI Safety 개론 (상세 버전)
+# Week 01: AI Safety 개론
 
 ## 학습 목표
 - AI Safety의 개념과 중요성을 이해한다

@@ -1,4 +1,4 @@
-# Week 06: Suricata IPS (3) — 운영 (상세 버전)
+# Week 06: Suricata IPS (3) — 운영
 
 ## 학습 목표
 - eve.json과 fast.log를 분석할 수 있다

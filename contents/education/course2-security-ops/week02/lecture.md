@@ -1,4 +1,4 @@
-# Week 02: nftables 방화벽 (1) — 기초 (상세 버전)
+# Week 02: nftables 방화벽 (1) — 기초
 
 ## 학습 목표
 - nftables의 기본 구조(Table, Chain, Rule)를 이해한다

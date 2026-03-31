@@ -1,4 +1,4 @@
-# Week 13: 미국 표준 - SOC 2, HIPAA (상세 버전)
+# Week 13: 미국 표준 - SOC 2, HIPAA
 
 ## 학습 목표
 - SOC 2 인증의 Trust Service Criteria를 이해한다

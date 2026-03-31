@@ -1,4 +1,4 @@
-# Week 14: 자동화 침투 테스트 (OpsClaw 활용) (상세 버전)
+# Week 14: 자동화 침투 테스트 (OpsClaw 활용)
 
 ## 학습 목표
 - OpsClaw 플랫폼의 아키텍처와 API를 이해한다

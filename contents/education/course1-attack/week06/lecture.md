@@ -1,4 +1,4 @@
-# Week 06: OWASP Top 10 (3) - 인증 및 접근 제어 취약점 (상세 버전)
+# Week 06: OWASP Top 10 (3) - 인증 및 접근 제어 취약점
 
 ## 학습 목표
 - 인증(Authentication)과 인가(Authorization)의 차이를 이해한다

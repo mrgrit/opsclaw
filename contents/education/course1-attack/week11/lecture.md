@@ -1,4 +1,4 @@
-# Week 11: 권한 상승 (Linux Privilege Escalation) (상세 버전)
+# Week 11: 권한 상승 (Linux Privilege Escalation)
 
 ## 학습 목표
 - Linux 권한 모델(사용자, 그룹, 퍼미션)을 이해한다

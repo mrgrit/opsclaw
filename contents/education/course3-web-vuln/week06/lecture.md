@@ -1,4 +1,4 @@
-# Week 06: 입력값 검증 (2): XSS / CSRF (상세 버전)
+# Week 06: 입력값 검증 (2): XSS / CSRF
 
 ## 학습 목표
 - Cross-Site Scripting(XSS)의 세 가지 유형을 구분할 수 있다

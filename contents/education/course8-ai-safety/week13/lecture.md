@@ -1,4 +1,4 @@
-# Week 13: Red Teaming for AI (상세 버전)
+# Week 13: Red Teaming for AI
 
 ## 학습 목표
 - AI Red Teaming의 개념과 기존 레드팀과의 차이를 이해한다

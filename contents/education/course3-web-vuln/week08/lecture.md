@@ -1,4 +1,4 @@
-# Week 08: 중간고사 — JuiceShop 점검 보고서 (상세 버전)
+# Week 08: 중간고사 — JuiceShop 점검 보고서
 
 ## 학습 목표
 - OWASP Testing Guide를 기반으로 체계적인 웹 취약점 점검을 수행한다

@@ -1,4 +1,4 @@
-# Week 05: 입력값 검증 (1): SQL Injection (상세 버전)
+# Week 05: 입력값 검증 (1): SQL Injection
 
 ## 학습 목표
 - SQL Injection의 원리와 유형을 이해한다

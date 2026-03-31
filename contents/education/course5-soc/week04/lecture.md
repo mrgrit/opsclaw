@@ -1,4 +1,4 @@
-# Week 04: Wazuh 관제 환경 (상세 버전)
+# Week 04: Wazuh 관제 환경
 
 ## 학습 목표
 - Wazuh SIEM의 아키텍처를 이해한다

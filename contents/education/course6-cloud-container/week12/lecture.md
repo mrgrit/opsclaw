@@ -1,4 +1,4 @@
-# Week 12: Kubernetes 공격 (상세 버전)
+# Week 12: Kubernetes 공격
 
 ## 학습 목표
 - Kubernetes 환경의 주요 공격 벡터를 이해한다

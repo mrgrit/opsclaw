@@ -1,4 +1,4 @@
-# Week 11: RAG 보안 (상세 버전)
+# Week 11: RAG 보안
 
 ## 학습 목표
 - RAG(Retrieval-Augmented Generation) 아키텍처를 이해한다

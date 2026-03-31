@@ -1,4 +1,4 @@
-# Week 11: Wazuh SIEM (3) — FIM, SCA, Active Response (상세 버전)
+# Week 11: Wazuh SIEM (3) — FIM, SCA, Active Response
 
 ## 학습 목표
 - FIM(File Integrity Monitoring)을 설정하고 파일 변경을 탐지할 수 있다

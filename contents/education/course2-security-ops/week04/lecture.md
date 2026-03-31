@@ -1,4 +1,4 @@
-# Week 04: Suricata IPS (1) — 설치와 구성 (상세 버전)
+# Week 04: Suricata IPS (1) — 설치와 구성
 
 ## 학습 목표
 - IDS와 IPS의 차이를 설명할 수 있다
