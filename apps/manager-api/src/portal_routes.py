@@ -710,6 +710,51 @@ async def get_paper(
     return {"paper": paper, "file": file, "content": paper_path.read_text("utf-8")}
 
 
+# ── Manual / About ────────────────────────────────────────────────────────────
+
+MANUAL_SECTIONS = [
+    {"slug": "getting-started", "title": "시작하기", "icon": "🚀", "description": "OpsClaw 소개, 설치, 퀵스타트"},
+    {"slug": "native-mode", "title": "Native 모드", "icon": "🤖", "description": "Ollama LLM 자율 실행, CLI 사용법"},
+    {"slug": "claude-code-mode", "title": "Claude Code 모드", "icon": "💻", "description": "Claude Code 오케스트레이션"},
+    {"slug": "architecture", "title": "아키텍처", "icon": "🏗️", "description": "내부 메커니즘, DB 스키마"},
+    {"slug": "education", "title": "교육 플랫폼", "icon": "📚", "description": "교육 시스템 활용 가이드"},
+    {"slug": "operations", "title": "실전 운영", "icon": "🛡️", "description": "보안 관제, IT 운영 활용"},
+    {"slug": "tutorials", "title": "튜토리얼", "icon": "📝", "description": "단계별 실습 가이드"},
+    {"slug": "reference", "title": "API 레퍼런스", "icon": "📖", "description": "전체 API 문서"},
+]
+
+
+@router.get("/portal/content/manual")
+async def list_manual_sections():
+    """매뉴얼 섹션 목록."""
+    manual_dir = CONTENTS_BASE / "manual"
+    sections = []
+    for s in MANUAL_SECTIONS:
+        sec_dir = manual_dir / s["slug"]
+        files = []
+        if sec_dir.is_dir():
+            for f in sorted(sec_dir.iterdir()):
+                if f.suffix == ".md":
+                    first_line = f.read_text("utf-8").split("\n", 1)[0]
+                    title = first_line.lstrip("# ").strip() if first_line.startswith("#") else f.stem
+                    files.append({"id": f.stem, "title": title, "filename": f.name})
+        sections.append({**s, "files": files, "file_count": len(files)})
+    # index file
+    index_path = manual_dir / "00-index.md"
+    index_content = index_path.read_text("utf-8") if index_path.is_file() else ""
+    return {"sections": sections, "index": index_content}
+
+
+@router.get("/portal/content/manual/{section}/{file}")
+async def get_manual_page(section: str, file: str):
+    """매뉴얼 페이지 내용."""
+    filename = file if file.endswith(".md") else f"{file}.md"
+    manual_path = _safe_path(CONTENTS_BASE / "manual", section, filename)
+    if not manual_path.is_file():
+        raise HTTPException(404, f"Manual page not found: {section}/{file}")
+    return {"section": section, "file": file, "content": manual_path.read_text("utf-8")}
+
+
 # ── WebSocket terminal ────────────────────────────────────────────────────────
 
 

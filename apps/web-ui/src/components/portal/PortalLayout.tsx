@@ -10,35 +10,43 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    icon: '\u{1F4DA}',
-    label: '\uD559\uC2B5',
+    icon: 'ℹ️',
+    label: '소개',
     children: [
-      { to: '/education', label: '\uAD50\uC721\uACFC\uC815' },
-      { to: '/novel', label: '\uC2DC\uB098\uB9AC\uC624' },
+      { to: '/about', label: '시스템 소개' },
+      { to: '/manual', label: '매뉴얼' },
+    ],
+  },
+  {
+    icon: '📚',
+    label: '학습',
+    children: [
+      { to: '/education', label: '교육과정' },
+      { to: '/novel', label: '시나리오' },
       { to: '/ctf', label: 'CTF' },
     ],
   },
   {
-    icon: '\u{1F3E2}',
-    label: '\uCEE4\uBBA4\uB2C8\uD2F0',
+    icon: '🏢',
+    label: '커뮤니티',
     children: [
-      { to: '/community', label: '\uAC8C\uC2DC\uD310' },
-      { to: '/members', label: '\uBA64\uBC84' },
+      { to: '/community', label: '게시판' },
+      { to: '/members', label: '멤버' },
     ],
   },
   {
-    icon: '\u{1F4BB}',
-    label: '\uB3C4\uAD6C',
+    icon: '💻',
+    label: '도구',
     children: [
-      { to: '/terminal', label: '\uD130\uBBF8\uB110' },
-      { to: '/admin-panel', label: '\uAD00\uB9AC \uCF58\uC194', adminOnly: true },
+      { to: '/terminal', label: '터미널' },
+      { to: '/admin-panel', label: '관리 콘솔', adminOnly: true },
     ],
   },
   {
-    icon: '\u{1F4C4}',
-    label: '\uC790\uB8CC',
+    icon: '📄',
+    label: '자료',
     children: [
-      { to: '/papers', label: '\uC5F0\uAD6C\uC790\uB8CC', adminOnly: true },
+      { to: '/papers', label: '연구자료', adminOnly: true },
     ],
   },
 ]

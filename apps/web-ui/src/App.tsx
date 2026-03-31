@@ -19,6 +19,8 @@ import PortalChapter from './pages/portal/Chapter'
 import PortalCTF from './pages/portal/CTF'
 import PortalTerminal from './pages/portal/Terminal'
 import PortalPapers from './pages/portal/Papers'
+import About from './pages/portal/About'
+import Manual from './pages/portal/Manual'
 import Community from './pages/portal/Community'
 import Board from './pages/portal/Board'
 import PostDetail from './pages/portal/PostDetail'
@@ -34,6 +36,9 @@ export default function App() {
         {/* Education Portal — 기본 페이지 */}
         <Route element={<PortalLayout />}>
           <Route index element={<PortalHome />} />
+          <Route path="about" element={<About />} />
+          <Route path="manual" element={<Manual />} />
+          <Route path="manual/:section/:file" element={<Manual />} />
           <Route path="login" element={<PortalLogin />} />
           <Route path="education" element={<PortalEducation />} />
           <Route path="education/:course" element={<PortalEducation />} />
