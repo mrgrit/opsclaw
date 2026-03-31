@@ -37,6 +37,7 @@ LLM_MODEL = "gpt-oss:120b"
 AGENT_RSS_FEEDS = {
     "agent-secu": {
         "board": "security-info",
+        "focus": "사이버 위협, 취약점, 해킹 사건",
         "feeds": [
             {"name": "The Hacker News", "url": "https://thehackernews.com/feeds/posts/default?alt=rss"},
             {"name": "CISA Advisories", "url": "https://www.cisa.gov/cybersecurity-advisories/all.xml"},
@@ -45,6 +46,7 @@ AGENT_RSS_FEEDS = {
     },
     "agent-web": {
         "board": "security-info",
+        "focus": "웹 보안, 기업 보안, 클라우드 보안",
         "feeds": [
             {"name": "Dark Reading", "url": "https://www.darkreading.com/rss.xml"},
             {"name": "Hacker News", "url": "https://hnrss.org/frontpage?points=100"},
@@ -52,10 +54,19 @@ AGENT_RSS_FEEDS = {
     },
     "agent-siem": {
         "board": "ai-info",
+        "focus": "AI 보안 위협, LLM 취약점, AI 규제, AI Safety",
         "feeds": [
-            {"name": "VentureBeat AI", "url": "https://venturebeat.com/category/ai/feed/"},
             {"name": "AI Snake Oil", "url": "https://aisnakeoil.substack.com/feed"},
             {"name": "404 Media", "url": "https://www.404media.co/rss/"},
+        ],
+    },
+    "agent-dgx": {
+        "board": "ai-info",
+        "focus": "AI 모델, AI Agent 프레임워크, MLOps, GPU/인프라",
+        "feeds": [
+            {"name": "VentureBeat AI", "url": "https://venturebeat.com/category/ai/feed/"},
+            {"name": "Hugging Face Blog", "url": "https://huggingface.co/blog/feed.xml"},
+            {"name": "arXiv cs.AI", "url": "http://arxiv.org/rss/cs.AI"},
         ],
     },
 }
@@ -445,18 +456,24 @@ async def mission_rss_analysis(agent, feeds_config):
         for e in all_entries[:15]
     )
 
-    prompt = f"""다음은 최신 보안/AI 뉴스 피드에서 수집한 항목들이야:
+    focus = feeds_config.get("focus", "보안/AI")
+
+    prompt = f"""다음은 최신 뉴스 피드에서 수집한 항목들이야:
 
 {entries_text}
 
-이 중에서 가장 중요하고 트렌디한 3-5개를 골라서:
-1. 각 항목에 대해 한국어로 요약 (2-3문장)
-2. 왜 보안 전문가들이 관심을 가져야 하는지 설명
-3. 관련 MITRE ATT&CK 기법이나 OWASP 항목이 있다면 매핑
+너의 전문 분야({focus})에 맞는 3-5개를 골라서 리포트를 작성해줘.
 
-마크다운 형식으로 작성해줘. 출처 링크를 포함해줘."""
+작성 규칙:
+- 각 항목을 자연스러운 한국어로 요약해줘 (딱딱한 보고서체 말고, 동료에게 설명하듯이)
+- 왜 주목할 만한지 너의 관점에서 한마디 붙여줘
+- 직접적으로 관련이 있는 경우에만 MITRE/OWASP 언급 (억지로 매핑하지 마)
+- 출처 링크 포함
+- 마지막에 한줄 총평 (오늘의 분위기/트렌드를 한마디로)
 
-    system = f"당신의 페르소나: {agent['persona']}\n보안/AI 전문가로서 인사이트를 제공하세요."
+자유롭게 써줘. 너만의 시각과 톤으로."""
+
+    system = f"당신의 페르소나: {agent['persona']}\n전문가이지만 친근한 톤으로 동료들에게 브리핑하듯이 작성해. HTML 태그는 절대 쓰지 마. 마크다운만 사용해."
 
     content = await llm_generate(prompt, system)
     if not content:
@@ -525,20 +542,21 @@ OpsClaw 시스템 구성:
 
 {system_info}
 
-위 트렌드 정보를 분석하여:
+너는 SOC 매니저야. 위 트렌드를 우리 시스템 관점에서 분석해줘.
 
-1. **트렌드 종합 요약** (3-5줄): 지난 2주간 가장 중요한 보안/AI 트렌드
-2. **OpsClaw 시스템 적용 가능한 제안** (구체적으로):
-   - 새로운 Suricata 룰 추가가 필요한 위협이 있는가?
-   - nftables에 추가할 차단 정책이 있는가?
-   - Wazuh에 새 탐지 룰이 필요한가?
-   - OpsClaw의 기능(Playbook, RL, Agent) 개선 아이디어가 있는가?
-3. **관계없거나 적용 불가능한 항목**은 SKIP (언급하지 마)
-4. **구체적 실행 계획**: OpsClaw dispatch나 execute-plan으로 실행할 수 있는 명령어 예시
+작성 규칙:
+- 먼저, 지난 2주 트렌드를 3-5줄로 자연스럽게 요약
+- 그 다음, 우리 시스템(OpsClaw, Suricata, nftables, Wazuh 등)에 실제로 적용할 수 있는 것만 제안
+- 적용 불가능하거나 관계없는 건 아예 언급하지 마
+- 각 제안에는 왜 필요한지, 어떻게 적용하는지 구체적으로
+- 가능하면 OpsClaw CLI나 dispatch 명령어 예시도 포함
+- MITRE/OWASP는 직접 관련 있을 때만 자연스럽게 언급
+- 딱딱한 보고서체 말고, 팀 미팅에서 브리핑하는 톤으로
+- HTML 태그 절대 금지. 마크다운만 사용
 
-마크다운으로 작성. 실행 가능한 제안만."""
+마지막에 한줄: 이번 주기에 가장 시급한 액션 아이템 1개를 꼽아줘."""
 
-    system = f"당신의 페르소나: {manager['persona']}\nSOC 매니저로서 실용적이고 구체적인 개선 제안을 하세요."
+    system = f"당신의 페르소나: {manager['persona']}\n팀에게 브리핑하듯 자연스럽게 작성해. HTML 태그 쓰지 마."
 
     content = await llm_generate(prompt, system)
     if not content:
