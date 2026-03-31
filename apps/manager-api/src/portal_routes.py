@@ -1476,9 +1476,10 @@ async def list_boards(user: Optional[dict] = Depends(get_optional_user)):
         conn = _get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "SELECT id, slug, name, description, board_type, theme, "
-                "allow_upload, write_role, read_role, sort_order "
-                "FROM portal_boards ORDER BY sort_order, id"
+                "SELECT b.id, b.slug, b.name, b.description, b.board_type, b.theme, "
+                "b.allow_upload, b.write_role, b.read_role, b.sort_order, "
+                "COALESCE((SELECT count(*) FROM portal_posts p WHERE p.board_id = b.id), 0) AS post_count "
+                "FROM portal_boards b ORDER BY b.sort_order, b.id"
             )
             boards = cur.fetchall()
         conn.close()
