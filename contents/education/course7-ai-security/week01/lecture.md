@@ -307,6 +307,11 @@ Ollama는 두 가지 API 형식을 지원한다:
 
 opsclaw 서버에서 dgx-spark의 Ollama 서버에 접근한다.
 
+> **실습 목적**: 로컬 LLM 서버(Ollama)에 API를 호출하여, 데이터를 외부로 보내지 않고 AI를 보안 업무에 활용하는 첫 경험을 한다.
+> **배우는 것**: Ollama API의 구조(모델 목록 조회, 채팅 완성 호출)와, 보안 로그를 LLM에게 분석시키는 기본 워크플로우를 익힌다.
+> **결과 해석**: `/api/tags` 응답에 모델 목록이 나오면 Ollama 정상 동작이다. 모델별 size 필드로 메모리 요구량을, parameter_size로 모델 성능 수준을 판단한다.
+> **실전 활용**: 보안 관제에서 대량 로그 분석, 경보 요약, Suricata 룰 생성 등에 로컬 LLM을 활용하면 비용 절감과 데이터 주권을 동시에 확보할 수 있다.
+
 ```bash
 # opsclaw 서버에 SSH 접속
 sshpass -p1 ssh -o StrictHostKeyChecking=no opsclaw@10.20.30.201

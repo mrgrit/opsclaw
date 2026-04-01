@@ -245,6 +245,11 @@ created → planning → executing → validating → reporting → closed
 ssh opsclaw@10.20.30.201
 ```
 
+> **실습 목적**: 자율보안시스템의 핵심인 OpsClaw API가 정상 동작하는지 확인하는 것은, 자율 보안 운영의 첫 단계이다.
+> **배우는 것**: REST API 헬스체크 패턴을 이해하고, OpsClaw의 Manager-SubAgent 계층 구조가 실제로 어떻게 동작하는지 확인한다.
+> **결과 해석**: `{"status":"ok"}`가 반환되면 Manager API 정상이다. 연결 거부(Connection refused)는 서비스 미기동, 401은 인증키 오류를 의미한다.
+> **실전 활용**: 자율보안 플랫폼 운영 시 API 헬스체크는 모니터링의 기본이며, 장애 시 자동 대응이 중단되므로 최우선 점검 대상이다.
+
 ```bash
 # OpsClaw API 상태 확인
 curl -s http://localhost:8000/health | python3 -m json.tool
