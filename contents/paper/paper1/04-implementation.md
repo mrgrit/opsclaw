@@ -358,7 +358,22 @@ if regex("\bsudo\b", task.instruction_prompt):
 - `failed`: 모든 태스크 실패
 - `dry_run`: dry_run 모드로 실행
 
-## 4.6 구현 통계
+## 4.6 Bastion 개선 패키지
+
+Claude Code 소스코드 분석(Bastion 프로젝트)을 통해 6개 패키지를 신규 추가하였다.
+
+| Package | Lines | Function |
+|---------|-------|----------|
+| prompt_engine | ~300 | 7개 섹션 모듈로 시스템 프롬프트 동적 조합 (7,852자) |
+| hook_engine | ~250 | 10개 라이프사이클 이벤트, webhook/script 실행, 차단 가능 |
+| tool_validator | ~150 | JSON Schema 기반 Tool 입출력 검증 |
+| cost_tracker | ~120 | LLM 토큰/비용 추적, 예산 강제 |
+| permission_engine | ~200 | RBAC+Policy+Approval+Risk 다층 퍼미션 |
+| memory_manager | ~180 | 자동 메모리 추출, LRU 용량 관리, 유형 분류 |
+
+이는 Claude Code의 도구 시스템(45개 내장 도구, 10단계 파이프라인), Hook 시스템(14개 이벤트), 권한 시스템(4 모드)을 서버 사이드 하네스에 맞게 재설계한 것이다.
+
+## 4.7 구현 통계
 
 표 2에 OpsClaw의 구현 규모를 요약한다.
 
