@@ -250,8 +250,11 @@ VPC (10.0.0.0/16)
 ### 실습: nftables로 Security Group 시뮬레이션
 
 > **실습 목적**: 클라우드 IAM과 VPC의 보안 원리를 실습 환경에서 체험하고 개념을 체화하기 위해 수행한다
+>
 > **배우는 것**: API 키 인증이 IAM의 Authentication/Authorization 원리와 동일하며, nftables 규칙이 Security Group/NACL과 같은 역할임을 이해한다
+>
 > **결과 해석**: API 키 없이 401/403 응답이면 인증 실패이고, nftables 규칙의 accept/drop이 클라우드 보안 그룹의 allow/deny와 대응한다
+>
 > **실전 활용**: AWS/Azure 환경에서 IAM 최소 권한 설정, VPC 서브넷 분리, Security Group 설계에 활용한다
 
 ```bash

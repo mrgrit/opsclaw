@@ -121,8 +121,11 @@
 ### 2.1 OpsClaw API로 환경 탐색
 
 > **실습 목적**: OpsClaw API를 활용하여 자동화된 관제 워크플로우를 구축한다
+>
 > **배우는 것**: 경보 수집, 분석, 대응을 API 기반으로 자동화하여 관제 효율을 높이는 방법을 배운다
+>
 > **결과 해석**: API 호출로 경보 수집과 대응이 자동 실행되면 자동화 관제 파이프라인이 정상 동작한다
+>
 > **실전 활용**: SOAR(Security Orchestration, Automation and Response)는 SOC 운영 효율화의 핵심 기술이다
 
 ```bash

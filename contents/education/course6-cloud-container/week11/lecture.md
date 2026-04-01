@@ -303,8 +303,11 @@ spec:
 ### 5.1 Secret의 문제점
 
 > **실습 목적**: Kubernetes의 RBAC, Pod Security, NetworkPolicy 개념을 Docker 환경에서 유사하게 체험하기 위해 수행한다
+>
 > **배우는 것**: Docker 그룹 권한이 K8s RBAC과 유사하고, nftables 규칙이 NetworkPolicy와 같은 역할이며, Pod Security의 non-root/read-only 설정 원리를 이해한다
+>
 > **결과 해석**: groups 명령에 docker가 있으면 접근 허용, 없으면 거부이며, 이것이 K8s RBAC의 축소판이다
+>
 > **실전 활용**: K8s 클러스터 운영 시 namespace별 RBAC 설계, default-deny NetworkPolicy 적용, Pod Security Standards 설정에 활용한다
 
 ```bash

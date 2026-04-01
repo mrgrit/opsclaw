@@ -135,8 +135,11 @@ WAF(Web Application Firewall)는 HTTP/HTTPS 트래픽을 검사하여 웹 공격
 ## 3. 실습 환경 접속
 
 > **실습 목적**: web 서버의 Apache+ModSecurity WAF 환경에 접속하여 웹 방화벽 동작을 확인한다
+>
 > **배우는 것**: ModSecurity의 요청 검사, OWASP CRS 룰셋 동작, WAF 로그 분석 방법을 배운다
+>
 > **결과 해석**: 악성 요청 시 403 차단 응답과 modsec_audit.log에 차단 기록이 남으면 WAF가 정상 동작한다
+>
 > **실전 활용**: 웹 서비스 앞단에 WAF를 배치하여 SQLi, XSS 등 웹 공격을 1차 차단하는 것이 표준 구성이다
 
 ```bash

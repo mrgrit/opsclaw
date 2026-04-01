@@ -137,8 +137,11 @@ SQL Injection은 **A03:2021 Injection** 카테고리에 속하며, 웹 보안에
 ### 2.1 기본 SQLi 공격 (Classic)
 
 > **실습 목적**: SQL Injection 취약점을 체계적으로 점검하고 공격 가능성을 증명한다
+>
 > **배우는 것**: Classic SQLi, Blind SQLi, Union-based SQLi 등 다양한 기법으로 입력값 검증 우회를 시도하는 방법을 배운다
+>
 > **결과 해석**: 인증 우회나 DB 데이터 추출에 성공하면 CRITICAL 등급의 SQLi 취약점이 확인된 것이다
+>
 > **실전 활용**: 웹 취약점 점검에서 SQLi는 CVSS 9.8의 최고 위험 등급으로, 발견 즉시 긴급 보고 대상이다
 
 ```bash
