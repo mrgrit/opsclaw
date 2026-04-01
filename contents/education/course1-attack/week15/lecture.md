@@ -325,7 +325,7 @@ curl -s -o /dev/null -w "Nginx/WAF: %{http_code}\n" http://10.20.30.80/
 
 # 4. JuiceShop API 엔드포인트 탐색
 curl -s http://10.20.30.80:3000/api/ 2>/dev/null | head -c 300
-curl -s http://10.20.30.80:3000/rest/products/1 | python3 -m json.tool 2>/dev/null | head -20
+curl -s http://10.20.30.80:3000/rest/products/search?q=test | python3 -m json.tool 2>/dev/null | head -20
 ```
 
 ### 실습 2: 취약점 분석 (30분)
