@@ -135,14 +135,21 @@ def create_review_router() -> APIRouter:
         past_report_text = "\n".join(f"- {r['title']}: {r['body']}" for r in past_reports) or "없음"
 
         prompt = (
-            f"당신은 IT 운영 자동화 시스템 OpsClaw의 Master Agent다.\n\n"
+            f"당신은 IT 운영 자동화 시스템 OpsClaw의 Master Agent다.\n"
+            f"SubAgent가 대상 Linux 서버에서 bash 명령을 직접 실행한다.\n\n"
             f"사용자 요구사항:\n{request_text}\n\n"
             f"참고할 수 있는 기존 Playbook:\n{similar_pb_text}\n\n"
             f"과거 유사 작업 보고서:\n{past_report_text}\n\n"
-            f"위 요구사항을 달성하기 위한 작업 계획을 JSON 배열로 반환하라.\n"
+            f"위 요구사항을 달성하기 위한 작업 계획을 JSON으로 반환하라.\n\n"
+            f"중요 규칙:\n"
+            f"- instruction_prompt는 반드시 Linux bash에서 바로 실행 가능한 명령어여야 한다\n"
+            f"- 자연어 설명이 아닌 실제 셸 명령어를 작성하라 (예: hostname && uptime)\n"
+            f"- sudo가 필요하면 sudo를 포함하라 (NOPASSWD 설정됨)\n"
+            f"- 여러 명령은 && 또는 ;로 연결하라\n"
+            f"- SSH 접속 명령은 불필요 (SubAgent가 이미 대상 서버에서 실행됨)\n\n"
             f"형식: {{\"summary\": \"<전체계획 1~2문장>\", \"tasks\": ["
-            f"{{\"order\": 1, \"title\": \"<작업제목>\", \"playbook_hint\": \"<기존플레이북명 또는 null>\", "
-            f"\"instruction_prompt\": \"<Manager에게 줄 지시문>\", \"risk_level\": \"<low|medium|high|critical>\"}}]}}\n"
+            f"{{\"order\": 1, \"title\": \"<작업제목>\", \"playbook_hint\": null, "
+            f"\"instruction_prompt\": \"<bash 명령어>\", \"risk_level\": \"<low|medium|high|critical>\"}}]}}\n"
             f"JSON만 출력하라. 설명 불필요."
         )
 
