@@ -7,7 +7,7 @@ pre_* Hook은 실행을 차단(block)할 수 있다.
 """
 
 from packages.hook_engine.events import HOOK_EVENTS, HookEvent
-from packages.hook_engine.models import HookDefinition, HookResponse
+from packages.hook_engine.models import HookDefinition, HookInput, HookResponse
 from packages.hook_engine.executor import fire_event
 from packages.hook_engine.registry import (
     register_hook,
@@ -20,6 +20,7 @@ __all__ = [
     "HOOK_EVENTS",
     "HookEvent",
     "HookDefinition",
+    "HookInput",
     "HookResponse",
     "fire_event",
     "register_hook",
