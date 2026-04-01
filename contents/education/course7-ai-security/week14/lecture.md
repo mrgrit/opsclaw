@@ -192,7 +192,10 @@ AGGRESSIVE_REWARDS = {
 > **결과 해석**: 자동 테스트의 통과/실패 비율로 AI 모델의 보안 수준을 정량적으로 평가한다
 > **실전 활용**: AI 모델 업데이트 시 자동 보안 회귀 테스트, AI Red Team 자동화 도구 개발에 활용한다
 
+현재 RL 정책(Q-테이블)을 조회하여 각 risk_level별 학습된 최적 전략을 확인한다.
+
 ```bash
+# RL 정책 조회: 각 상태(agent_id + risk_level)별 Q-값 확인
 curl -s http://localhost:8000/rl/policy \
   -H "X-API-Key: opsclaw-api-key-2026" | python3 -m json.tool
 ```
@@ -303,7 +306,10 @@ curl -s "http://localhost:8000/rl/recommend?agent_id=http://localhost:8002&risk_
 
 ### 실습 3: 보상 해킹 시나리오 분석
 
+LLM에게 보상 함수를 분석시켜 에이전트가 보상을 극대화하기 위해 악용할 수 있는 시나리오를 찾는다. 보상 해킹(reward hacking)은 AI 안전성의 핵심 과제이다.
+
 ```bash
+# 보상 해킹 시나리오 분석: 보상 함수의 취약점 자동 식별
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

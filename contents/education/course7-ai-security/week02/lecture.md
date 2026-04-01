@@ -156,7 +156,11 @@ dgx-spark (192.168.0.105)
 
 ### 3.1 기본 대화 (Chat Completion)
 
+Ollama의 OpenAI 호환 API로 LLM에게 질문을 보낸다. system 메시지로 역할을 지정하고, user 메시지로 질문한다.
+
 ```bash
+# /v1/chat/completions: OpenAI 호환 API 엔드포인트
+# system: AI의 행동 지침 / user: 사용자 질문
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -178,7 +182,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 3.3 주요 파라미터
 
+temperature, max_tokens, top_p 파라미터를 조절하여 LLM 응답의 일관성과 길이를 제어한다. 보안 분석에는 낮은 temperature(0.1~0.3)가 적합하다.
+
 ```bash
+# temperature: 0.3(정확한 답변) / max_tokens: 출력 길이 제한
+# top_p: 상위 확률 토큰만 샘플링 (0.9 = 상위 90%)
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

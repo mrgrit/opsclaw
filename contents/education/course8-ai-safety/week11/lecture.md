@@ -222,7 +222,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 3.2 간접 인젝션 탐지
 
+외부 데이터에 숨겨진 간접 인젝션 패턴을 정규식과 구조 분석으로 탐지하는 스크립트를 구현한다.
+
 ```bash
+# 간접 인젝션 탐지 스크립트 구현
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import re
@@ -269,7 +272,10 @@ ENDSSH
 
 ### 4.1 문서 검증 파이프라인
 
+외부 문서를 LLM에 전달하기 전에 무결성, 인젝션 패턴, 메타데이터를 검증하는 파이프라인을 구축한다.
+
 ```bash
+# 문서 검증 파이프라인: 인젝션 패턴 + 무결성 검증
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 rag_security = {
@@ -311,7 +317,10 @@ ENDSSH
 
 ### 4.2 LLM으로 문서 신뢰도 평가
 
+LLM 자체를 활용하여 입력 문서의 신뢰도를 0~100 점수로 평가시킨다. 인젝션이 포함된 문서를 자동 식별한다.
+
 ```bash
+# LLM으로 문서 신뢰도 자동 평가 (0~100점)
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -330,7 +339,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 5.1 분산 지식 아키텍처 보안 분석
 
+OpsClaw 분산 지식 아키텍처의 신뢰 경계를 분석하고 Supply Chain 공격 벡터를 식별한다.
+
 ```bash
+# 분산 지식 아키텍처 보안 분석: 신뢰 경계 + 공격 벡터
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 print("=== OpsClaw 분산 지식 아키텍처 보안 ===\n")

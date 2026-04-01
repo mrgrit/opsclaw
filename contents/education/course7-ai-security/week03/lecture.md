@@ -106,7 +106,11 @@ LLM에 전달하는 입력(프롬프트)을 설계하여 원하는 출력을 이
 > **결과 해석**: tool_calls 필드에 호출할 함수명과 인자가 포함되며, 함수 실행 결과를 다시 LLM에 전달하여 최종 분석을 얻는다
 > **실전 활용**: 보안 자동 점검 에이전트 개발, SOAR 플랫폼의 AI 기반 자동 대응 시나리오 구축에 활용한다
 
+예시 없이 역할(system)과 질문(user)만으로 보안 로그를 분석시킨다. python3 파이프로 응답 본문만 추출한다.
+
 ```bash
+# Zero-shot: 예시 없이 LLM에 직접 분석 요청
+# python3 파이프: JSON 응답에서 content 필드만 추출
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -121,7 +125,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 2.2 Few-shot (예시 포함)
 
+이전 분석 예시를 assistant 메시지로 포함시켜 LLM이 동일한 형식과 기준으로 응답하도록 유도한다.
+
 ```bash
+# Few-shot: user/assistant 쌍으로 분석 예시를 제공
+# 마지막 user 메시지가 실제 분석 대상
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -140,7 +148,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 2.3 Chain-of-Thought (단계적 추론)
 
+시간순 이벤트를 제공하고 "단계별로 추론하세요"라는 지시로 LLM이 사고 경위를 논리적으로 재구성하도록 유도한다.
+
 ```bash
+# Chain-of-Thought: "단계별로 추론하세요" 지시로 논리적 분석 유도
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -214,7 +225,11 @@ CISO에게 보고할 보안 인시던트 보고서를 작성합니다.
 
 ### 4.1 JSON 형식 요청
 
+LLM 응답을 JSON 형식으로 받아 자동화 파이프라인에서 파싱할 수 있게 한다. temperature를 0으로 설정하면 일관된 구조를 얻기 쉽다.
+
 ```bash
+# JSON 구조화 출력: 자동화 연동용 (severity, type, source_ip, action)
+# temperature 0: 일관된 JSON 구조를 보장
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -229,7 +244,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 4.2 테이블 형식 요청
 
+마크다운 테이블 형식을 지정하면 보고서에 바로 삽입할 수 있는 구조화된 출력을 얻을 수 있다.
+
 ```bash
+# 마크다운 테이블 형식 출력 요청
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -275,7 +293,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 실습 2: CVE 분석 프롬프트
 
+CVE 번호를 LLM에게 전달하여 요약, 비유 설명, 공격 과정, 대응 방법을 자동 생성시킨다.
+
 ```bash
+# CVE-2021-44228(Log4Shell) 분석: 5개 항목 형식 지정
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -290,7 +311,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 실습 3: 대응 플레이북 자동 생성
 
+공격 상황 정보를 전달하면 LLM이 실제 명령어를 포함한 단계별 대응 플레이북을 생성한다.
+
 ```bash
+# SSH 브루트포스 대응 플레이북 자동 생성
+# 실제 실행 명령어를 포함한 단계별 절차 요청
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

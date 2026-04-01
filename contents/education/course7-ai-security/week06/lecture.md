@@ -101,7 +101,10 @@
 > **결과 해석**: LLM이 생성한 nftables 규칙의 chain/rule 구조가 올바른지, 의도한 트래픽만 허용/차단하는지 검증한다
 > **실전 활용**: 보안 정책의 IaC화, 방화벽 규칙 자동 생성 및 검토, 컴플라이언스 기반 자동 설정에 활용한다
 
+취약한 Flask 코드를 LLM에게 전달하여 SQL Injection, Path Traversal, RCE 등의 보안 취약점을 자동 식별시킨다.
+
 ```bash
+# 취약한 Flask 코드를 변수에 저장 (SQLi, 파일 업로드, 명령 실행 취약점 포함)
 CODE='
 from flask import Flask, request
 import sqlite3
@@ -145,7 +148,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 2.2 설정 파일 보안 검토
 
+nginx 설정 파일을 LLM에게 전달하여 autoindex, server_tokens 노출, /admin 접근 제어 미설정 등의 보안 문제를 식별시킨다.
+
 ```bash
+# 보안 문제가 있는 nginx 설정을 변수에 저장
 CONFIG='
 server {
     listen 80;
@@ -183,7 +189,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 3.1 CVE 정보 분석 및 요약
 
+CVE 번호를 LLM에 전달하면 영향 범위, 대응 방법, 환경별 확인 명령어까지 포함한 실무 대응 보고서를 생성한다.
+
 ```bash
+# CVE-2024-3094(xz-utils 백도어) 분석: 7개 항목 형식 지정
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -198,7 +207,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 3.2 영향 범위 분석
 
+실습 환경의 서버 목록을 LLM에 전달하여 특정 CVE가 각 서버에 미치는 영향을 개별 분석시킨다.
+
 ```bash
+# 4대 서버 환경별 Log4Shell 영향 분석 요청
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -217,7 +229,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 4.1 스캔 결과를 보고서로 변환
 
+Trivy 스캔 결과를 LLM에 전달하면 경영진용 보고서 형식으로 변환하여 비즈니스 영향과 패치 우선순위를 포함시킨다.
+
 ```bash
+# Trivy 스캔 결과를 변수에 저장 (4개 CVE, 심각도별)
 SCAN_RESULT='
 취약점 스캔 결과 (Trivy):
 1. CVE-2023-44487 (HTTP/2 Rapid Reset) - CRITICAL - nginx:1.24

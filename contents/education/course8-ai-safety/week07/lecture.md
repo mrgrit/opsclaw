@@ -337,9 +337,13 @@ ENDSSH
 
 ### 5.1 안전한 데이터 파이프라인 설계
 
+AI 학습 데이터 파이프라인의 각 단계(수집/정제/검증/저장)별 보안 요구사항을 정의하고 검증 체크리스트를 자동 생성한다.
+
 ```bash
+# 데이터 파이프라인 보안 점검 스크립트 실행
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
+# 파이프라인 단계별 보안 요구사항 정의
 pipeline_security = {
     "수집 단계": [
         "데이터 출처 검증 (신뢰할 수 있는 소스만 사용)",
@@ -375,7 +379,11 @@ ENDSSH
 
 ### 5.2 LLM으로 데이터 품질 검증
 
+LLM을 활용하여 학습 데이터의 라벨이 올바른지 자동 검증한다. 잘못된 라벨(데이터 오염)을 조기에 발견할 수 있다.
+
 ```bash
+# 학습 데이터 라벨 검증: 의도적으로 잘못된 라벨 포함
+# LLM이 CORRECT/INCORRECT로 판단하여 오염 데이터 식별
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

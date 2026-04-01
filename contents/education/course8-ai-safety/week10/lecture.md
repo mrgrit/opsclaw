@@ -251,7 +251,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 4.1 자율성 수준별 위험
 
+AI 에이전트의 자율성 수준(Advisory/Semi/Full)별 위험도를 분석하고 필요한 안전 장치를 매핑한다.
+
 ```bash
+# 에이전트 자율성 수준별 위험도 분석
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 autonomy_levels = [
@@ -303,7 +306,10 @@ ENDSSH
 
 ### 4.2 에이전트 안전 설계 원칙
 
+에이전트 안전 설계의 핵심 원칙(최소 권한, 확인 루프, 롤백)을 코드로 구현하여 체험한다.
+
 ```bash
+# 에이전트 안전 설계 원칙 구현
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 principles = [
@@ -331,7 +337,10 @@ ENDSSH
 
 ### 5.1 안전 장치 매핑
 
+OpsClaw의 기존 안전 장치(risk_level, PoW, dry_run 등)를 AI Safety 프레임워크에 매핑하여 분석한다.
+
 ```bash
+# OpsClaw 안전 장치 → AI Safety 프레임워크 매핑
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 opsclaw_safety = {

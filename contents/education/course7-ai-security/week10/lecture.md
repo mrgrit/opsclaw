@@ -300,7 +300,11 @@ done
 
 ### 실습 3: LLM으로 Playbook 설계
 
+LLM에게 보안 점검 요구사항을 전달하면 OpsClaw에서 바로 실행할 수 있는 JSON 형식의 Playbook을 자동 생성한다.
+
 ```bash
+# LLM으로 보안 하드닝 Playbook JSON 자동 생성
+# 생성된 JSON을 OpsClaw execute-plan에 직접 사용 가능
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

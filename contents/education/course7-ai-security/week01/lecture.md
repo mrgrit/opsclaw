@@ -522,9 +522,11 @@ curl -X POST http://192.168.0.105:11434/api/chat \
 
 ### 실습 4.7: Suricata 알림 분석
 
-IDS/IPS 알림을 LLM에게 분석시킨다.
+IDS/IPS 알림을 LLM에게 분석시킨다. Log4j RCE 공격 시도를 담은 Suricata 알림을 전달하여 위협 수준과 대응 방법을 자동 평가한다.
 
 ```bash
+# Suricata IDS 알림을 LLM에 전달하여 위협 평가
+# temperature 0.1: 보안 분석은 일관성 있는 낮은 값 사용
 curl -X POST http://192.168.0.105:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
@@ -546,9 +548,11 @@ curl -X POST http://192.168.0.105:11434/api/chat \
 
 ### 실습 4.8: 보안 보고서 자동 생성
 
-LLM에게 수집된 정보를 바탕으로 보안 보고서를 작성하게 한다.
+LLM에게 수집된 정보를 바탕으로 보안 보고서를 작성하게 한다. 인시던트 세부 정보를 전달하면 정형화된 보고서를 자동 생성한다.
 
 ```bash
+# SSH 브루트포스 인시던트 정보를 LLM에 전달하여 보고서 자동 생성
+# temperature 0.2: 보고서는 사실에 기반한 낮은 창의성이 적합
 curl -X POST http://192.168.0.105:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{

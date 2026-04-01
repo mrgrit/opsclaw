@@ -323,7 +323,11 @@ curl -s http://localhost:8000/projects
 
 ### 실습 2: LLM으로 K8s 공격 시나리오 분석
 
+K8s 공격 킬체인을 LLM에게 분석시킨다. RCE 획득 후 ServiceAccount 토큰을 통한 클러스터 장악까지의 단계별 공격 경로와 방어 방법을 확인한다.
+
 ```bash
+# Ollama API로 K8s 공격 시나리오 분석 요청
+# 교육 목적으로 킬체인과 방어 방법을 동시에 분석
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

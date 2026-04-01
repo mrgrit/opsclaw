@@ -362,7 +362,11 @@ OpsClaw API를 사용하여 3대 서버(secu, web, siem)의 보안 상태를 자
 
 ### Step 1: 프로젝트 생성
 
+OpsClaw에 external 모드 프로젝트를 생성하여 Claude Code가 직접 오케스트레이션할 수 있도록 한다. 반환된 project ID를 변수에 저장한다.
+
 ```bash
+# OpsClaw 프로젝트 생성 (master_mode=external: 외부 오케스트레이션)
+# python3 파이프로 응답 JSON에서 project ID만 추출
 RESULT=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
@@ -373,7 +377,10 @@ echo "Project ID: $PID"
 
 ### Step 2: Stage 전환
 
+execute-plan 호출 전에 반드시 plan -> execute 순서로 Stage를 전환해야 한다. 순서를 건너뛰면 400 에러가 발생한다.
+
 ```bash
+# plan → execute 단계 전환 (필수 선행 조건)
 curl -s -X POST "http://localhost:8000/projects/$PID/plan" \
   -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
 curl -s -X POST "http://localhost:8000/projects/$PID/execute" \
@@ -385,7 +392,11 @@ echo "Stage: execute 준비 완료"
 
 **최소 요구:** 3개 태스크, parallel=true
 
+3대 서버(secu/web/siem)에 대한 보안 점검 태스크를 동시에(parallel) 실행한다. 각 태스크에 대상 서버의 SubAgent URL을 지정한다.
+
 ```bash
+# 3대 서버 보안 점검을 병렬 실행 (parallel=true)
+# 각 task의 subagent_url: 해당 서버의 SubAgent 주소
 curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
@@ -413,14 +424,20 @@ for t in d.get('task_results',[]):
 
 ### Step 4: Evidence 확인
 
+실행된 태스크의 결과(명령 출력, 종료 코드 등)가 evidence로 기록된다. summary 엔드포인트로 전체 결과를 조회한다.
+
 ```bash
+# 프로젝트의 전체 evidence(실행 결과) 요약 조회
 curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
   -H "X-API-Key: opsclaw-api-key-2026" | python3 -m json.tool
 ```
 
 ### Step 5: Replay 확인
 
+프로젝트의 작업 히스토리를 시간순으로 재현하여 각 태스크의 실행 순서, 종료 코드, PoW 보상을 확인한다.
+
 ```bash
+# 프로젝트 작업 Replay: 시간순 실행 이력 + PoW 보상 확인
 curl -s "http://localhost:8000/projects/$PID/replay" \
   -H "X-API-Key: opsclaw-api-key-2026" | python3 -c "
 import sys,json

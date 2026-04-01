@@ -169,7 +169,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 3.4 Blue Team 미션 예시
 
+Red Team 발견사항을 Blue Team LLM(llama3.1)에게 전달하여 방어 명령어를 자동 생성시킨다. Red와 Blue에 다른 모델을 사용하여 독립적 관점을 확보한다.
+
 ```bash
+# Blue Team 방어 분석: llama3.1:8b 모델 사용 (Red Team과 다른 모델)
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

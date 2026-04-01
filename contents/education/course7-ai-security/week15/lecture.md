@@ -221,7 +221,10 @@ LLM으로 종합 보고서를 작성하라. 포함: 점검개요, 발견사항(C
 
 low/medium/high risk_level 태스크를 각 2개 이상 실행하여 보상을 축적하라.
 
+프로젝트 생성 -> Stage 전환 -> 다양한 risk_level 태스크 실행의 전체 플로우를 한 번에 수행한다. 성공/실패 태스크를 모두 포함하여 RL 학습 데이터를 구성한다.
+
 ```bash
+# 프로젝트 생성 + ID 추출 (한 줄에서 처리)
 RL_PID=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" -H "X-API-Key: opsclaw-api-key-2026" \
   -d '{"name":"final-rl","request_text":"RL 데이터","master_mode":"external"}' \

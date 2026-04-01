@@ -406,7 +406,10 @@ docker compose down
 
 ### 실습 3: 리소스 제한 테스트
 
+Compose의 리소스 제한이 실제로 CPU 사용을 제한하는지 확인한다. dd 명령으로 CPU를 100% 사용하려 해도 10%로 제한되는 것을 docker stats에서 확인할 수 있다.
+
 ```bash
+# CPU/메모리 제한이 적용된 스트레스 테스트용 Compose 파일 생성
 cat > /tmp/stress-compose.yaml << 'EOF'
 version: "3.9"
 services:

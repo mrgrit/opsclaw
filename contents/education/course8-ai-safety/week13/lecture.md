@@ -87,7 +87,10 @@
 > **결과 해석**: 모델 파일의 해시값 불일치, 의존성 취약점 수, 데이터 출처 미확인 항목이 공급망 위험 지표이다
 > **실전 활용**: AI 모델 도입 시 보안 검증 프로세스, ML 파이프라인의 SBOM(소프트웨어 BOM) 관리에 활용한다
 
+AI 시스템의 보안 위협(모델 도난, 데이터 오염, 적대적 공격)을 체계적으로 분석하는 위협 모델링을 수행한다.
+
 ```bash
+# AI 시스템 위협 모델링: STRIDE + AI 특화 위협
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 owasp_llm_top10 = [
@@ -130,7 +133,10 @@ ENDSSH
 
 ### 2.1 평가 카테고리
 
+AI 시스템 보안 평가 카테고리(입력/모델/출력/인프라/데이터)별 점검 항목을 구현한다.
+
 ```bash
+# AI 보안 평가 카테고리별 점검 항목 구현
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 categories = [
@@ -254,7 +260,10 @@ ENDSSH
 
 ### 3.1 ATLAS 전술과 기법
 
+MITRE ATLAS(AI 위협 프레임워크)의 전술과 기법을 매핑하여 AI 특화 공격 표면을 분석한다.
+
 ```bash
+# MITRE ATLAS: AI 위협 전술/기법 매핑
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 atlas_tactics = [
@@ -283,7 +292,10 @@ ENDSSH
 
 ### 4.1 보고서 구조
 
+AI 보안 평가 보고서의 표준 구조를 정의하고 자동 생성 템플릿을 구현한다.
+
 ```bash
+# AI 보안 평가 보고서 구조 정의 및 자동 생성
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 report_structure = """
@@ -334,7 +346,10 @@ ENDSSH
 
 ### 4.2 LLM 기반 보고서 자동화
 
+LLM에게 평가 결과를 전달하여 경영진용 보안 보고서를 자동 생성시킨다.
+
 ```bash
+# LLM으로 AI 보안 평가 보고서 자동 생성
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -353,7 +368,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 5.1 CI/CD 파이프라인 통합
 
+AI 보안 테스트를 CI/CD 파이프라인에 통합하여 배포 전 자동 검증하는 워크플로를 구현한다.
+
 ```bash
+# AI 보안 테스트 CI/CD 파이프라인 통합
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 print("=== 지속적 AI Red Teaming ===\n")

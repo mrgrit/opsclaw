@@ -285,7 +285,10 @@ python3 ~/lab/week08/model_selection.py
 
 ### 3.1 보안 분석 프롬프트 설계 (5원칙 적용)
 
+OpsClaw 에이전트의 보안 분석 프롬프트를 5원칙(역할/맥락/형식/제약/예시)에 맞게 설계한다.
+
 ```bash
+# 보안 분석 프롬프트 설계 (5원칙 적용)
 cat > ~/lab/week08/prompt.txt << 'PROMPTEOF'
 === 보안 에이전트 프롬프트 (5원칙 적용) ===
 

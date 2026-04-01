@@ -174,7 +174,11 @@ curl -s -X POST "http://localhost:8000/projects/$PID/dispatch" \
 execute-plan은 **여러 태스크를 순차적으로** 실행한다.
 각 태스크에 risk_level과 SubAgent를 지정할 수 있다.
 
+3대 서버에 각각 다른 명령을 순차 실행하는 예시이다. 각 태스크에 대상 서버 SubAgent URL과 risk_level을 지정한다.
+
 ```bash
+# 3개 태스크를 순차 실행: 각각 다른 서버의 SubAgent에 전달
+# order: 실행 순서 / risk_level: low/medium/high/critical
 curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
@@ -243,9 +247,10 @@ curl -s -H "X-API-Key: opsclaw-api-key-2026" \
 
 ## 6. 완료 보고서
 
-프로젝트 완료 시 결과 보고서를 작성한다.
+프로젝트 완료 시 결과 보고서를 작성한다. outcome과 work_details로 작업 결과를 기록하며, 이 데이터는 RL 학습에도 활용된다.
 
 ```bash
+# 프로젝트 완료 보고서 작성 (outcome: success/failure/partial)
 curl -s -X POST "http://localhost:8000/projects/$PID/completion-report" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \

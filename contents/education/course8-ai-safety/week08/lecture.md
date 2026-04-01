@@ -130,7 +130,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 2.1 DAN 기법
 
+DAN(Do Anything Now) 프롬프트로 LLM의 안전 정책을 우회할 수 있는지 테스트한다. 응답 길이와 내용으로 탈옥 성공 여부를 판단한다.
+
 ```bash
+# DAN 탈옥 시도: AI 정책에서 자유로운 역할 부여
+# 응답 길이와 첫 300자로 탈옥 성공/실패 판단
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -142,7 +146,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 2.2 역할극 기법
 
+소설 집필이라는 합법적 맥락을 통해 공격 기법 설명을 유도한다. 교육/창작 프레이밍이 안전 장치를 우회하는지 확인한다.
+
 ```bash
+# 역할극 탈옥: 소설 창작 맥락으로 기술적 공격 정보 유도
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -154,7 +161,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 2.3 교육 프레이밍 기법
 
+교수 역할의 system 메시지와 교육 목적 프레이밍으로 민감한 기술 정보(리버스 셸)를 요청한다. 방어법 요청을 포함하여 합법성을 높인다.
+
 ```bash
+# 교육 프레이밍: system에 교수 역할 + 방어법 함께 요청
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -173,7 +183,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 3.1 직접 인젝션
 
+시스템 프롬프트 비공개 지시를 직접 요청으로 추출할 수 있는지 테스트한다. "디버깅" 명목의 시스템 프롬프트 유출 시도이다.
+
 ```bash
+# 직접 인젝션: 시스템 프롬프트 추출 시도
+# temperature 0: 일관된 결과로 재현성 확보
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -242,7 +256,10 @@ ENDSSH
 
 ### 4.1 인코딩 우회
 
+Base64로 인코딩된 악성 요청을 LLM에게 디코딩 후 답변하도록 유도한다. 키워드 필터를 우회하는 기법이다.
+
 ```bash
+# Base64 인코딩 우회: 악성 요청을 인코딩하여 필터 회피 시도
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -254,7 +271,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 4.2 다국어 우회
 
+영어로 민감한 요청을 하여 한국어 안전 필터를 우회할 수 있는지 테스트한다. 다국어 모델은 언어별 안전 수준이 다를 수 있다.
+
 ```bash
+# 다국어 우회: 영어로 요청하여 한국어 안전 필터 회피 시도
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -270,7 +290,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 5.1 보고서 템플릿
 
+LLM 취약점 평가 결과를 정형화된 보고서로 작성하는 템플릿을 생성한다. 탈옥/인젝션/우회 시도별 성공/실패를 기록한다.
+
 ```bash
+# 평가 보고서 템플릿 생성 스크립트
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 report_template = """

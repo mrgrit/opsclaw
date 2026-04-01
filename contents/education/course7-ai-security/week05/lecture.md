@@ -173,7 +173,11 @@ falsepositives:
 > **결과 해석**: LLM 보고서의 위협 분류, 영향 범위, 대응 권고를 Wazuh 원본 알림과 대조하여 정확성을 검증한다
 > **실전 활용**: SOC 야간 근무 시 자동 알림 분석, 일일 보안 브리핑 자동 생성, 경영진 보고서 초안 작성에 활용한다
 
+공격 시나리오를 자연어로 설명하면 LLM이 유효한 SIGMA YAML 룰을 자동 생성한다.
+
 ```bash
+# 공격 설명 → SIGMA 룰 YAML 자동 생성
+# MITRE ATT&CK ID와 로그 소스를 포함하여 정확한 매핑 요청
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -188,7 +192,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 4.2 로그 샘플에서 Wazuh 룰 생성
 
+실제 로그 샘플을 LLM에게 전달하면 패턴을 분석하여 Wazuh XML 룰을 자동 생성한다. CMS 스캐닝처럼 빈도 기반 탐지가 필요한 경우 frequency/timeframe도 자동 설정된다.
+
 ```bash
+# 로그 샘플 → Wazuh XML 룰 자동 생성
+# rule id 100000-109999: 사용자 정의 룰 범위
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -203,7 +211,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 4.3 CVE에서 탐지 룰 생성
 
+CVE 정보에서 공격 패턴을 추출하여 SIGMA 룰과 Suricata 룰을 동시에 생성한다. 네트워크 계층과 호스트 계층 양쪽에서 탐지할 수 있다.
+
 ```bash
+# CVE-2021-44228(Log4Shell) → SIGMA + Suricata 룰 동시 생성
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -222,12 +233,16 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 5.1 LLM으로 룰 리뷰
 
+작성된 탐지 룰을 LLM에게 리뷰시켜 정확성, 오탐률, 우회 가능성, 성능 영향을 평가한다.
+
 ```bash
+# 리뷰 대상 룰을 변수에 저장
 RULE='<rule id="100010" level="12">
   <match>select.*from.*information_schema</match>
   <description>SQL Injection attempt detected</description>
 </rule>'
 
+# LLM에 룰 리뷰 요청: 5가지 평가 항목으로 분석
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
@@ -277,7 +292,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 실습 2: 웹 공격 SIGMA 룰 생성
 
+3가지 웹 공격 패턴(SQLi, XSS, Path Traversal)에 대한 SIGMA 룰을 한 번에 생성시킨다.
+
 ```bash
+# 3가지 웹 공격 패턴 → SIGMA 룰 일괄 생성 (MITRE 태그 포함)
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

@@ -133,11 +133,13 @@ resource "aws_instance" "web" {
 > **결과 해석**: Checkov의 FAILED 항목은 즉시 수정 필요한 보안 위반이고, CKV_ 코드로 구체적 규칙을 확인한다
 > **실전 활용**: CI/CD 파이프라인에 IaC 보안 스캔을 통합하여 취약한 인프라 배포를 자동 차단하는 보안 게이트에 활용한다
 
+Terraform은 init -> plan -> apply 순서로 인프라를 배포한다. plan 단계에서 변경 사항을 검토한 후 apply로 실제 적용한다.
+
 ```bash
 terraform init      # 플러그인 다운로드
-terraform plan      # 변경 사항 미리보기
-terraform apply     # 실제 적용
-terraform destroy   # 인프라 삭제
+terraform plan      # 변경 사항 미리보기 (실제 변경 없음)
+terraform apply     # 실제 적용 (승인 필요)
+terraform destroy   # 인프라 삭제 (주의: 복구 불가)
 ```
 
 ---
@@ -371,9 +373,14 @@ HCLEOF
 
 ### 실습 2: LLM으로 IaC 보안 검토
 
+Terraform 코드를 LLM에게 전달하여 보안 취약점을 자동 분석시킨다. 0.0.0.0/0 허용, 암호화 미설정 등을 식별할 수 있다.
+
 ```bash
+# Terraform 코드를 변수에 저장
 TF_CODE=$(cat /tmp/iac-lab/main.tf)
 
+# Ollama API로 IaC 보안 분석 요청
+# 변수 치환을 위해 큰따옴표 + 이스케이프 사용
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{

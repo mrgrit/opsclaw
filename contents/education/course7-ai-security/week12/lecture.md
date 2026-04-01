@@ -122,7 +122,10 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 2.2 OpsClaw로 Explore 실행
 
+OpsClaw execute-plan으로 대상 서버의 시스템 정보(OS, 포트, 사용자, 서비스, 디스크)를 자동 수집한다. 수집된 데이터는 OODA Loop의 Observe 단계에 해당한다.
+
 ```bash
+# OODA Observe: 5가지 정보 수집 태스크 (uname, ss, passwd, systemctl, df)
 PID="프로젝트_ID"
 
 curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
@@ -246,7 +249,10 @@ curl -s -X POST "http://localhost:8000/projects/$PID/dispatch" \
 
 ### 4.3 LLM으로 Stimulate 계획 수립
 
+LLM에게 SIEM 탐지 능력 검증을 위한 안전한 stimulation 시나리오를 자동 설계시킨다. 실제 피해를 주지 않는 테스트 이벤트만 생성한다.
+
 ```bash
+# LLM으로 SIEM 탐지 검증용 안전한 시나리오 5가지 자동 생성
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

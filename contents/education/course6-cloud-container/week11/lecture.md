@@ -351,7 +351,11 @@ sudo nft list ruleset | head -30
 
 ### 실습 3: LLM으로 K8s 보안 설정 분석
 
+취약한 Pod YAML 설정을 LLM에게 전달하여 보안 문제를 자동 분석시킨다. privileged, runAsUser: 0, hostNetwork 등의 위험 설정을 식별할 수 있다.
+
 ```bash
+# Ollama API로 K8s YAML 보안 분석 요청
+# system: 역할 지정 / user: 분석 대상 YAML 전달
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

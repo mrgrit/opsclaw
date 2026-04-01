@@ -87,7 +87,10 @@
 > **결과 해석**: Red Team 결과에서 공격 성공률, 발견된 취약점 수, 심각도 분포로 AI 시스템의 보안 수준을 판단한다
 > **실전 활용**: AI 서비스 출시 전 Red Team 평가, 분기별 AI 보안 점검, OpenAI/Anthropic 등의 안전 평가 프로세스 이해에 활용한다
 
+AI 윤리 5대 원칙(공정성/투명성/프라이버시/안전성/책임성)을 Python으로 구현하여 각 원칙의 구현 방법과 점검 항목을 확인한다.
+
 ```bash
+# AI 윤리 5대 원칙 분석 스크립트 실행
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 principles = [
@@ -126,7 +129,10 @@ ENDSSH
 
 ### 2.1 위험 기반 분류 체계
 
+EU AI Act의 위험 기반 4단계 분류 체계를 Python으로 구현하여 AI 시스템의 위험 등급을 자동 판정한다.
+
 ```bash
+# EU AI Act 위험 기반 분류 체계 구현
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 risk_levels = [
@@ -164,7 +170,10 @@ ENDSSH
 
 ### 2.2 고위험 AI 의무사항
 
+EU AI Act에서 고위험 AI 시스템에 요구하는 의무사항을 체크리스트로 구현하여 준수 여부를 점검한다.
+
 ```bash
+# 고위험 AI 의무사항 체크리스트 자동 점검
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 obligations = [
@@ -195,7 +204,10 @@ ENDSSH
 
 ### 3.1 AI RMF 구조
 
+NIST AI RMF의 4개 기능(Govern/Map/Measure/Manage)을 OpsClaw 아키텍처에 매핑하여 분석한다.
+
 ```bash
+# NIST AI RMF → OpsClaw 매핑 분석
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 nist_ai_rmf = {
@@ -238,7 +250,10 @@ ENDSSH
 
 ### 4.1 주요 법안/정책
 
+한국 AI 관련 법안/정책의 주요 의무사항을 분석하고 자가 진단 체크리스트를 생성한다.
+
 ```bash
+# 한국 AI 법안/정책 분석 및 자가 진단
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 korea_ai_policy = [
@@ -292,7 +307,10 @@ ENDSSH
 
 ### 5.1 AI 시스템 윤리 체크리스트
 
+AI 시스템의 윤리 체크리스트(공정성, 투명성, 프라이버시, 안전성, 책임성)를 구현하여 자동 평가한다.
+
 ```bash
+# AI 윤리 체크리스트 자동 평가 (5개 원칙)
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 checklist = {
@@ -332,7 +350,10 @@ ENDSSH
 
 ### 5.2 LLM으로 윤리적 판단 시뮬레이션
 
+LLM에게 윤리적 딜레마 상황을 제시하여 다양한 윤리 프레임워크(공리주의/의무론/덕윤리)로 분석시킨다.
+
 ```bash
+# LLM 윤리적 판단 시뮬레이션: 3가지 윤리 프레임워크
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

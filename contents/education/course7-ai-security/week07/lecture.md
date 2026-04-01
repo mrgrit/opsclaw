@@ -246,7 +246,11 @@ curl -s http://localhost:8002/health | python3 -m json.tool
 
 ### 실습 2: LLM으로 에이전트 아키텍처 분석
 
+OpsClaw의 Master-Manager-SubAgent 구조를 LLM에게 분석시켜 보안 에이전트 아키텍처의 장단점을 평가한다.
+
 ```bash
+# Ollama API로 3계층 에이전트 아키텍처 장단점 분석 요청
+# 보안/확장성/장애허용/성능/감사 5가지 관점에서 평가
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{

@@ -199,7 +199,10 @@ KNOWLEDGE='{
 
 ### 4.1 로컬 지식을 LLM 프롬프트에 활용
 
+SubAgent가 수집한 로컬 지식(열린 포트, 최근 알림, 베이스라인 변경)을 LLM 프롬프트에 포함시켜 서버 맞춤형 분석을 수행한다.
+
 ```bash
+# web 서버의 로컬 지식을 JSON으로 구성
 LOCAL_KNOWLEDGE='{
   "hostname": "web",
   "role": "웹 서버",

@@ -225,7 +225,11 @@ SYS_ADMIN capability가 있으면 cgroup을 통해 호스트에서 명령 실행
 
 ### 6.1 읽기 전용 파일시스템
 
+컨테이너 파일시스템을 읽기 전용으로 설정하여 악성 파일 쓰기를 차단한다. 임시 파일이 필요한 경로만 tmpfs로 허용한다.
+
 ```bash
+# --read-only: 루트 파일시스템 쓰기 금지 (악성 파일 설치 차단)
+# --tmpfs: 메모리 기반 임시 경로 허용 (컨테이너 삭제 시 자동 소멸)
 docker run --read-only \
   --tmpfs /tmp \
   --tmpfs /var/run \
@@ -242,7 +246,12 @@ docker run --security-opt no-new-privileges nginx:latest
 
 ### 6.3 리소스 제한
 
+컨테이너가 호스트 리소스를 독점하지 못하도록 메모리, CPU, 프로세스 수를 제한한다. DoS 공격이나 포크 폭탄 방지에 필수적이다.
+
 ```bash
+# --memory: 메모리 상한 (초과 시 OOM Kill)
+# --cpus: CPU 사용량 제한 (0.5 = 50%)
+# --pids-limit: 최대 프로세스 수 (포크 폭탄 방지)
 docker run -d \
   --memory=256m \
   --cpus=0.5 \

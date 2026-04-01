@@ -251,7 +251,10 @@ ENDSSH
 
 ### 3.2 멤버십 추론 방어
 
+멤버십 추론 공격에 대한 방어 기법(차분 프라이버시, 정규화, 출력 라운딩)을 Python으로 구현하여 효과를 비교한다.
+
 ```bash
+# 멤버십 추론 방어 기법 구현 및 효과 비교
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 defenses = [
@@ -344,7 +347,10 @@ ENDSSH
 
 ### 5.1 보안 체크리스트
 
+AI 모델 프라이버시 보안 체크리스트를 자동 생성하여 배포 전 점검 항목을 확인한다.
+
 ```bash
+# AI 프라이버시 보안 체크리스트 자동 생성
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 checklist = {

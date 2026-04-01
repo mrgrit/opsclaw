@@ -423,11 +423,15 @@ ENDSSH
 
 ### 6.1 필터 우회 시도
 
+다양한 우회 기법(유니코드 삽입, Base64 인코딩, 단어 분리, 동의어, 다국어)으로 입력 필터를 통과할 수 있는지 테스트한다. 키워드 기반 필터의 한계를 보여준다.
+
 ```bash
+# web 서버에서 필터 우회 실험 Python 스크립트 실행
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import re
 
+# 프롬프트 인젝션 탐지용 정규식 패턴
 PATTERNS = [
     r"(?i)ignore.*instructions",
     r"(?i)you\s+are\s+now",

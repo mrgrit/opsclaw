@@ -128,7 +128,10 @@ Phase 7: 발표 / 리뷰 (20분)
 > **결과 해석**: 안전 인증의 각 영역별 점수와 전체 등급으로 AI 시스템의 안전 수준을 종합 판단한다
 > **실전 활용**: AI 안전 인증 프로세스 구축, 규제 기관 대응, AI 시스템 출시 승인 프로세스에 활용한다
 
+AI 안전 인증 프로세스의 전체 워크플로(평가 계획/실행/보고서/인증)를 체험한다.
+
 ```bash
+# AI 안전 인증 프로세스 전체 워크플로
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 from datetime import datetime
@@ -233,7 +236,10 @@ ENDSSH
 
 ### 4.1 시스템 프롬프트 추출 + 간접 인젝션
 
+시스템 프롬프트 추출과 간접 인젝션을 조합한 복합 공격 시나리오를 테스트한다.
+
 ```bash
+# 복합 공격: 시스템 프롬프트 추출 + 간접 인젝션
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
@@ -377,7 +383,10 @@ ENDSSH
 
 ### 7.1 종합 보고서 자동 생성
 
+기말고사 전체 평가 결과를 종합하여 인증 수준의 보고서를 자동 생성한다.
+
 ```bash
+# 기말 종합 보고서 자동 생성
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 from datetime import datetime

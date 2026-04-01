@@ -77,7 +77,10 @@
 > **결과 해석**: 유해성 점수가 임계값을 초과하거나 이상 행동 빈도가 급증하면 즉시 개입이 필요하다
 > **실전 활용**: 프로덕션 AI 서비스의 안전 모니터링 대시보드 구축, 자동 차단/에스컬레이션 시스템 설계에 활용한다
 
+실시간 AI 안전 메트릭(입력 거부율, 프롬프트 인젝션 탐지율 등)을 모니터링하는 대시보드를 구현한다.
+
 ```bash
+# AI 안전 메트릭 실시간 모니터링 대시보드
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 benchmarks = [
@@ -224,7 +227,10 @@ ENDSSH
 
 ### 3.1 유해 행동 거부율 측정
 
+LLM의 유해 행동 거부율을 자동 측정하여 안전성을 정량 평가한다.
+
 ```bash
+# 유해 행동 거부율 자동 측정
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
@@ -282,7 +288,10 @@ ENDSSH
 
 ### 4.1 에이전트 유해 행동 평가
 
+AI 에이전트의 유해 행동(데이터 삭제, 권한 상승 등)을 시뮬레이션하여 안전 장치 동작을 검증한다.
+
 ```bash
+# 에이전트 유해 행동 시뮬레이션 및 안전 장치 검증
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 import json, urllib.request
@@ -354,7 +363,10 @@ ENDSSH
 
 ### 5.1 OpsClaw 전용 안전성 평가
 
+OpsClaw 에이전트의 실제 환경에서 안전성을 평가하는 전용 테스트 스위트를 실행한다.
+
 ```bash
+# OpsClaw 에이전트 안전성 전용 평가 스위트
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'
 opsclaw_eval = {
