@@ -250,6 +250,11 @@ HAVING ports_scanned > 20;
 
 ### 실습 1: Wazuh에서 보안 이벤트 조회
 
+> **실습 목적**: 클라우드 모니터링(CloudTrail/CloudWatch)의 원리를 실습 환경의 Wazuh/nftables 로그로 체험하기 위해 수행한다
+> **배우는 것**: Wazuh 알림이 CloudTrail 이벤트와 동일한 '누가, 언제, 무엇을' 구조이며, 로그 기반 보안 이벤트 탐지의 원리를 이해한다
+> **결과 해석**: rule.level이 10 이상이면 높은 위험 이벤트이고, srcip 필드로 공격 출처를, description으로 공격 유형을 판단한다
+> **실전 활용**: AWS CloudTrail/CloudWatch 알람 설정, VPC Flow Logs 분석, GuardDuty 이벤트 대응에 활용한다
+
 ```bash
 # siem 서버의 Wazuh 알림 확인
 sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.100

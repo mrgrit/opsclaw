@@ -159,6 +159,11 @@ Wazuh 4.11.2는 3개 컴포넌트로 구성된다:
 
 ### 3.1 siem 서버 접속
 
+> **실습 목적**: siem 서버에서 Wazuh SIEM의 설치 상태와 에이전트 연결을 확인한다
+> **배우는 것**: Wazuh Manager 서비스 상태, 에이전트 등록/연결, 기본 알림 구조를 이해한다
+> **결과 해석**: Manager가 active이고 에이전트가 connected 상태이면 SIEM이 정상 수집 중이다
+> **실전 활용**: SOC 구축 시 SIEM 플랫폼 설치와 에이전트 배포가 첫 번째 단계이다
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
 ```

@@ -136,6 +136,11 @@ Suricata는 IDS와 IPS 모드를 모두 지원한다.
 >
 > **검증 완료:** secu 서버에서 Suricata 8.0.4 active, 65,093줄 룰 로드 확인
 
+> **실습 목적**: secu 서버에서 Suricata IPS의 설치 상태와 기본 구성을 확인한다
+> **배우는 것**: Suricata의 서비스 상태, 로드된 룰 수, 로그 위치 등 IPS 기본 운영 요소를 파악하는 방법을 배운다
+> **결과 해석**: systemctl 상태가 active이고 룰이 정상 로드되었으면 IPS가 정상 동작 중이다
+> **실전 활용**: 네트워크 보안 엔지니어의 핵심 업무는 IPS 룰셋 관리와 오탐 조정이다
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
 ```

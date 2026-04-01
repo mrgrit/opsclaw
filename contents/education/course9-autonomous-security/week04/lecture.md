@@ -175,6 +175,11 @@ Manager API
 
 ### 2.1 Health Check
 
+> **실습 목적**: SubAgent를 통해 원격 서버에 보안 명령을 안전하게 실행하는 방법을 익히기 위해 수행한다
+> **배우는 것**: Manager API의 dispatch/execute-plan이 SubAgent URL을 통해 원격 서버에 명령을 전달하는 구조와, risk_level에 따른 안전 제어를 이해한다
+> **결과 해석**: dispatch 응답의 stdout/stderr/exit_code로 원격 명령 실행 결과를 판단하고, risk_level=critical은 dry_run이 강제된다
+> **실전 활용**: 다중 서버 보안 자동화, 원격 패치 관리, 분산 환경의 보안 운영 자동화에 활용한다
+
 ```bash
 # opsclaw 서버 접속
 ssh opsclaw@10.20.30.201

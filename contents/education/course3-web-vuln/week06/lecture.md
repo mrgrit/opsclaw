@@ -129,6 +129,11 @@ URL: http://site.com/search?q=<script>alert(1)</script>
 
 ### 2.2 JuiceShop에서 Reflected XSS 탐지
 
+> **실습 목적**: XSS와 CSRF 취약점을 탐지하고 악용 시나리오를 증명한다
+> **배우는 것**: Reflected/Stored XSS 페이로드 삽입과 CSRF 토큰 부재를 확인하는 점검 기법을 배운다
+> **결과 해석**: 응답에 스크립트 태그가 그대로 포함되면 XSS 취약점이며, CSRF 토큰 없이 상태 변경이 가능하면 CSRF 취약점이다
+> **실전 활용**: XSS는 쿠키 탈취와 세션 하이재킹에, CSRF는 비인가 거래 실행에 악용되는 고위험 취약점이다
+
 ```bash
 # 검색 기능에 XSS 페이로드 삽입
 # 서버 응답에 스크립트가 그대로 포함되는지 확인

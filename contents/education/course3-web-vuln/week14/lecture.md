@@ -145,6 +145,11 @@
 
 ### 2.3 실습: JuiceShop 취약점 CVSS 산출
 
+> **실습 목적**: 발견된 취약점의 CVSS 점수를 산출하고 전문적인 점검 보고서를 작성한다
+> **배우는 것**: CVSS 벡터 계산법, 취약점별 심각도 분류, 보고서 구성 요소와 작성 방법을 배운다
+> **결과 해석**: CVSS 점수가 9.0 이상이면 Critical, 7.0-8.9은 High로 긴급 조치가 필요한 등급이다
+> **실전 활용**: 점검 보고서의 품질이 곧 컨설팅 회사의 역량 지표이며, CVSS 산출 능력은 필수이다
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'

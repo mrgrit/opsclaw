@@ -87,6 +87,11 @@ services:
       POSTGRES_PASSWORD: mysecret  # 이렇게 하면 안 됨!
 ```
 
+> **실습 목적**: Docker Compose에서 secrets, read_only, cap_drop 등 보안 설정을 일괄 적용하는 방법을 체험하기 위해 수행한다
+> **배우는 것**: 환경변수 대신 Docker Secrets로 비밀정보를 전달하면 docker inspect에 노출되지 않는 이유와, 리소스 제한으로 DoS를 방지하는 원리를 이해한다
+> **결과 해석**: docker compose ps에서 (healthy) 상태는 healthcheck 통과, 리소스 제한은 docker stats에서 MEM LIMIT 값으로 확인한다
+> **실전 활용**: 프로덕션 Compose 파일 작성 시 보안 템플릿으로 활용하며, 보안 감사에서 설정 준수를 증명하는 데 사용한다
+
 ```bash
 # 실행
 docker compose up -d

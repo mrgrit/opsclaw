@@ -128,6 +128,11 @@ resource "aws_instance" "web" {
 
 ### 2.2 Terraform 워크플로
 
+> **실습 목적**: Infrastructure as Code(Terraform) 파일의 보안 취약점을 배포 전에 탐지하는 방법을 체험하기 위해 수행한다
+> **배우는 것**: Terraform 코드에서 0.0.0.0/0 SSH 허용, 하드코딩 비밀번호, 암호화 미설정 등 흔한 보안 오류를 식별하는 방법과 Checkov/tfsec 자동 스캔 원리를 이해한다
+> **결과 해석**: Checkov의 FAILED 항목은 즉시 수정 필요한 보안 위반이고, CKV_ 코드로 구체적 규칙을 확인한다
+> **실전 활용**: CI/CD 파이프라인에 IaC 보안 스캔을 통합하여 취약한 인프라 배포를 자동 차단하는 보안 게이트에 활용한다
+
 ```bash
 terraform init      # 플러그인 다운로드
 terraform plan      # 변경 사항 미리보기

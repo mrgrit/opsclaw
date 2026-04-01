@@ -108,6 +108,11 @@
 
 ### 2.1 privileged Pod 탈출
 
+> **실습 목적**: Kubernetes 환경의 주요 공격 벡터(privileged Pod 탈출, SA 토큰 악용)를 Docker로 시뮬레이션하여 이해하기 위해 수행한다
+> **배우는 것**: --privileged 컨테이너에서 호스트 디스크와 프로세스에 접근 가능한 이유와, API 키(SA 토큰) 노출이 전체 시스템 장악으로 이어지는 공격 체인을 이해한다
+> **결과 해석**: privileged 컨테이너에서 fdisk -l 성공은 호스트 탈출 가능 상태, --cap-drop ALL에서 실패는 방어 동작을 의미한다
+> **실전 활용**: K8s 보안 감사에서 privileged Pod 탐지, SA 토큰 자동 마운트 비활성화, 감사 로깅 설정에 활용한다
+
 ```bash
 # 공격자가 privileged Pod에 접근한 경우
 # 호스트 파일시스템 마운트

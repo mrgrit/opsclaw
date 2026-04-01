@@ -183,6 +183,11 @@ GDPR은 다음 기술적 조치를 요구한다:
 
 ### 5.2 실습: 데이터베이스의 개인정보 보호
 
+> **실습 목적**: GDPR의 기술적 보호조치 요구사항을 실습 환경의 데이터베이스에서 확인한다
+> **배우는 것**: SSL 암호화 전송, 접근 통제, 개인정보 최소 수집 원칙이 기술적으로 구현되었는지 점검한다
+> **결과 해석**: PostgreSQL에서 SSL이 on이면 전송 암호화 적합, off이면 GDPR 제32조 부적합이다
+> **실전 활용**: 글로벌 서비스 운영 시 GDPR 제32조의 기술적 보호조치 준수는 법적 의무이다
+
 ```bash
 # PostgreSQL 접속하여 암호화 확인
 sshpass -p1 ssh opsclaw@10.20.30.201 "PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw -c \"SHOW ssl;\" 2>/dev/null"

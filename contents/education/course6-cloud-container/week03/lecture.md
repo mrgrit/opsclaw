@@ -110,6 +110,11 @@ Trivy는 Aqua Security에서 만든 오픈소스 취약점 스캐너이다.
 
 ### 2.1 Trivy 설치
 
+> **실습 목적**: 컨테이너 이미지에 숨어있는 알려진 취약점(CVE)을 Trivy로 스캔하여 사전에 발견하기 위해 수행한다
+> **배우는 것**: Trivy가 이미지 레이어를 분석하여 CRITICAL/HIGH 취약점을 리포트하는 원리와, 베이스 이미지 선택이 취약점 수에 미치는 영향을 이해한다
+> **결과 해석**: Total 행의 CRITICAL/HIGH 수가 0이면 안전하고, 수치가 높을수록 즉시 패치 또는 이미지 교체가 필요하다
+> **실전 활용**: CI/CD 파이프라인에 Trivy를 통합하여 취약 이미지의 프로덕션 배포를 자동 차단하는 데 활용한다
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get install -y wget apt-transport-https gnupg lsb-release

@@ -98,6 +98,11 @@ OpsClaw는 벡터 DB 없이 PostgreSQL FTS로 RAG를 구현한다.
 
 ### 2.1 PostgreSQL FTS 기초
 
+> **실습 목적**: 에이전트가 인시던트 대응을 자율적으로 수행하는 end-to-end 시나리오를 구현하기 위해 수행한다
+> **배우는 것**: 탐지→분석→격리→복구→보고의 인시던트 대응 전체 사이클을 에이전트가 자율 수행하는 구조를 이해한다
+> **결과 해석**: 각 대응 단계의 완료 여부와 소요 시간, 최종 보고서의 정확성으로 에이전트의 대응 능력을 평가한다
+> **실전 활용**: 24/7 무인 보안 대응 시스템, 초기 대응 자동화, SOC Tier 1 업무 자동화에 활용한다
+
 ```bash
 # PostgreSQL FTS 기본 실습
 PGPASSWORD=opsclaw psql -h 127.0.0.1 -U opsclaw -d opsclaw << 'SQLEOF'

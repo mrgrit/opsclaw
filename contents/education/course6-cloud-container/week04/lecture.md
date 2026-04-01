@@ -99,6 +99,11 @@ Docker 컨테이너는 Linux 커널의 3가지 기능으로 격리된다:
 
 `--privileged` 플래그는 모든 보안 제한을 해제한다.
 
+> **실습 목적**: 컨테이너 런타임의 capability와 privilege 설정이 보안에 미치는 영향을 직접 비교하기 위해 수행한다
+> **배우는 것**: --privileged 컨테이너가 호스트 디바이스에 접근 가능한 이유와, --cap-drop ALL로 권한을 제거했을 때 차단되는 동작을 이해한다
+> **결과 해석**: CapEff 값이 클수록 권한이 많으며, capsh --decode로 어떤 capability가 부여되었는지 확인한다
+> **실전 활용**: 컨테이너 탈출 방지를 위한 런타임 보안 정책 수립 및 seccomp/AppArmor 프로파일 설계에 활용한다
+
 ```bash
 # 절대 프로덕션에서 사용하지 말 것
 docker run --privileged -it ubuntu bash

@@ -101,6 +101,11 @@ LLM에 전달하는 입력(프롬프트)을 설계하여 원하는 출력을 이
 
 ### 2.1 Zero-shot (예시 없이 요청)
 
+> **실습 목적**: LLM에게 도구(Tool)를 제공하여 자율적으로 명령을 실행하고 결과를 분석하는 에이전트 동작을 체험하기 위해 수행한다
+> **배우는 것**: Tool Calling의 구조(function name, arguments)와 LLM이 어떤 도구를 선택하는지의 판단 과정을 이해한다
+> **결과 해석**: tool_calls 필드에 호출할 함수명과 인자가 포함되며, 함수 실행 결과를 다시 LLM에 전달하여 최종 분석을 얻는다
+> **실전 활용**: 보안 자동 점검 에이전트 개발, SOAR 플랫폼의 AI 기반 자동 대응 시나리오 구축에 활용한다
+
 ```bash
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \

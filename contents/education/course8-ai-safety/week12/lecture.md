@@ -82,6 +82,11 @@
 
 ### 1.2 AI 윤리 5대 원칙
 
+> **실습 목적**: AI Red Teaming을 체계적으로 수행하는 방법론을 익히고 실습하기 위해 수행한다
+> **배우는 것**: AI Red Team의 구성, 테스트 케이스 설계, 공격 시나리오 실행, 결과 보고의 전체 프로세스를 이해한다
+> **결과 해석**: Red Team 결과에서 공격 성공률, 발견된 취약점 수, 심각도 분포로 AI 시스템의 보안 수준을 판단한다
+> **실전 활용**: AI 서비스 출시 전 Red Team 평가, 분기별 AI 보안 점검, OpenAI/Anthropic 등의 안전 평가 프로세스 이해에 활용한다
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
 python3 << 'PYEOF'

@@ -148,6 +148,11 @@ created → planning → executing → reporting → completed
 
 ### 3.1 PostgreSQL 기동 확인
 
+> **실습 목적**: 멀티 에이전트 시스템에서 에이전트 간 역할 분담과 협업 패턴을 구현하기 위해 수행한다
+> **배우는 것**: Manager-Worker, Pipeline, 경쟁적 협업 등 멀티 에이전트 패턴과, 에이전트 간 메시지 전달 구조를 이해한다
+> **결과 해석**: 각 에이전트의 역할별 출력이 올바르게 통합되고, 전체 작업이 완료되는지로 협업 효과를 판단한다
+> **실전 활용**: 분산 보안 모니터링, Red/Blue 자동 대결, 대규모 인프라 동시 점검 시스템 구축에 활용한다
+
 ```bash
 # Docker 상태 확인
 sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep postgres

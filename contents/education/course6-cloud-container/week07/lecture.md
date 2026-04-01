@@ -104,6 +104,11 @@ CIS Benchmark를 자동으로 점검하는 오픈소스 스크립트이다.
 
 ### 2.1 실행 방법
 
+> **실습 목적**: CIS Docker Benchmark 기준으로 실제 Docker 환경의 보안 수준을 자동 점검하기 위해 수행한다
+> **배우는 것**: Docker Bench for Security가 7개 영역(호스트/데몬/파일/이미지/런타임/운영/Swarm)을 자동 점검하는 원리와, WARN 항목의 의미를 이해한다
+> **결과 해석**: [PASS]는 기준 충족, [WARN]은 개선 필요이며, 섹션별 WARN 수로 우선순위를 판단한다
+> **실전 활용**: 정기 보안 점검 보고서 작성 및 Docker 환경 하드닝 작업의 기준점으로 활용한다
+
 ```bash
 # 방법 1: Docker로 실행 (권장)
 docker run --rm --net host --pid host --userns host --cap-add audit_control \

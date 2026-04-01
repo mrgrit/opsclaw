@@ -189,6 +189,11 @@ execute-plan 실행
 4. 웹 서비스 응답 확인 (web)
 5. SIEM 에이전트 상태 확인 (siem)
 
+> **실습 목적**: OpsClaw의 Playbook 시스템으로 보안 대응 절차를 자동화하기 위해 수행한다
+> **배우는 것**: Playbook의 step 구조(순서, 명령, 조건)와 execute-plan API로 다중 서버에 순차 명령을 실행하는 원리를 이해한다
+> **결과 해석**: 각 step의 exit_code가 0이면 성공, 0이 아니면 실패이며, evidence에서 실행 로그를 확인한다
+> **실전 활용**: 인시던트 대응 SOP 자동화, 보안 패치 자동 배포, 컴플라이언스 점검 자동화에 활용한다
+
 ```bash
 # opsclaw 서버 접속
 ssh opsclaw@10.20.30.201
