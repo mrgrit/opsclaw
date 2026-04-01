@@ -136,8 +136,13 @@ _ROLE_SYSTEM_PROMPTS: dict[str, str] = {
 }
 
 
-def _role_system_prompt(role: str) -> str:
-    return _ROLE_SYSTEM_PROMPTS.get(role, _ROLE_SYSTEM_PROMPTS["manager"])
+def _role_system_prompt(role: str, context: dict | None = None) -> str:
+    """prompt_engine 사용 가능하면 동적 프롬프트 생성, 아니면 기존 고정 프롬프트 폴백."""
+    try:
+        from packages.prompt_engine import compose
+        return compose(role, context)
+    except Exception:
+        return _ROLE_SYSTEM_PROMPTS.get(role, _ROLE_SYSTEM_PROMPTS["manager"])
 
 
 class PiAdapterError(Exception):
@@ -211,7 +216,7 @@ class PiRuntimeClient:
             model = profile.model
 
         compiled_prompt = build_prompt(request.prompt, request.context)
-        system_prompt = request.context.get("system_prompt") or _role_system_prompt(role)
+        system_prompt = request.context.get("system_prompt") or _role_system_prompt(role, request.context)
 
         # tool_names는 직접 Ollama 호출 시 미지원 (tool calling은 향후 function_call API로 확장)
         tool_names = request.context.get("tool_names")
@@ -246,6 +251,23 @@ class PiRuntimeClient:
                 time.sleep(3)
 
         command = [f"httpx→{base_url}/chat/completions", f"model={model}"]
+
+        # 비용 추적
+        try:
+            from packages.cost_tracker import track_usage, LLMUsage
+            # 토큰 추정: 한국어 ~2자/token, 영어 ~4자/token (Ollama는 usage 미제공)
+            est_input = len(system_prompt + compiled_prompt) // 3
+            est_output = len(stdout) // 3
+            track_usage(LLMUsage(
+                model=model,
+                input_tokens=est_input,
+                output_tokens=est_output,
+                duration_ms=int((time.time() * 1000) % 1_000_000),
+                project_id=(request.context or {}).get("project_id"),
+                agent_id=(request.context or {}).get("agent_id"),
+            ))
+        except Exception:
+            pass  # 비용 추적 실패가 LLM 호출을 방해하지 않음
 
         normalized = normalize_output(
             stdout=stdout,

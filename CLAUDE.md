@@ -158,6 +158,105 @@ kill $(pgrep -f "manager-api") && sleep 2 && set -a && source .env && set +a && 
 - **SubAgent 배포 가이드**: `docs/manual/agent/08-subagent-deploy.md`
 - **API 인증 가이드**: `docs/manual/agent/09-api-auth.md`
 
+## Bastion 개선 패치 (2026-04-01, Claude Code 아키텍처 벤치마크)
+
+> 분석 프로젝트: `~/bastion/` (https://github.com/mrgrit/bastion)
+> Claude Code 소스(`~/bastion/src/`)를 분석하여 5개 패키지 신규 추가.
+
+### 신규 패키지
+
+| 패키지 | 경로 | 역할 | 상태 |
+|--------|------|------|------|
+| **prompt_engine** | `packages/prompt_engine/` | 시스템 프롬프트 동적 조합 (7개 섹션 모듈) | 완료 |
+| **hook_engine** | `packages/hook_engine/` | 라이프사이클 Hook 이벤트 시스템 (10개 이벤트) | 완료 |
+| **tool_validator** | `packages/tool_validator/` | JSON Schema 기반 Tool 입출력 검증 | 완료 |
+| **cost_tracker** | `packages/cost_tracker/` | LLM 토큰/비용 추적 + 예산 강제 | 완료 |
+| **permission_engine** | `packages/permission_engine/` | 다층 퍼미션 통합 (RBAC+Policy+Approval+Risk) | 완료 |
+| **memory_manager** | `packages/memory_manager/` | 메모리 고도화 (자동 추출, LRU 용량, 유형 분류) | 완료 |
+
+### 변경된 기존 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `packages/pi_adapter/runtime/client.py` | `_role_system_prompt()` → `prompt_engine.compose()` 호출, 비용 추적 통합 |
+
+### DB 테이블 (자동 생성됨)
+
+- `hooks` — Hook 등록 정보 (hook_engine 초기화 시 자동 생성)
+- `llm_usage` — LLM 토큰 사용 기록 (cost_tracker 초기화 시 자동 생성)
+
+### prompt_engine 사용법
+
+```python
+from packages.prompt_engine import compose
+
+# 기본 사용
+prompt = compose("manager")  # ~7,800자 시스템 프롬프트
+
+# 서버 지정 + RAG 결과 포함
+prompt = compose("master", {
+    "server": "secu",
+    "rag_results": [{"title": "과거 방화벽 점검", "body": "..."}],
+    "local_knowledge": {"server": "secu", "tools": {...}},
+})
+
+# 캐시 경계 분리
+static, dynamic = compose_with_boundary("manager")
+```
+
+### hook_engine 사용법
+
+```python
+from packages.hook_engine import register_hook, fire_event, HookDefinition, HookInput
+
+# Hook 등록
+register_hook(HookDefinition(
+    event="pre_dispatch",
+    hook_type="webhook",
+    target="https://slack.example.com/hook",
+    condition="risk_level == 'critical'",
+    can_block=True,
+))
+
+# 이벤트 발생
+results = fire_event(HookInput(
+    event="pre_dispatch",
+    project_id="proj_123",
+    command="rm -rf /tmp/old",
+    risk_level="critical",
+))
+# results[0].continue_ == False → 실행 차단
+```
+
+### permission_engine 사용법
+
+```python
+from packages.permission_engine import check_permission
+
+# 다층 체크: RBAC → Policy → Approval → Risk Auto
+d = check_permission(
+    actor_id="operator",
+    tool_name="run_command",
+    risk_level="critical",
+    env="prod",
+)
+# d.behavior: "allow" | "deny" | "ask"
+# d.source: "all_passed" | "rbac" | "policy" | "risk_auto" | "read_only_tool"
+```
+
+### memory_manager 사용법
+
+```python
+from packages.memory_manager import auto_extract_memories, enforce_capacity
+
+# 프로젝트 완료 후 자동 메모리 추출
+memories = auto_extract_memories("proj_123")
+# → [MemoryEntry(type="runbook", title="성공: nginx 설치"), ...]
+
+# LRU 용량 관리
+result = enforce_capacity(max_task_memories=200, max_experiences=100)
+```
+
 ## 알려진 버그 / 패치 이력
 
 | 마일스톤 | 내용 |
