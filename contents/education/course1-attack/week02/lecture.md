@@ -393,7 +393,7 @@ curl -s http://10.20.30.80:80/robots.txt 2>/dev/null
 PATHS=("/admin" "/login" "/api" "/ftp" "/backup" "/.git" "/.env" "/wp-admin" "/phpmyadmin" "/robots.txt" "/sitemap.xml" "/swagger.json" "/api-docs")
 
 echo "=== JuiceShop (3000) 경로 탐색 ==="
-for path in "${PATHS[@]}"; do
+for path in "${PATHS[@]}"; do                          # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000$path" 2>/dev/null)
   if [ "$code" != "404" ] && [ "$code" != "000" ]; then
     echo "  $path → HTTP $code"
@@ -402,7 +402,7 @@ done
 
 echo ""
 echo "=== Apache (80) 경로 탐색 ==="
-for path in "${PATHS[@]}"; do
+for path in "${PATHS[@]}"; do                          # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80$path" 2>/dev/null)
   if [ "$code" != "404" ] && [ "$code" != "000" ]; then
     echo "  $path → HTTP $code"
@@ -419,19 +419,19 @@ done
 
 ```bash
 # JuiceShop FTP 디렉토리 (Week 01에서 발견)
-curl -s http://10.20.30.80:3000/ftp/ 2>/dev/null | python3 -c "
+curl -s http://10.20.30.80:3000/ftp/ 2>/dev/null | python3 -c "  # silent 모드
 import sys, json
 try:
     data = json.load(sys.stdin)
-    for item in data:
+    for item in data:                                  # 반복문 시작
         print(f'  {item}')
 except:
     print(sys.stdin.read()[:500])
 "
 
 # FTP 내 파일 하나씩 접근
-curl -s http://10.20.30.80:3000/ftp/acquisitions.md 2>/dev/null | head -10
-curl -s http://10.20.30.80:3000/ftp/legal.md 2>/dev/null | head -10
+curl -s http://10.20.30.80:3000/ftp/acquisitions.md 2>/dev/null | head -10  # silent 모드
+curl -s http://10.20.30.80:3000/ftp/legal.md 2>/dev/null | head -10  # silent 모드
 ```
 
 ### 실습 4.5: gobuster 디렉토리 열거 (설치되어 있는 경우)
@@ -441,7 +441,7 @@ curl -s http://10.20.30.80:3000/ftp/legal.md 2>/dev/null | head -10
 WORDLIST=("admin" "api" "backup" "config" "console" "dashboard" "db" "debug" "docs" "download" "ftp" "git" "help" "images" "js" "login" "logout" "metrics" "panel" "portal" "private" "public" "rest" "search" "secret" "server-status" "setup" "static" "status" "swagger" "test" "upload" "users" "vendor" "wp-admin")
 
 echo "=== 디렉토리 열거: JuiceShop ==="
-for dir in "${WORDLIST[@]}"; do
+for dir in "${WORDLIST[@]}"; do                        # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/$dir" 2>/dev/null)
   if [ "$code" = "200" ] || [ "$code" = "301" ] || [ "$code" = "302" ] || [ "$code" = "403" ]; then
     echo "  /$dir → HTTP $code"
@@ -455,7 +455,7 @@ done
 # nikto가 설치되어 있으면 실행 (없으면 건너뜀)
 which nikto >/dev/null 2>&1 && {
   echo "=== nikto 스캔 (Apache) ==="
-  nikto -h http://10.20.30.80:80 -maxtime 60s 2>/dev/null | head -30
+  nikto -h http://10.20.30.80:80 -maxtime 60s 2>/dev/null | head -30  # 웹 서버 취약점 스캐너
 } || echo "nikto 미설치 — 건너뜀"
 ```
 
@@ -465,24 +465,26 @@ which nikto >/dev/null 2>&1 && {
 
 ## 실습 5.1: OpsClaw 정찰 프로젝트
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # 프로젝트 생성
 RESULT=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{"name":"week02-recon","request_text":"Week 02: 정보수집 자동화","master_mode":"external"}')
+  -d '{"name":"week02-recon","request_text":"Week 02: 정보수집 자동화","master_mode":"external"}')  # 요청 데이터(body)
 PID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
 echo "Project: $PID"
 
 # Stage 전환
-curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
-curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null  # silent 모드 / POST 요청 / API 인증 / OpsClaw 프로젝트
+curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: opsclaw-api-key-2026" > /dev/null  # silent 모드 / POST 요청 / API 인증 / OpsClaw 프로젝트
 
 # 정찰 태스크 병렬 실행
 curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {"order":1,"title":"네트워크 호스트 발견","instruction_prompt":"nmap -sn 10.20.30.0/24 2>/dev/null","risk_level":"low","subagent_url":"http://localhost:8002"},
       {"order":2,"title":"web 포트스캔","instruction_prompt":"nmap -sV -p 22,80,443,3000,8002,8080,8081,8082 10.20.30.80 2>/dev/null","risk_level":"low","subagent_url":"http://localhost:8002"},
@@ -496,27 +498,29 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
 import sys,json
 d=json.load(sys.stdin)
 print(f'결과: {d[\"overall\"]} (성공:{d[\"tasks_ok\"]}, 실패:{d[\"tasks_failed\"]})')
-for t in d.get('task_results',[]):
+for t in d.get('task_results',[]):                     # 반복문 시작
     print(f'  [{t[\"order\"]}] {t[\"title\"]} → {t[\"status\"]}')
 "
 ```
 
 ### 결과 확인
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # Evidence 요약
 curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
-  -H "X-API-Key: opsclaw-api-key-2026" | python3 -c "
+  -H "X-API-Key: opsclaw-api-key-2026" | python3 -c "  # API 인증 키
 import sys,json; d=json.load(sys.stdin)
 print(f'증적: {d[\"total\"]}건, 성공률: {d[\"success_rate\"]*100:.0f}%')
 "
 
 # Replay 타임라인
 curl -s "http://localhost:8000/projects/$PID/replay" \
-  -H "X-API-Key: opsclaw-api-key-2026" | python3 -c "
+  -H "X-API-Key: opsclaw-api-key-2026" | python3 -c "  # API 인증 키
 import sys,json; d=json.load(sys.stdin)
 print(f'총 보상: {d[\"total_reward\"]}')
-for s in d['timeline']:
+for s in d['timeline']:                                # 반복문 시작
     print(f'  [{s[\"task_order\"]}] {s[\"task_title\"]:25s} reward={s[\"total_reward\"]}')
 "
 ```

@@ -382,19 +382,19 @@ echo "  실패: $(sshpass -p1 ssh user@$IP 'grep -c "Failed password" /var/log/a
 echo ""
 echo "[2] 무차별 대입 의심 IP (10회 이상 실패)"
 sshpass -p1 ssh user@$IP "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
-  awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | awk '\$1>=10 {print \"  \" \$1 \"회: \" \$2}'"
+  awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | awk '\$1>=10 {print \"  \" \$1 \"회: \" \$2}'"  # 텍스트 필드 처리
 
 echo ""
 echo "[3] sudo 사용 현황"
-sshpass -p1 ssh user@$IP "grep 'sudo:' /var/log/auth.log 2>/dev/null | wc -l | xargs -I{} echo '  총 {}건'"
+sshpass -p1 ssh user@$IP "grep 'sudo:' /var/log/auth.log 2>/dev/null | wc -l | xargs -I{} echo '  총 {}건'"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "[4] 시스템 오류"
-sshpass -p1 ssh user@$IP "grep -i 'error\|critical\|emergency' /var/log/syslog 2>/dev/null | wc -l | xargs -I{} echo '  총 {}건'"
+sshpass -p1 ssh user@$IP "grep -i 'error\|critical\|emergency' /var/log/syslog 2>/dev/null | wc -l | xargs -I{} echo '  총 {}건'"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "[5] 최근 패키지 변경"
-sshpass -p1 ssh user@$IP "tail -5 /var/log/dpkg.log 2>/dev/null || echo '  dpkg 로그 없음'"
+sshpass -p1 ssh user@$IP "tail -5 /var/log/dpkg.log 2>/dev/null || echo '  dpkg 로그 없음'"  # 비밀번호 자동입력 SSH
 ```
 
 ### 7.2 실습: 4개 서버 로그 비교 분석

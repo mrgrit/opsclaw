@@ -151,22 +151,22 @@
 # 탐지 도구 상태
 echo "=== 탐지 도구 ==="
 echo -n "Wazuh Manager: "
-sshpass -p1 ssh siem@10.20.30.100 "systemctl is-active wazuh-manager 2>/dev/null"
+sshpass -p1 ssh siem@10.20.30.100 "systemctl is-active wazuh-manager 2>/dev/null"  # 비밀번호 자동입력 SSH
 echo -n "Suricata IPS: "
-sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 # 대응 도구 상태
 echo ""
 echo "=== 대응 도구 ==="
 echo -n "방화벽(nftables): "
-sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | head -1 && echo 'OK'"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | head -1 && echo 'OK'"  # 비밀번호 자동입력 SSH
 echo -n "Active Response: "
-sshpass -p1 ssh siem@10.20.30.100 "ls /var/ossec/active-response/bin/ 2>/dev/null | wc -l"
+sshpass -p1 ssh siem@10.20.30.100 "ls /var/ossec/active-response/bin/ 2>/dev/null | wc -l"  # 비밀번호 자동입력 SSH
 
 # 로그 수집 상태
 echo ""
 echo "=== 로그 수집 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do      # 반복문 시작
   echo -n "$ip Wazuh Agent: "
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
 done
@@ -174,7 +174,7 @@ done
 # 백업 상태
 echo ""
 echo "=== 백업 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "ls /backup/ 2>/dev/null || echo '백업 디렉토리 없음'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls /backup/ 2>/dev/null || echo '백업 디렉토리 없음'"  # 비밀번호 자동입력 SSH
 ```
 
 ---
@@ -201,9 +201,9 @@ echo "=== 초기 분석 시작: $(date) ==="
 # 1. 고위험 알림 확인
 echo ""
 echo "[1] 최근 고위험 알림"
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -215,7 +215,7 @@ for line in sys.stdin:
 # 2. 비정상 프로세스 확인
 echo ""
 echo "[2] 의심 프로세스"
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   echo "--- $ip ---"
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "ps aux --sort=-%cpu | head -5"
 done
@@ -223,17 +223,17 @@ done
 # 3. 네트워크 연결 확인
 echo ""
 echo "[3] 비정상 네트워크 연결"
-sshpass -p1 ssh opsclaw@10.20.30.201 "ss -tnp | grep ESTABLISHED"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ss -tnp | grep ESTABLISHED"  # 비밀번호 자동입력 SSH
 
 # 4. 최근 로그인
 echo ""
 echo "[4] 최근 로그인"
-sshpass -p1 ssh opsclaw@10.20.30.201 "last | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "last | head -10"  # 비밀번호 자동입력 SSH
 
 # 5. 최근 파일 변경
 echo ""
 echo "[5] 최근 24시간 내 변경된 중요 파일"
-sshpass -p1 ssh opsclaw@10.20.30.201 "find /etc -mtime -1 -type f 2>/dev/null | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "find /etc -mtime -1 -type f 2>/dev/null | head -10"  # 비밀번호 자동입력 SSH
 ```
 
 ### 4.3 인시던트 심각도 결정
@@ -291,18 +291,18 @@ echo "find / -name '*.php' -newer /tmp/reference_time -type f 2>/dev/null"
 
 # 2. 백도어 확인
 echo "=== cron 작업 확인 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "crontab -l 2>/dev/null; ls -la /etc/cron.d/ 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "crontab -l 2>/dev/null; ls -la /etc/cron.d/ 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 echo "=== authorized_keys 확인 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "cat ~/.ssh/authorized_keys 2>/dev/null || echo '없음'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat ~/.ssh/authorized_keys 2>/dev/null || echo '없음'"  # 비밀번호 자동입력 SSH
 
 # 3. 비밀번호 변경
 echo "=== 비밀번호 변경 필요 계정 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "awk -F: '\$3>=1000 && \$3<65534 {print \$1}' /etc/passwd"
+sshpass -p1 ssh opsclaw@10.20.30.201 "awk -F: '\$3>=1000 && \$3<65534 {print \$1}' /etc/passwd"  # 비밀번호 자동입력 SSH
 
 # 4. 취약점 패치
 echo "=== 패치 현황 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "apt list --upgradable 2>/dev/null | head -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "apt list --upgradable 2>/dev/null | head -5"  # 비밀번호 자동입력 SSH
 ```
 
 ---
@@ -457,14 +457,16 @@ sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | wc -l"
 
 ### Wazuh 로그 분석 실습
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # siem 서버에서 최근 경보 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "  # 비밀번호 자동입력 SSH
   echo '=== 최근 경보 (level >= 7) ==='
   sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | \
-    python3 -c '
+    python3 -c '                                       # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         if a.get("rule",{}).get("level",0) >= 7:

@@ -341,12 +341,14 @@ echo "Week 06: Command Injection → T1190 + T1059.004"
 
 ### 실습 2: OpsClaw로 ATT&CK 기반 공격 체인 실행
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # OpsClaw 프로젝트 생성: ATT&CK 매핑된 공격 체인
 curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "name": "week13-attack-mapping",
     "request_text": "ATT&CK 기반 공격 체인 실행 및 매핑",
     "master_mode": "external"
@@ -354,15 +356,15 @@ curl -s -X POST http://localhost:8000/projects \
 
 # 프로젝트 ID 확인 후 Stage 전환 (예: id=1)
 curl -s -X POST http://localhost:8000/projects/1/plan \
-  -H "X-API-Key: opsclaw-api-key-2026"
+  -H "X-API-Key: opsclaw-api-key-2026"                 # API 인증 키
 curl -s -X POST http://localhost:8000/projects/1/execute \
-  -H "X-API-Key: opsclaw-api-key-2026"
+  -H "X-API-Key: opsclaw-api-key-2026"                 # API 인증 키
 
 # ATT&CK 기법별 태스크 실행
 curl -s -X POST http://localhost:8000/projects/1/execute-plan \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 1,
@@ -453,7 +455,7 @@ LAYER
 
 echo "Navigator Layer 파일 생성: /tmp/course1_attack_layer.json"
 echo "ATT&CK Navigator에서 'Open Existing Layer' → 이 JSON 파일을 업로드하면 시각화됨"
-wc -l /tmp/course1_attack_layer.json
+wc -l /tmp/course1_attack_layer.json                   # 줄/단어/바이트 수 카운트
 ```
 
 ### 실습 4: 주차별 공격 체인 분석

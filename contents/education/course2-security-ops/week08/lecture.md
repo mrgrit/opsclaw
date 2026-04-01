@@ -104,7 +104,7 @@ secu 서버에 다음 조건의 방화벽을 구성하라.
 > **실전 활용**: 보안 장비 긴급 구성은 실무에서 보안 사고 대응 시 시간 압박 속에 수행해야 하는 핵심 기술이다
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1  # 비밀번호 자동입력 SSH
 
 # 테이블 및 체인 생성
 echo 1 | sudo -S nft add table inet exam_filter
@@ -130,7 +130,7 @@ echo 1 | sudo -S nft add rule inet exam_filter input icmp type echo-request acce
 
 # 내부 네트워크에서만 8000
 echo 1 | sudo -S nft add rule inet exam_filter input \
-  ip saddr 10.20.30.0/24 tcp dport 8000 accept
+  ip saddr 10.20.30.0/24 tcp dport 8000 accept         # IP 주소 조회
 
 # 차단 로깅
 echo 1 | sudo -S nft add rule inet exam_filter input \
@@ -182,7 +182,7 @@ echo 1 | sudo -S nft add chain inet exam_nat postrouting \
 
 # masquerade
 echo 1 | sudo -S nft add rule inet exam_nat postrouting \
-  ip saddr 10.20.30.0/24 masquerade
+  ip saddr 10.20.30.0/24 masquerade                    # IP 주소 조회
 
 # 포트 포워딩
 echo 1 | sudo -S nft add rule inet exam_nat prerouting \
@@ -192,7 +192,7 @@ echo 1 | sudo -S nft add rule inet exam_nat prerouting \
 echo 1 | sudo -S nft add rule inet exam_filter forward \
   ct state established,related accept
 echo 1 | sudo -S nft add rule inet exam_filter forward \
-  ip saddr 10.20.30.0/24 accept
+  ip saddr 10.20.30.0/24 accept                        # IP 주소 조회
 
 # IP 포워딩 활성화
 echo 1 | sudo -S sysctl -w net.ipv4.ip_forward=1
@@ -214,7 +214,7 @@ echo 1 | sudo -S sysctl -w net.ipv4.ip_forward=1
 **정답 예시:**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1  # 비밀번호 자동입력 SSH
 
 echo 1 | sudo -S tee /etc/suricata/rules/local.rules << 'EOF'
 # 1. 디렉터리 트래버설
@@ -249,10 +249,10 @@ echo 1 | sudo -S kill -USR2 $(pidof suricata)
 sleep 3
 
 # 테스트
-curl -s "http://10.20.30.80/../../etc/passwd" > /dev/null
-curl -s "http://10.20.30.80/?q=%3Cscript%3Ealert(1)%3C/script%3E" > /dev/null
-curl -s -A "nikto/2.1.6" "http://10.20.30.80/" > /dev/null
-curl -s -A "sqlmap/1.0" "http://10.20.30.80/" > /dev/null
+curl -s "http://10.20.30.80/../../etc/passwd" > /dev/null  # silent 모드
+curl -s "http://10.20.30.80/?q=%3Cscript%3Ealert(1)%3C/script%3E" > /dev/null  # silent 모드
+curl -s -A "nikto/2.1.6" "http://10.20.30.80/" > /dev/null  # silent 모드
+curl -s -A "sqlmap/1.0" "http://10.20.30.80/" > /dev/null  # silent 모드
 
 # 결과 확인
 echo 1 | sudo -S tail -10 /var/log/suricata/fast.log
@@ -347,9 +347,11 @@ echo 1 | sudo -S apache2ctl -M 2>/dev/null | grep security
 
 ## 시험 종료 후 정리
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 시험 설정 제거
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1  # 비밀번호 자동입력 SSH
 echo 1 | sudo -S nft delete table inet exam_filter 2>/dev/null
 echo 1 | sudo -S nft delete table inet exam_nat 2>/dev/null
 echo 1 | sudo -S sed -i '/EXAM/d' /etc/suricata/rules/local.rules 2>/dev/null

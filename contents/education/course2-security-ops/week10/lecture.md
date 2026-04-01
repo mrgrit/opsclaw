@@ -535,9 +535,9 @@ echo 1 | sudo -S systemctl status wazuh-manager
 
 ```bash
 echo 1 | sudo -S tail -f /var/ossec/logs/alerts/alerts.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         r = e.get('rule',{})

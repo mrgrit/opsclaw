@@ -203,42 +203,42 @@ ISO 27001 인증에서 **가장 중요한 문서** 중 하나이다.
 #!/bin/bash
 # 인증 심사용 증적 수집 스크립트
 EVIDENCE_DIR="/tmp/audit_evidence_$(date +%Y%m%d)"
-mkdir -p "$EVIDENCE_DIR"
+mkdir -p "$EVIDENCE_DIR"                               # 디렉터리 생성
 
 echo "증적 수집 시작: $(date)"
 echo "저장 위치: $EVIDENCE_DIR"
 
 # 1. 서버 인벤토리 (A.5.9)
 echo "=== [A.5.9] 자산 인벤토리 수집 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
     echo '=== 서버 정보 ==='
     hostname
-    uname -a
-    cat /etc/os-release | grep PRETTY_NAME
+    uname -a                                           # 커널/시스템 정보
+    cat /etc/os-release | grep PRETTY_NAME             # 설정 파일 조회
     echo '=== 하드웨어 ==='
-    lscpu | grep 'Model name'
-    free -h | grep Mem
-    df -h /
+    lscpu | grep 'Model name'                          # CPU 정보 조회
+    free -h | grep Mem                                 # 메모리 사용량 조회
+    df -h /                                            # 디스크 사용량 조회
     echo '=== 서비스 ==='
-    systemctl list-units --type=service --state=running --no-pager
+    systemctl list-units --type=service --state=running --no-pager  # 서비스 관리
   " 2>/dev/null > "$EVIDENCE_DIR/inventory_${ip}.txt"
 done
 
 # 2. SSH 설정 (A.8.5)
 echo "=== [A.8.5] SSH 설정 수집 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "cat /etc/ssh/sshd_config" 2>/dev/null > "$EVIDENCE_DIR/sshd_config_${ip}.txt"
 done
 
 # 3. 사용자 계정 (A.8.2)
 echo "=== [A.8.2] 계정 정보 수집 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
     echo '=== 사용자 목록 ==='
-    cat /etc/passwd
+    cat /etc/passwd                                    # 설정 파일 조회
     echo '=== 그룹 ==='
-    cat /etc/group
+    cat /etc/group                                     # 설정 파일 조회
     echo '=== sudo 그룹 ==='
     getent group sudo
     echo '=== 최근 로그인 ==='
@@ -248,31 +248,31 @@ done
 
 # 4. 방화벽 규칙 (A.8.20)
 echo "=== [A.8.20] 방화벽 규칙 수집 ==="
-sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset" 2>/dev/null > "$EVIDENCE_DIR/firewall_rules.txt"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset" 2>/dev/null > "$EVIDENCE_DIR/firewall_rules.txt"  # 비밀번호 자동입력 SSH
 
 # 5. 비밀번호 정책 (A.8.5)
 echo "=== [A.8.5] 비밀번호 정책 수집 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "
+sshpass -p1 ssh opsclaw@10.20.30.201 "                 # 비밀번호 자동입력 SSH
   echo '=== login.defs ==='
-  grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs
+  grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN|PASS_WARN_AGE' /etc/login.defs  # 패턴 검색
   echo '=== pwquality ==='
   cat /etc/security/pwquality.conf 2>/dev/null
 " 2>/dev/null > "$EVIDENCE_DIR/password_policy.txt"
 
 # 6. 로그 샘플 (A.8.15)
 echo "=== [A.8.15] 로그 샘플 수집 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "tail -100 /var/log/auth.log" 2>/dev/null > "$EVIDENCE_DIR/auth_log_sample.txt"
-sshpass -p1 ssh siem@10.20.30.100 "tail -50 /var/ossec/logs/alerts/alerts.json" 2>/dev/null > "$EVIDENCE_DIR/wazuh_alerts_sample.txt"
+sshpass -p1 ssh opsclaw@10.20.30.201 "tail -100 /var/log/auth.log" 2>/dev/null > "$EVIDENCE_DIR/auth_log_sample.txt"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh siem@10.20.30.100 "tail -50 /var/ossec/logs/alerts/alerts.json" 2>/dev/null > "$EVIDENCE_DIR/wazuh_alerts_sample.txt"  # 비밀번호 자동입력 SSH
 
 # 7. NTP 설정 (A.8.17)
 echo "=== [A.8.17] NTP 설정 수집 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "timedatectl" 2>/dev/null > "$EVIDENCE_DIR/ntp_${ip}.txt"
 done
 
 # 8. 패치 현황 (A.8.8)
 echo "=== [A.8.8] 패치 현황 수집 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "apt list --upgradable 2>/dev/null" > "$EVIDENCE_DIR/patches_${ip}.txt"
 done
 
@@ -352,11 +352,13 @@ sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev
 심사원: "지난 6개월간 보안 사고가 있었습니까? 대응 기록을 보여주십시오."
 ```
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 고위험 알림 이력
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -452,7 +454,7 @@ for line in sys.stdin:
 ```bash
 # ISO 27001 A.8.5 (안전한 인증) 점검 증적 수집
 echo "=== 패스워드 정책 확인 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "  # 비밀번호 자동입력 SSH
   echo '--- login.defs ---' && grep -E 'PASS_MAX|PASS_MIN|PASS_WARN' /etc/login.defs
   echo '--- pam 설정 ---' && grep pam_pwquality /etc/pam.d/common-password 2>/dev/null || echo 'pam_pwquality 미설정'
   echo '--- sudo 설정 ---' && sudo -l 2>/dev/null | head -5

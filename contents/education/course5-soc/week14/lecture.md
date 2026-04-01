@@ -126,35 +126,37 @@
 > **실전 활용**: SOAR(Security Orchestration, Automation and Response)는 SOC 운영 효율화의 핵심 기술이다
 
 ```bash
-export OPSCLAW_API_KEY=opsclaw-api-key-2026
+export OPSCLAW_API_KEY=opsclaw-api-key-2026            # 환경 변수 설정
 
 # 프로젝트 생성
 echo "=== Phase 1: 프로젝트 생성 ==="
 PROJECT=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{"name":"soc-explore-demo","request_text":"보안 관제 환경 탐색","master_mode":"external"}')
+  -d '{"name":"soc-explore-demo","request_text":"보안 관제 환경 탐색","master_mode":"external"}')  # 요청 데이터(body)
 PROJECT_ID=$(echo "$PROJECT" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 echo "Project ID: $PROJECT_ID"
 
 # Stage 전환
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/plan" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null         # API 인증 키
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null         # API 인증 키
 echo "Stage: execute"
 ```
 
 ### 2.2 secu 서버 탐색
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
-export OPSCLAW_API_KEY=opsclaw-api-key-2026
+export OPSCLAW_API_KEY=opsclaw-api-key-2026            # 환경 변수 설정
 
 echo "=== secu 서버 탐색 ==="
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 1,
@@ -167,7 +169,7 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
   }' | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
-for r in data.get('results', []):
+for r in data.get('results', []):                      # 반복문 시작
     print(f'Task {r.get(\"order\",\"?\")}: {r.get(\"status\",\"?\")}')
     output = r.get('output','')
     print(output[:500] if output else '(출력 없음)')
@@ -176,14 +178,16 @@ for r in data.get('results', []):
 
 ### 2.3 siem 서버 탐색
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
-export OPSCLAW_API_KEY=opsclaw-api-key-2026
+export OPSCLAW_API_KEY=opsclaw-api-key-2026            # 환경 변수 설정
 
 echo "=== siem 서버 탐색 ==="
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 1,
@@ -196,7 +200,7 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
   }' | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
-for r in data.get('results', []):
+for r in data.get('results', []):                      # 반복문 시작
     print(f'Task {r.get(\"order\",\"?\")}: {r.get(\"status\",\"?\")}')
     print(r.get('output','')[:500])
 "
@@ -208,8 +212,10 @@ for r in data.get('results', []):
 
 ### 3.1 관제 순환 스크립트
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 cat << 'SCRIPT' > /tmp/soc_daemon.sh
 #!/bin/bash
 OLLAMA_URL="http://192.168.0.105:11434/v1/chat/completions"
@@ -232,7 +238,7 @@ echo "  수집: $(echo "$WAZUH_ALERTS" | wc -l)줄"
 echo "[3] LLM 분석 요청"
 ANALYSIS=$(curl -s "$OLLAMA_URL" \
   -H "Content-Type: application/json" \
-  -d "{
+  -d "{                                                # 요청 데이터(body)
     \"model\": \"gemma3:12b\",
     \"messages\": [
       {\"role\": \"system\", \"content\": \"SOC L1 자동 분석 에이전트입니다. 경보를 분석하여 심각도와 대응 필요 여부를 판단합니다. 한국어로 간결하게.\"},
@@ -246,16 +252,18 @@ echo "=== LLM 분석 결과 ==="
 echo "$ANALYSIS"
 SCRIPT
 
-chmod +x /tmp/soc_daemon.sh
+chmod +x /tmp/soc_daemon.sh                            # 파일 권한 변경
 bash /tmp/soc_daemon.sh
 ENDSSH
 ```
 
 ### 3.2 경보 임계값 기반 에스컬레이션
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 alerts = [
     {"time": "09:01", "source": "suricata", "severity": "low", "desc": "HTTP 스캔 탐지"},
     {"time": "09:02", "source": "suricata", "severity": "low", "desc": "포트 스캔 탐지"},
@@ -269,14 +277,14 @@ alerts = [
 THRESHOLDS = {"critical": 1, "high": 2, "medium": 5, "low": 10}
 
 counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-for a in alerts:
+for a in alerts:                                       # 반복문 시작
     counts[a["severity"]] += 1
 
 print("=== 경보 에스컬레이션 분석 ===")
 print(f"총 경보: {len(alerts)}건\n")
 
 escalate = False
-for sev in ["critical", "high", "medium", "low"]:
+for sev in ["critical", "high", "medium", "low"]:      # 반복문 시작
     t = THRESHOLDS[sev]
     c = counts[sev]
     status = "ESCALATE" if c >= t else "OK"
@@ -287,7 +295,7 @@ print(f"\n판정: {'에스컬레이션 - SOC L2 호출' if escalate else '정상
 
 if escalate:
     print("\n에스컬레이션 사유:")
-    for a in alerts:
+    for a in alerts:                                   # 반복문 시작
         if a["severity"] in ["critical", "high"]:
             print(f"  [{a['time']}] [{a['severity'].upper()}] {a['desc']}")
 PYEOF
@@ -300,14 +308,16 @@ ENDSSH
 
 ### 4.1 탐지 능력 검증
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
-export OPSCLAW_API_KEY=opsclaw-api-key-2026
+export OPSCLAW_API_KEY=opsclaw-api-key-2026            # 환경 변수 설정
 
 echo "=== 자극 테스트: 포트 스캔 ==="
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "command": "for port in 22 80 443 3306 5432 8080; do timeout 1 bash -c \"echo > /dev/tcp/10.20.30.1/$port\" 2>/dev/null && echo \"Port $port: OPEN\" || echo \"Port $port: CLOSED\"; done",
     "subagent_url": "http://10.20.30.80:8002"
   }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:300])"
@@ -315,14 +325,16 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
 
 ### 4.2 SQL Injection 자극
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
-export OPSCLAW_API_KEY=opsclaw-api-key-2026
+export OPSCLAW_API_KEY=opsclaw-api-key-2026            # 환경 변수 설정
 
 echo "=== 자극: SQLi 시도 ==="
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "command": "curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:3000/rest/products/search?q=test%27+OR+1=1--\" && echo \" (SQLi 전송)\"",
     "subagent_url": "http://10.20.30.80:8002"
   }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:200])"
@@ -330,14 +342,16 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
 
 ### 4.3 탐지 확인
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
-export OPSCLAW_API_KEY=opsclaw-api-key-2026
+export OPSCLAW_API_KEY=opsclaw-api-key-2026            # 환경 변수 설정
 
 echo "=== 탐지 확인: Suricata ==="
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "command": "tail -10 /var/log/suricata/fast.log 2>/dev/null | grep -iE \"sql|scan|injection\" || echo \"관련 경보 없음\"",
     "subagent_url": "http://10.20.30.1:8002"
   }' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('output','')[:300])"
@@ -349,9 +363,11 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/dispatch" \
 
 ### 5.1 탐지-분석-대응 자동화
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 def detect(log_entry):
     keywords = {
         "critical": ["reverse shell", "root login", "data exfiltration"],
@@ -359,8 +375,8 @@ def detect(log_entry):
         "medium": ["port scan", "directory traversal", "xss"],
         "low": ["404 error", "invalid user agent"],
     }
-    for severity, patterns in keywords.items():
-        for pattern in patterns:
+    for severity, patterns in keywords.items():        # 반복문 시작
+        for pattern in patterns:                       # 반복문 시작
             if pattern in log_entry.lower():
                 return severity, pattern
     return "info", "unknown"
@@ -382,7 +398,7 @@ test_logs = [
 ]
 
 print("=== 탐지-분석-대응 파이프라인 ===\n")
-for log in test_logs:
+for log in test_logs:                                  # 반복문 시작
     severity, pattern = detect(log)
     action = respond(severity, pattern)
     print(f"로그: {log[:60]}...")
@@ -398,9 +414,11 @@ ENDSSH
 
 ### 6.1 역할 분담
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 roles = {
     "자동화(AI) 담당": [
         "대량 로그 수집 및 정규화",
@@ -421,10 +439,10 @@ roles = {
     ],
 }
 
-for role, tasks in roles.items():
+for role, tasks in roles.items():                      # 반복문 시작
     print(f"\n{role}")
     print("=" * 40)
-    for task in tasks:
+    for task in tasks:                                 # 반복문 시작
         print(f"  - {task}")
 
 print("\n핵심: AI는 인간을 '대체'가 아닌 '증강(augment)'한다")

@@ -309,12 +309,12 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep '^ENCRYPT_METHOD' /etc/login.defs"
 ```bash
 # 탐지 체계 확인 (Wazuh)
 echo "=== Wazuh Manager 상태 ==="
-sshpass -p1 ssh siem@10.20.30.100 "systemctl is-active wazuh-manager 2>/dev/null"
+sshpass -p1 ssh siem@10.20.30.100 "systemctl is-active wazuh-manager 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 echo "=== 최근 고위험 알림 ==="
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -325,11 +325,11 @@ for line in sys.stdin:
 
 # 격리 능력 확인 (방화벽으로 IP 차단 가능 여부)
 echo "=== 방화벽 차단 가능 ==="
-sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | head -5 && echo 'nftables 사용 가능'"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | head -5 && echo 'nftables 사용 가능'"  # 비밀번호 자동입력 SSH
 
 # 증거 보존 확인 (로그 보관 기간)
 echo "=== 로그 보관 설정 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/logrotate.conf 2>/dev/null | grep -E 'rotate|weekly|monthly'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/logrotate.conf 2>/dev/null | grep -E 'rotate|weekly|monthly'"  # 비밀번호 자동입력 SSH
 ```
 
 ---
@@ -349,8 +349,10 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "cat /etc/logrotate.conf 2>/dev/null | grep
 
 ### 5.2 실습: 패치 현황 점검
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   echo "=== $ip: 패치 현황 ==="
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "apt list --upgradable 2>/dev/null | head -5"
   echo "보안 패치:"

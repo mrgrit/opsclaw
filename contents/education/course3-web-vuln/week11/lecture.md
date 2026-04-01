@@ -118,44 +118,44 @@
 ```bash
 # 1. 존재하지 않는 경로 (404)
 echo "=== 404 에러 ==="
-curl -s http://10.20.30.80:3000/nonexistent_path_xyz123 | head -10
+curl -s http://10.20.30.80:3000/nonexistent_path_xyz123 | head -10  # silent 모드
 echo ""
 
 # 2. 잘못된 파라미터 타입
 echo "=== 타입 에러 ==="
-curl -s http://10.20.30.80:3000/api/Products/abc | python3 -m json.tool 2>/dev/null
+curl -s http://10.20.30.80:3000/api/Products/abc | python3 -m json.tool 2>/dev/null  # silent 모드
 echo ""
 
 # 3. SQL 문법 오류 유도
 echo "=== SQL 에러 ==="
-curl -s "http://10.20.30.80:3000/rest/products/search?q='" | head -20
+curl -s "http://10.20.30.80:3000/rest/products/search?q='" | head -20  # silent 모드
 echo ""
 
 # 4. 빈 JSON body
 echo "=== 빈 요청 에러 ==="
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{}' | python3 -m json.tool 2>/dev/null
+  -d '{}' | python3 -m json.tool 2>/dev/null           # 요청 데이터(body)
 echo ""
 
 # 5. 잘못된 Content-Type
 echo "=== Content-Type 에러 ==="
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: text/plain" \
-  -d 'not json' | head -10
+  -d 'not json' | head -10                             # 요청 데이터(body)
 echo ""
 
 # 6. 매우 긴 입력
 echo "=== 과도한 입력 ==="
 LONG_INPUT=$(python3 -c "print('A'*10000)")
-curl -s "http://10.20.30.80:3000/rest/products/search?q=$LONG_INPUT" | head -5
+curl -s "http://10.20.30.80:3000/rest/products/search?q=$LONG_INPUT" | head -5  # silent 모드
 ```
 
 ### 2.2 스택 트레이스 분석
 
 ```bash
 # 에러 응답에서 민감 정보 추출
-curl -s "http://10.20.30.80:3000/rest/products/search?q='" | python3 -c "
+curl -s "http://10.20.30.80:3000/rest/products/search?q='" | python3 -c "  # silent 모드
 import sys, json
 
 data = sys.stdin.read()
@@ -177,7 +177,7 @@ print(f'메시지: {message[:200]}')
 
 if stack:
     print(f'\n스택 트레이스 (처음 5줄):')
-    for i, line in enumerate(stack.split('\n')[:5]):
+    for i, line in enumerate(stack.split('\n')[:5]):   # 반복문 시작
         print(f'  {line.strip()}')
 
 # 노출된 정보 식별
@@ -201,16 +201,16 @@ print(f'\n노출된 정보: {info_found if info_found else \"없음\"}')" 2>/dev
 echo "=== JuiceShop 에러 응답 ==="
 curl -sI http://10.20.30.80:3000/nonexistent | head -5
 echo ""
-curl -s http://10.20.30.80:3000/nonexistent | head -5
+curl -s http://10.20.30.80:3000/nonexistent | head -5  # silent 모드
 
 echo ""
 echo "=== Apache 에러 응답 ==="
 curl -sI http://10.20.30.80:80/nonexistent | head -5
 echo ""
-curl -s http://10.20.30.80:80/nonexistent | head -10
+curl -s http://10.20.30.80:80/nonexistent | head -10   # silent 모드
 
 # Apache 에러 페이지에 버전 정보가 노출되는지 확인
-curl -s http://10.20.30.80:80/nonexistent | grep -i "apache\|server at\|port"
+curl -s http://10.20.30.80:80/nonexistent | grep -i "apache\|server at\|port"  # silent 모드
 ```
 
 ---
@@ -263,12 +263,12 @@ if [ -n "$MAIN_JS" ]; then
   echo "소스맵 ($MAIN_JS.map): HTTP $code"
   if [ "$code" = "200" ]; then
     echo "소스맵 노출됨! 소스 코드 복원 가능"
-    curl -s "http://10.20.30.80:3000/${MAIN_JS}.map" | python3 -c "
+    curl -s "http://10.20.30.80:3000/${MAIN_JS}.map" | python3 -c "  # silent 모드
 import sys, json
 data = json.load(sys.stdin)
 sources = data.get('sources', [])
 print(f'소스 파일 수: {len(sources)}')
-for s in sources[:10]:
+for s in sources[:10]:                                 # 반복문 시작
     print(f'  {s}')
 if len(sources) > 10:
     print(f'  ... 외 {len(sources)-10}개')
@@ -291,7 +291,7 @@ fi
 ```bash
 # JuiceShop 디렉터리 리스팅
 echo "=== JuiceShop 디렉터리 리스팅 ==="
-for dir in "/" "/ftp" "/ftp/" "/assets" "/assets/" "/public" "/encryptionkeys"; do
+for dir in "/" "/ftp" "/ftp/" "/assets" "/assets/" "/public" "/encryptionkeys"; do  # 반복문 시작
   result=$(curl -s "http://10.20.30.80:3000$dir" | head -3)
   code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000$dir")
   echo "[$code] $dir"
@@ -302,7 +302,7 @@ done
 
 echo ""
 echo "=== Apache 디렉터리 리스팅 ==="
-for dir in "/" "/icons/" "/manual/" "/cgi-bin/"; do
+for dir in "/" "/icons/" "/manual/" "/cgi-bin/"; do    # 반복문 시작
   result=$(curl -s "http://10.20.30.80:80$dir" | head -5)
   code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:80$dir")
   echo "[$code] $dir"
@@ -317,15 +317,15 @@ done
 ```bash
 # /ftp 디렉터리의 파일 목록과 내용 확인
 echo "=== /ftp 파일 목록 ==="
-curl -s http://10.20.30.80:3000/ftp/ | python3 -c "
+curl -s http://10.20.30.80:3000/ftp/ | python3 -c "    # silent 모드
 import sys, json
 try:
     data = json.load(sys.stdin)
     if isinstance(data, list):
-        for f in data:
+        for f in data:                                 # 반복문 시작
             print(f'  {f}')
     elif isinstance(data, dict):
-        for f in data.get('data', data.get('files', [])):
+        for f in data.get('data', data.get('files', [])):  # 반복문 시작
             if isinstance(f, str):
                 print(f'  {f}')
             else:
@@ -337,9 +337,9 @@ except:
 # 각 파일 내용 확인
 echo ""
 echo "=== 주요 파일 내용 ==="
-for file in "legal.md" "acquisitions.md" "package.json.bak" "coupons_2013.md.bak" "eastere.gg"; do
+for file in "legal.md" "acquisitions.md" "package.json.bak" "coupons_2013.md.bak" "eastere.gg"; do  # 반복문 시작
   echo "--- $file ---"
-  curl -s "http://10.20.30.80:3000/ftp/$file" 2>/dev/null | head -5
+  curl -s "http://10.20.30.80:3000/ftp/$file" 2>/dev/null | head -5  # silent 모드
   echo ""
 done
 ```
@@ -370,13 +370,13 @@ echo "=== 사용자 열거 테스트 ==="
 echo "존재하는 계정:"
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@juice-sh.op","password":"wrong"}' | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('error','')[:100])" 2>/dev/null
+  -d '{"email":"admin@juice-sh.op","password":"wrong"}' | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('error','')[:100])" 2>/dev/null  # 요청 데이터(body)
 
 # 존재하지 않는 이메일
 echo "미존재 계정:"
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"nobody@nowhere.com","password":"wrong"}' | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('error','')[:100])" 2>/dev/null
+  -d '{"email":"nobody@nowhere.com","password":"wrong"}' | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('error','')[:100])" 2>/dev/null  # 요청 데이터(body)
 
 echo ""
 echo "두 메시지가 다르면 → 사용자 열거 가능 (취약)"
@@ -392,13 +392,13 @@ echo "=== 회원가입 열거 ==="
 echo "존재하는 이메일:"
 curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@juice-sh.op","password":"Test1234!","passwordRepeat":"Test1234!","securityQuestion":{"id":1},"securityAnswer":"a"}' | python3 -c "import sys; data=sys.stdin.read(); print(data[:150])" 2>/dev/null
+  -d '{"email":"admin@juice-sh.op","password":"Test1234!","passwordRepeat":"Test1234!","securityQuestion":{"id":1},"securityAnswer":"a"}' | python3 -c "import sys; data=sys.stdin.read(); print(data[:150])" 2>/dev/null  # 요청 데이터(body)
 
 echo ""
 echo "새 이메일:"
 curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"brand_new_user@test.com","password":"Test1234!","passwordRepeat":"Test1234!","securityQuestion":{"id":1},"securityAnswer":"a"}' | python3 -c "import sys; data=sys.stdin.read(); print(data[:150])" 2>/dev/null
+  -d '{"email":"brand_new_user@test.com","password":"Test1234!","passwordRepeat":"Test1234!","securityQuestion":{"id":1},"securityAnswer":"a"}' | python3 -c "import sys; data=sys.stdin.read(); print(data[:150])" 2>/dev/null  # 요청 데이터(body)
 ```
 
 ### 5.4 비밀번호 찾기에서의 열거
@@ -410,13 +410,13 @@ echo "=== 비밀번호 재설정 열거 ==="
 echo "존재하는 이메일:"
 curl -s -X POST http://10.20.30.80:3000/rest/user/reset-password \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@juice-sh.op","answer":"wrong","new":"Test1234!","repeat":"Test1234!"}' | head -3
+  -d '{"email":"admin@juice-sh.op","answer":"wrong","new":"Test1234!","repeat":"Test1234!"}' | head -3  # 요청 데이터(body)
 
 echo ""
 echo "미존재 이메일:"
 curl -s -X POST http://10.20.30.80:3000/rest/user/reset-password \
   -H "Content-Type: application/json" \
-  -d '{"email":"nobody@test.com","answer":"wrong","new":"Test1234!","repeat":"Test1234!"}' | head -3
+  -d '{"email":"nobody@test.com","answer":"wrong","new":"Test1234!","repeat":"Test1234!"}' | head -3  # 요청 데이터(body)
 ```
 
 ---
@@ -425,7 +425,7 @@ curl -s -X POST http://10.20.30.80:3000/rest/user/reset-password \
 
 ```bash
 # 자동 점검 스크립트
-python3 << 'PYEOF'
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import requests, json
 
 BASE = "http://10.20.30.80:3000"
@@ -437,14 +437,14 @@ print("=" * 60)
 
 # 1. 서버 헤더
 r = requests.head(BASE, timeout=5)
-for header in ["Server", "X-Powered-By", "X-AspNet-Version", "X-Generator"]:
+for header in ["Server", "X-Powered-By", "X-AspNet-Version", "X-Generator"]:  # 반복문 시작
     val = r.headers.get(header)
     if val:
         findings.append(f"헤더 정보 노출: {header}: {val}")
         print(f"[!] {header}: {val}")
 
 # 2. 보안 헤더 미설정
-for header in ["X-Frame-Options", "X-Content-Type-Options",
+for header in ["X-Frame-Options", "X-Content-Type-Options",  # 반복문 시작
                "Content-Security-Policy", "Strict-Transport-Security"]:
     if header not in r.headers:
         findings.append(f"보안 헤더 미설정: {header}")
@@ -464,7 +464,7 @@ except:
 
 # 4. 디렉터리/파일 노출
 sensitive_paths = ["ftp", "metrics", ".env", "package.json", "encryptionkeys"]
-for path in sensitive_paths:
+for path in sensitive_paths:                           # 반복문 시작
     r = requests.get(f"{BASE}/{path}", timeout=5)
     if r.status_code == 200:
         findings.append(f"민감 경로 접근 가능: /{path}")
@@ -473,7 +473,7 @@ for path in sensitive_paths:
 # 5. 요약
 print(f"\n{'=' * 60}")
 print(f"총 발견 사항: {len(findings)}건")
-for i, f in enumerate(findings, 1):
+for i, f in enumerate(findings, 1):                    # 반복문 시작
     print(f"  {i}. {f}")
 PYEOF
 ```

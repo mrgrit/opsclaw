@@ -475,6 +475,8 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "sudo cat /etc/shado
 
 ### 실습 4: Cron Job 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 시스템 crontab 확인
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
@@ -541,15 +543,17 @@ export PATH=$(echo $PATH | sed 's|/tmp:||')
 
 ### 실습 6: 종합 권한 상승 체크리스트 실행
 
+파일 시스템을 검색하여 보안 관련 항목을 찾습니다.
+
 ```bash
 # web 서버에서 한 번에 체크하는 스크립트
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'CHECK'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'CHECK'  # 비밀번호 자동입력 SSH
 echo "===== 1. 현재 사용자 ====="
 whoami && id
 
 echo ""
 echo "===== 2. 커널 버전 ====="
-uname -r
+uname -r                                               # 커널/시스템 정보
 
 echo ""
 echo "===== 3. sudo 권한 ====="
@@ -557,11 +561,11 @@ echo 1 | sudo -S -l 2>/dev/null
 
 echo ""
 echo "===== 4. SUID 바이너리 ====="
-find / -perm -4000 -type f 2>/dev/null
+find / -perm -4000 -type f 2>/dev/null                 # 퍼미션 기준 파일 검색
 
 echo ""
 echo "===== 5. 쓰기 가능한 /etc 파일 ====="
-find /etc -writable -type f 2>/dev/null | head -10
+find /etc -writable -type f 2>/dev/null | head -10     # 유형 기준 파일 검색
 
 echo ""
 echo "===== 6. Cron Jobs ====="
@@ -570,11 +574,11 @@ ls -la /etc/cron.d/ 2>/dev/null
 
 echo ""
 echo "===== 7. 실행 중인 프로세스 (root) ====="
-ps aux | grep "^root" | head -10
+ps aux | grep "^root" | head -10                       # 프로세스 목록 조회
 
 echo ""
 echo "===== 8. 네트워크 서비스 ====="
-ss -tlnp 2>/dev/null | head -10
+ss -tlnp 2>/dev/null | head -10                        # 소켓 상태: TCP
 CHECK
 ```
 

@@ -119,7 +119,7 @@
 > **실전 활용**: 위협 인텔리전스 기반 선제 방어(Proactive Defense)는 APT 대응의 핵심 전략이다
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100  # 비밀번호 자동입력 SSH
 
 # API 토큰 설정 (대시보드에서 확인한 값)
 OPENCTI_TOKEN="your-api-token-here"
@@ -136,7 +136,7 @@ OPENCTI_TOKEN="your-api-token-here"
 curl -s -X POST http://10.20.30.100:9400/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENCTI_TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "query": "mutation { indicatorAdd(input: { name: \"Malicious C2 Server\", pattern: \"[ipv4-addr:value = '"'"'203.0.113.50'"'"']\", pattern_type: \"stix\", x_opencti_main_observable_type: \"IPv4-Addr\", valid_from: \"2026-03-27T00:00:00.000Z\" }) { id name } }"
   }' | python3 -m json.tool
 ```
@@ -163,7 +163,7 @@ iocs = [
 now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z")
 objects = []
 
-for name, obs_type, value in iocs:
+for name, obs_type, value in iocs:                     # 반복문 시작
     indicator_id = f"indicator--{uuid.uuid4()}"
     if "hashes" in obs_type:
         pattern = f"[file:hashes.'SHA-256' = '{value}']"
@@ -196,7 +196,7 @@ with open("/tmp/lazarus_iocs.json", "w") as f:
 print(f"Generated {len(objects)} IOCs")
 PYEOF
 
-python3 /tmp/create_stix_bundle.py
+python3 /tmp/create_stix_bundle.py                     # Python 스크립트 실행
 cat /tmp/lazarus_iocs.json | python3 -m json.tool | head -30
 ```
 
@@ -332,12 +332,12 @@ Lab-Lazarus Group
 curl -s -X POST http://10.20.30.100:9400/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENCTI_TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "query": "{ indicators(search: \"Lazarus\", first: 50) { edges { node { name pattern } } } }"
   }' | python3 -c "
 import sys, json, re
 data = json.load(sys.stdin)
-for edge in data.get('data',{}).get('indicators',{}).get('edges',[]):
+for edge in data.get('data',{}).get('indicators',{}).get('edges',[]):  # 반복문 시작
     node = edge['node']
     m = re.search(r\"value\s*=\s*'([^']+)'\", node.get('pattern',''))
     if m:
@@ -348,13 +348,13 @@ for edge in data.get('data',{}).get('indicators',{}).get('edges',[]):
 **Step 2: Suricata 로그에서 IOC 검색**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1  # 비밀번호 자동입력 SSH
 
 # Suricata 로그에서 C2 IP 검색
 echo 1 | sudo -S grep -E "203\.0\.113\.(10|11|12)" /var/log/suricata/eve.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         print(f\"{e.get('timestamp','')} {e.get('src_ip','')} -> {e.get('dest_ip','')} {e.get('event_type','')}\")
@@ -365,12 +365,12 @@ for line in sys.stdin:
 **Step 3: Wazuh 로그에서 IOC 검색**
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100  # 비밀번호 자동입력 SSH
 
 echo 1 | sudo -S grep -E "203\.0\.113\.(10|11|12)" /var/ossec/logs/alerts/alerts.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         r = e.get('rule',{})
@@ -410,8 +410,10 @@ cat /tmp/hunting_report.txt
 
 ### 6.1 Suricata 룰로 변환
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1  # 비밀번호 자동입력 SSH
 
 # OpenCTI IOC를 Suricata 룰로 변환
 echo 1 | sudo -S tee -a /etc/suricata/rules/local.rules << 'EOF'
@@ -483,7 +485,7 @@ data = resp.json()
 ips = []
 domains = []
 
-for edge in data.get('data',{}).get('indicators',{}).get('edges',[]):
+for edge in data.get('data',{}).get('indicators',{}).get('edges',[]):  # 반복문 시작
     pattern = edge['node'].get('pattern','')
     m_ip = re.search(r"ipv4-addr:value\s*=\s*'([^']+)'", pattern)
     m_domain = re.search(r"domain-name:value\s*=\s*'([^']+)'", pattern)
@@ -497,9 +499,9 @@ print(f"수집된 IOC: IP {len(ips)}개, Domain {len(domains)}개")
 # 2. Suricata 룰 생성
 sid_base = 9300000
 rules = []
-for i, ip in enumerate(ips):
+for i, ip in enumerate(ips):                           # 반복문 시작
     rules.append(f'alert ip $HOME_NET any -> {ip} any (msg:"CTI-AUTO - Malicious IP {ip}"; sid:{sid_base+i}; rev:1;)')
-for i, dom in enumerate(domains):
+for i, dom in enumerate(domains):                      # 반복문 시작
     rules.append(f'alert dns $HOME_NET any -> any any (msg:"CTI-AUTO - Malicious Domain {dom}"; dns.query; content:"{dom}"; nocase; sid:{sid_base+len(ips)+i}; rev:1;)')
 
 with open("/tmp/cti_auto_rules.rules", "w") as f:
@@ -509,7 +511,7 @@ print(f"생성된 Suricata 룰: {len(rules)}개")
 print("파일: /tmp/cti_auto_rules.rules")
 PYEOF
 
-python3 /tmp/sync_iocs.py
+python3 /tmp/sync_iocs.py                              # Python 스크립트 실행
 ```
 
 ---

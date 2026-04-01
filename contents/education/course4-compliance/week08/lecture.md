@@ -139,62 +139,68 @@ sshpass -p1 ssh siem@10.20.30.100
 
 #### 1. 계정 관리 (A.8.2)
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # 각 서버에서 실행
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   # 서버별 사용자 매핑
   case $ip in 10.20.30.201) srv="opsclaw@$ip";; 10.20.30.1) srv="secu@$ip";; 10.20.30.80) srv="web@$ip";; 10.20.30.100) srv="siem@$ip";; esac
   echo "= $ip =========="
 
   echo "[1] 일반 사용자 계정 목록:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "awk -F: '\$3>=1000 && \$3<65534{print \$1,\$6,\$7}' /etc/passwd"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "awk -F: '\$3>=1000 && \$3<65534{print \$1,\$6,\$7}' /etc/passwd"  # 비밀번호 자동입력 SSH
 
   echo "[2] sudo 권한 사용자:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "getent group sudo 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "getent group sudo 2>/dev/null"  # 비밀번호 자동입력 SSH
 
   echo "[3] root 직접 로그인 설정:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '기본값'"  # 비밀번호 자동입력 SSH
 done
 ```
 
 #### 2. 인증 설정 (A.8.5)
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   # 서버별 사용자 매핑
   case $ip in 10.20.30.201) srv="opsclaw@$ip";; 10.20.30.1) srv="secu@$ip";; 10.20.30.80) srv="web@$ip";; 10.20.30.100) srv="siem@$ip";; esac
   echo "= $ip =========="
 
   echo "[4] 비밀번호 정책:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN' /etc/login.defs | grep -v '^#'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_MIN_LEN' /etc/login.defs | grep -v '^#'"  # 비밀번호 자동입력 SSH
 
   echo "[5] SSH 최대 인증 시도:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "grep 'MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#' || echo '기본값(6)'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "grep 'MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#' || echo '기본값(6)'"  # 비밀번호 자동입력 SSH
 
   echo "[6] 비밀번호 복잡도:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$' || echo '미설정'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "cat /etc/security/pwquality.conf 2>/dev/null | grep -v '^#' | grep -v '^$' || echo '미설정'"  # 비밀번호 자동입력 SSH
 done
 ```
 
 #### 3. 로깅 (A.8.15)
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   # 서버별 사용자 매핑
   case $ip in 10.20.30.201) srv="opsclaw@$ip";; 10.20.30.1) srv="secu@$ip";; 10.20.30.80) srv="web@$ip";; 10.20.30.100) srv="siem@$ip";; esac
   echo "= $ip =========="
 
   echo "[7] syslog 서비스:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "systemctl is-active rsyslog 2>/dev/null || systemctl is-active syslog-ng 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "systemctl is-active rsyslog 2>/dev/null || systemctl is-active syslog-ng 2>/dev/null"  # 비밀번호 자동입력 SSH
 
   echo "[8] 로그 파일 존재:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "ls -lh /var/log/syslog /var/log/auth.log 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "ls -lh /var/log/syslog /var/log/auth.log 2>/dev/null"  # 비밀번호 자동입력 SSH
 
   echo "[9] auditd 상태:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "systemctl is-active auditd 2>/dev/null || echo '미설치'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "systemctl is-active auditd 2>/dev/null || echo '미설치'"  # 비밀번호 자동입력 SSH
 
   echo "[10] Wazuh Agent:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"  # 비밀번호 자동입력 SSH
 done
 ```
 
@@ -203,45 +209,47 @@ done
 ```bash
 # secu 서버 방화벽
 echo "[11] 방화벽 기본 정책:"
-sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep policy"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep policy"  # 비밀번호 자동입력 SSH
 
 echo "[12] 열린 포트:"
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   echo "--- $ip ---"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "ss -tlnp 2>/dev/null | grep LISTEN"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "ss -tlnp 2>/dev/null | grep LISTEN"  # 비밀번호 자동입력 SSH
 done
 
 # IPS 상태
 echo "[13] Suricata IPS:"
-sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "systemctl is-active suricata 2>/dev/null"  # 비밀번호 자동입력 SSH
 ```
 
 #### 5. 암호화 (A.8.24)
 
 ```bash
 echo "[14] TLS 버전 (Wazuh Dashboard):"
-sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep Protocol"  # 비밀번호 자동입력 SSH
 
 echo "[15] SSH 프로토콜 버전:"
-sshpass -p1 ssh opsclaw@10.20.30.201 "ssh -V 2>&1"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ssh -V 2>&1"     # 비밀번호 자동입력 SSH
 ```
 
 #### 6. 시스템 설정 (A.8.9)
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   # 서버별 사용자 매핑
   case $ip in 10.20.30.201) srv="opsclaw@$ip";; 10.20.30.1) srv="secu@$ip";; 10.20.30.80) srv="web@$ip";; 10.20.30.100) srv="siem@$ip";; esac
   echo "= $ip =========="
 
   echo "[16] 커널 보안 파라미터:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "sysctl net.ipv4.ip_forward net.ipv4.conf.all.accept_redirects 2>/dev/null"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "sysctl net.ipv4.ip_forward net.ipv4.conf.all.accept_redirects 2>/dev/null"  # 비밀번호 자동입력 SSH
 
   echo "[17] NTP 동기화:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "timedatectl 2>/dev/null | grep -E 'synchronized|NTP'"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "timedatectl 2>/dev/null | grep -E 'synchronized|NTP'"  # 비밀번호 자동입력 SSH
 
   echo "[18] 패치 현황:"
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "apt list --upgradable 2>/dev/null | wc -l"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "apt list --upgradable 2>/dev/null | wc -l"  # 비밀번호 자동입력 SSH
 done
 ```
 
@@ -325,9 +333,11 @@ done
 
 ## 시험 전 체크사항
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # 서버 접속 확인
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 $srv "hostname" 2>/dev/null \
     && echo "$ip: OK" || echo "$ip: FAIL"
 done
@@ -374,7 +384,7 @@ done
 ```bash
 # ISO 27001 A.8.5 (안전한 인증) 점검 증적 수집
 echo "=== 패스워드 정책 확인 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "  # 비밀번호 자동입력 SSH
   echo '--- login.defs ---' && grep -E 'PASS_MAX|PASS_MIN|PASS_WARN' /etc/login.defs
   echo '--- pam 설정 ---' && grep pam_pwquality /etc/pam.d/common-password 2>/dev/null || echo 'pam_pwquality 미설정'
   echo '--- sudo 설정 ---' && sudo -l 2>/dev/null | head -5

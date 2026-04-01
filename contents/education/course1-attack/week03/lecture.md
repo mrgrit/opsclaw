@@ -247,7 +247,7 @@ curl -s -X POST http://10.20.30.80:3000/api/Users/ \
 
 ```bash
 # 각 메서드별 상태코드 확인 (한눈에 비교)
-for method in GET POST PUT DELETE OPTIONS HEAD; do
+for method in GET POST PUT DELETE OPTIONS HEAD; do     # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" -X $method http://10.20.30.80:3000/api/Products/ 2>/dev/null)
   echo "  $method → HTTP $code"
 done
@@ -481,7 +481,7 @@ notAfter=Mar 21 05:23:34 2036 GMT
 # Step 1: 로그인하여 토큰 확인
 curl -v -c /tmp/cookies.txt -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@juice-sh.op","password":"admin123"}' 2>&1 | grep -i "set-cookie\|token"
+  -d '{"email":"admin@juice-sh.op","password":"admin123"}' 2>&1 | grep -i "set-cookie\|token"  # 요청 데이터(body)
 
 # 저장된 쿠키 확인
 cat /tmp/cookies.txt 2>/dev/null
@@ -570,7 +570,7 @@ RSASHA256(base64UrlEncode(header) + "." + base64UrlEncode(payload), privateKey)
 # Step 1: 계정 생성
 curl -s -X POST http://10.20.30.80:3000/api/Users/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Student123!","passwordRepeat":"Student123!","securityQuestion":{"id":1,"question":"Your eldest siblings middle name?","createdAt":"2025-01-01","updatedAt":"2025-01-01"},"securityAnswer":"test"}'
+  -d '{"email":"student@test.com","password":"Student123!","passwordRepeat":"Student123!","securityQuestion":{"id":1,"question":"Your eldest siblings middle name?","createdAt":"2025-01-01","updatedAt":"2025-01-01"},"securityAnswer":"test"}'  # 요청 데이터(body)
 
 # Step 2: 로그인하여 JWT 토큰 획득
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
@@ -630,7 +630,7 @@ curl -s http://10.20.30.80:3000/api/Feedbacks \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'{len(d.get(\"data\",[]))}개 피드백')"
 
 # 인증 없이 같은 API 호출
-curl -s -o /dev/null -w "%{http_code}" http://10.20.30.80:3000/api/Feedbacks
+curl -s -o /dev/null -w "%{http_code}" http://10.20.30.80:3000/api/Feedbacks  # silent 모드
 echo " ← Feedbacks는 인증 없이도 200 반환 (JuiceShop 특성)"
 ```
 
@@ -639,10 +639,10 @@ echo " ← Feedbacks는 인증 없이도 200 반환 (JuiceShop 특성)"
 
 ```bash
 # 인증이 반드시 필요한 API 예시: 사용자 목록
-curl -s -o /dev/null -w "%{http_code}" http://10.20.30.80:3000/api/Users/
+curl -s -o /dev/null -w "%{http_code}" http://10.20.30.80:3000/api/Users/  # silent 모드
 echo " ← Users API (인증 없음)"
 
-curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://10.20.30.80:3000/api/Users/
+curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $TOKEN" http://10.20.30.80:3000/api/Users/  # silent 모드
 echo " ← Users API (customer 토큰)"
 ```
 
@@ -677,15 +677,15 @@ REST(Representational State Transfer)는 웹 API 설계 규칙이다. URL로 **�
 
 ```bash
 # 제품 전체 목록 (인증 불필요)
-curl -s http://10.20.30.80:3000/api/Products | python3 -c "
+curl -s http://10.20.30.80:3000/api/Products | python3 -c "  # silent 모드
 import sys,json; d=json.load(sys.stdin)
 print(f'상품 수: {len(d.get(\"data\",[]))}')
-for p in d['data'][:3]:
+for p in d['data'][:3]:                                # 반복문 시작
     print(f'  [{p[\"id\"]}] {p[\"name\"]} - \${p[\"price\"]}')
 "
 
 # 특정 제품 조회 (ID로 접근)
-curl -s http://10.20.30.80:3000/api/Products/1 | python3 -m json.tool | head -15
+curl -s http://10.20.30.80:3000/api/Products/1 | python3 -m json.tool | head -15  # silent 모드
 
 # 사용자 목록 (인증 필요)
 curl -s http://10.20.30.80:3000/api/Users/ \
@@ -693,13 +693,13 @@ curl -s http://10.20.30.80:3000/api/Users/ \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'사용자 수: {len(d.get(\"data\",[]))}')"
 
 # 리뷰 목록 (인증 불필요!)
-curl -s http://10.20.30.80:3000/api/Feedbacks | python3 -m json.tool | head -20
+curl -s http://10.20.30.80:3000/api/Feedbacks | python3 -m json.tool | head -20  # silent 모드
 
 # 챌린지 목록 (JuiceShop 특수 API)
-curl -s http://10.20.30.80:3000/api/Challenges | python3 -m json.tool | head -30
+curl -s http://10.20.30.80:3000/api/Challenges | python3 -m json.tool | head -30  # silent 모드
 
 # 검색 기능
-curl -s "http://10.20.30.80:3000/rest/products/search?q=apple" | python3 -m json.tool
+curl -s "http://10.20.30.80:3000/rest/products/search?q=apple" | python3 -m json.tool  # silent 모드
 ```
 
 ### 8.3 API 응답 구조 분석
@@ -775,7 +775,7 @@ curl -s http://10.20.30.80:3000/main.js 2>/dev/null | grep -oE '/rest/[A-Za-z/]+
 # 로그인 후 토큰 저장
 RESPONSE=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Student123!"}')
+  -d '{"email":"student@test.com","password":"Student123!"}')  # 요청 데이터(body)
 
 echo "$RESPONSE" | python3 -m json.tool
 
@@ -811,6 +811,8 @@ curl -sI http://10.20.30.80:3000/ | grep -iE "x-frame|x-content|x-powered|conten
 
 ## 10. OpsClaw로 웹 분석 자동화
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # OpsClaw로 웹 서버 분석 프로젝트 생성
 curl -s -X POST http://localhost:8000/projects \
@@ -822,14 +824,14 @@ curl -s -X POST http://localhost:8000/projects \
 # Stage 전환 후 헤더 수집 자동화
 # (프로젝트 ID를 실제 값으로 교체)
 curl -s -X POST http://localhost:8000/projects/{프로젝트ID}/plan \
-  -H "X-API-Key: opsclaw-api-key-2026"
+  -H "X-API-Key: opsclaw-api-key-2026"                 # API 인증 키
 curl -s -X POST http://localhost:8000/projects/{프로젝트ID}/execute \
-  -H "X-API-Key: opsclaw-api-key-2026"
+  -H "X-API-Key: opsclaw-api-key-2026"                 # API 인증 키
 
 curl -s -X POST http://localhost:8000/projects/{프로젝트ID}/execute-plan \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {"order":1, "instruction_prompt":"curl -sI http://10.20.30.80:3000/", "risk_level":"low"},
       {"order":2, "instruction_prompt":"curl -s http://10.20.30.80:3000/api/Products | head -100", "risk_level":"low"}

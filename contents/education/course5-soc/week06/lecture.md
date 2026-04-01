@@ -155,21 +155,23 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'COMMAND=' /var/log/auth.log 2>/dev/n
 
 ### 2.2 시나리오: 웹 공격 체인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 1단계: 정찰 - 디렉토리 스캐닝
 sshpass -p1 ssh web@10.20.30.80 "grep ' 404 ' /var/log/nginx/access.log 2>/dev/null | \
-  awk '{print \$1}' | sort | uniq -c | sort -rn | head -5"
+  awk '{print \$1}' | sort | uniq -c | sort -rn | head -5"  # 텍스트 필드 처리
 
 # 2단계: 초기 접근 - SQL Injection 시도
-sshpass -p1 ssh web@10.20.30.80 "grep -iE 'union|select.*from|or.1=1' /var/log/nginx/access.log 2>/dev/null | tail -5"
+sshpass -p1 ssh web@10.20.30.80 "grep -iE 'union|select.*from|or.1=1' /var/log/nginx/access.log 2>/dev/null | tail -5"  # 비밀번호 자동입력 SSH
 
 # 3단계: Suricata에서 웹 공격 탐지
-sshpass -p1 ssh secu@10.20.30.1 "grep -i 'SQL\|XSS\|injection\|web' /var/log/suricata/fast.log 2>/dev/null | tail -10"
+sshpass -p1 ssh secu@10.20.30.1 "grep -i 'SQL\|XSS\|injection\|web' /var/log/suricata/fast.log 2>/dev/null | tail -10"  # 비밀번호 자동입력 SSH
 
 # 4단계: Wazuh에서 웹 공격 경보
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -190,23 +192,23 @@ Wazuh는 일부 규칙에 MITRE ATT&CK ID를 포함하고 있다.
 
 ```bash
 # ATT&CK 매핑이 있는 경보 확인
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 techniques = Counter()
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
         mitre = r.get('mitre',{})
-        for tech in mitre.get('technique',[]):
+        for tech in mitre.get('technique',[]):         # 반복문 시작
             techniques[tech] += 1
-        for tid in mitre.get('id',[]):
+        for tid in mitre.get('id',[]):                 # 반복문 시작
             techniques[tid] += 1
     except: pass
 if techniques:
     print('=== ATT&CK 기법별 통계 ===')
-    for tech, cnt in techniques.most_common(15):
+    for tech, cnt in techniques.most_common(15):       # 반복문 시작
         print(f'  {cnt:4d}건: {tech}')
 else:
     print('ATT&CK 매핑된 경보가 없거나 mitre 필드 미포함')
@@ -251,31 +253,31 @@ else:
 
 echo "=== 1. 정찰 단계 ==="
 echo "포트 스캔 흔적:"
-sshpass -p1 ssh secu@10.20.30.1 "grep -i 'scan' /var/log/suricata/fast.log 2>/dev/null | wc -l"
+sshpass -p1 ssh secu@10.20.30.1 "grep -i 'scan' /var/log/suricata/fast.log 2>/dev/null | wc -l"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "=== 2. 초기 접근 시도 ==="
 echo "SSH 무차별 대입:"
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep -c 'Failed password' /var/log/auth.log 2>/dev/null || echo '0'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep -c 'Failed password' /var/log/auth.log 2>/dev/null || echo '0'"  # 비밀번호 자동입력 SSH
 echo "웹 공격 시도:"
-sshpass -p1 ssh web@10.20.30.80 "grep -cE 'union|select|script' /var/log/nginx/access.log 2>/dev/null || echo '0'"
+sshpass -p1 ssh web@10.20.30.80 "grep -cE 'union|select|script' /var/log/nginx/access.log 2>/dev/null || echo '0'"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "=== 3. 초기 접근 성공 ==="
 echo "외부IP SSH 로그인 성공:"
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Accepted' /var/log/auth.log 2>/dev/null | grep -v '192.168.208' | head -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Accepted' /var/log/auth.log 2>/dev/null | grep -v '192.168.208' | head -5"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "=== 4. 권한 상승 ==="
 echo "sudo 사용:"
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | tail -5"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "=== 5. 지속성 확보 (의심) ==="
 echo "cron 변경:"
-sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /var/spool/cron/crontabs/ 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /var/spool/cron/crontabs/ 2>/dev/null"  # 비밀번호 자동입력 SSH
 echo "SSH authorized_keys:"
-sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la ~/.ssh/authorized_keys 2>/dev/null || echo '없음'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la ~/.ssh/authorized_keys 2>/dev/null || echo '없음'"  # 비밀번호 자동입력 SSH
 ```
 
 ---
@@ -407,14 +409,16 @@ ATT&CK Navigator에서 해당 기법에 색상을 표시하여 "우리 환경의
 
 ### Wazuh 로그 분석 실습
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # siem 서버에서 최근 경보 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "  # 비밀번호 자동입력 SSH
   echo '=== 최근 경보 (level >= 7) ==='
   sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | \
-    python3 -c '
+    python3 -c '                                       # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         if a.get("rule",{}).get("level",0) >= 7:

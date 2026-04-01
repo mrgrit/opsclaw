@@ -98,9 +98,9 @@
 
 ```bash
 # 모든 서버 접속 확인
-for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do  # 반복문 시작
   echo "=== $srv ==="
-  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "hostname" 2>/dev/null || echo "접속 실패"
+  sshpass -p1 ssh -o StrictHostKeyChecking=no $srv "hostname" 2>/dev/null || echo "접속 실패"  # 비밀번호 자동입력 SSH
 done
 ```
 
@@ -145,8 +145,10 @@ done
 
 ### 3.2 root 직접 로그인 차단 확인
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
-for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do  # 반복문 시작
   echo "=== $srv ==="
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep '^PermitRootLogin' /etc/ssh/sshd_config || echo '기본값 사용 중'"
 done
@@ -177,8 +179,10 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'PASS_MAX_DAYS|PASS_MIN_DAYS|PASS_
 
 ### 4.2 SSH 인증 방식 점검
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
-for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do  # 반복문 시작
   echo "=== $srv ==="
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep -E 'PasswordAuthentication|PubkeyAuthentication|MaxAuthTries' /etc/ssh/sshd_config | grep -v '^#'"
 done
@@ -191,10 +195,12 @@ done
 
 ### 4.3 로그인 실패 잠금 설정
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # PAM 기반 계정 잠금 설정 확인
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep pam_faillock /etc/pam.d/common-auth 2>/dev/null || echo 'faillock 미설정'"
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep pam_tally /etc/pam.d/common-auth 2>/dev/null || echo 'tally 미설정'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep pam_faillock /etc/pam.d/common-auth 2>/dev/null || echo 'faillock 미설정'"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep pam_tally /etc/pam.d/common-auth 2>/dev/null || echo 'tally 미설정'"  # 비밀번호 자동입력 SSH
 ```
 
 ---
@@ -306,9 +312,11 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep -E 'Ciphers|MACs|KexAlgorithms' /etc/
 
 ### 8.3 디스크 암호화 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh opsclaw@10.20.30.201 "lsblk -o NAME,FSTYPE,MOUNTPOINT | head -10"
-sshpass -p1 ssh opsclaw@10.20.30.201 "dmsetup status 2>/dev/null | head -5 || echo 'dm-crypt 미사용'"
+sshpass -p1 ssh opsclaw@10.20.30.201 "lsblk -o NAME,FSTYPE,MOUNTPOINT | head -10"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh opsclaw@10.20.30.201 "dmsetup status 2>/dev/null | head -5 || echo 'dm-crypt 미사용'"  # 비밀번호 자동입력 SSH
 ```
 
 ---
@@ -388,7 +396,7 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "dmsetup status 2>/dev/null | head -5 || ec
 ```bash
 # ISO 27001 A.8.5 (안전한 인증) 점검 증적 수집
 echo "=== 패스워드 정책 확인 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "  # 비밀번호 자동입력 SSH
   echo '--- login.defs ---' && grep -E 'PASS_MAX|PASS_MIN|PASS_WARN' /etc/login.defs
   echo '--- pam 설정 ---' && grep pam_pwquality /etc/pam.d/common-password 2>/dev/null || echo 'pam_pwquality 미설정'
   echo '--- sudo 설정 ---' && sudo -l 2>/dev/null | head -5

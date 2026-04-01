@@ -114,35 +114,37 @@
 > **실전 활용**: 내부 위협은 탐지가 어렵고 피해가 크므로, UEBA(사용자 행위 분석)가 SOC의 주요 과제이다
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== sudo 사용 이력 분석 ==="
 
 # 전체 sudo 명령 이력
 echo "--- 최근 sudo 명령 ---"
-grep "sudo:" /var/log/auth.log 2>/dev/null | tail -15
+grep "sudo:" /var/log/auth.log 2>/dev/null | tail -15  # 패턴 검색
 
 echo ""
 echo "--- sudo 사용 통계 ---"
 grep "sudo:" /var/log/auth.log 2>/dev/null | \
   grep "COMMAND=" | \
   sed 's/.*COMMAND=//' | \
-  sort | uniq -c | sort -rn | head -10
+  sort | uniq -c | sort -rn | head -10                 # 정렬
 
 echo ""
 echo "--- sudo 실패 (비인가 시도) ---"
-grep -E "sudo:.*NOT in sudoers|authentication failure" /var/log/auth.log 2>/dev/null | tail -5
+grep -E "sudo:.*NOT in sudoers|authentication failure" /var/log/auth.log 2>/dev/null | tail -5  # 패턴 검색
 
 echo ""
 echo "--- 사용자별 sudo 빈도 ---"
 grep "sudo:" /var/log/auth.log 2>/dev/null | \
-  grep -oP "USER=\w+" | sort | uniq -c | sort -rn
+  grep -oP "USER=\w+" | sort | uniq -c | sort -rn      # 디렉터리 재귀 검색
 ENDSSH
 ```
 
 ### 2.2 auditd 규칙으로 민감 행위 감시
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== auditd 규칙 확인 ==="
 
 # 현재 audit 규칙 확인
@@ -174,14 +176,16 @@ ENDSSH
 
 ### 2.3 Wazuh에서 내부 위협 경보
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== Wazuh 내부 위협 관련 경보 ==="
 
 cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
 import sys, json
 sudo_alerts = []
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         desc = a.get('rule',{}).get('description','').lower()
@@ -191,7 +195,7 @@ for line in sys.stdin:
     except: pass
 
 print(f'sudo/권한 관련 경보: {len(sudo_alerts)}건')
-for a in sudo_alerts[-10:]:
+for a in sudo_alerts[-10:]:                            # 반복문 시작
     rule = a.get('rule',{})
     ts = a.get('timestamp','')
     agent = a.get('agent',{}).get('name','')
@@ -206,8 +210,10 @@ ENDSSH
 
 ### 3.1 시나리오 1 - sudo를 이용한 파일 열람
 
+로그나 설정에서 특정 패턴을 검색합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 시나리오 1: sudo 파일 열람 시뮬레이션 ==="
 
 echo "--- Step 1: 다른 사용자 디렉토리 접근 시도 ---"
@@ -220,7 +226,7 @@ echo "1" | sudo -S ls /root/ 2>/dev/null | head -5
 
 echo ""
 echo "--- Step 3: 접근 로그 확인 ---"
-grep "sudo.*COMMAND.*ls.*root" /var/log/auth.log 2>/dev/null | tail -3
+grep "sudo.*COMMAND.*ls.*root" /var/log/auth.log 2>/dev/null | tail -3  # 패턴 검색
 
 echo ""
 echo "=== 탐지 포인트 ==="
@@ -232,9 +238,11 @@ ENDSSH
 
 ### 3.2 시나리오 2 - 데이터 유출 시도 패턴
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 exfil_indicators = [
     {
         "pattern": "대량 파일 압축",
@@ -260,9 +268,9 @@ exfil_indicators = [
 
 print(f"{'패턴':<20} {'탐지 방법'}")
 print("=" * 70)
-for ind in exfil_indicators:
+for ind in exfil_indicators:                           # 반복문 시작
     print(f"\n{ind['pattern']}")
-    for cmd in ind['commands']:
+    for cmd in ind['commands']:                        # 반복문 시작
         print(f"  명령: {cmd}")
     print(f"  탐지: {ind['detection']}")
 PYEOF
@@ -271,9 +279,11 @@ ENDSSH
 
 ### 3.3 UEBA 스타일 행위 이상 탐지
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 user_activities = [
     {"time": "09:00", "action": "login", "detail": "SSH 로그인"},
     {"time": "09:05", "action": "command", "detail": "ls, cd (일반 작업)"},
@@ -288,7 +298,7 @@ user_activities = [
 
 print("시간   행위        상세                                           판정")
 print("=" * 85)
-for act in user_activities:
+for act in user_activities:                            # 반복문 시작
     anomaly = False
     reason = ""
     if "shadow" in act["detail"]: anomaly, reason = True, "민감 파일 접근"
@@ -309,8 +319,10 @@ ENDSSH
 
 ### 4.1 계정 비활성화 절차
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 계정 비활성화 절차 (교육용) ==="
 
 cat << 'PROCEDURE'
@@ -337,7 +349,7 @@ PROCEDURE
 
 echo ""
 echo "--- 현재 활성 사용자 ---"
-who 2>/dev/null
+who 2>/dev/null                                        # 로그인 사용자 조회
 echo ""
 echo "--- sudo 그룹 ---"
 getent group sudo 2>/dev/null
@@ -346,8 +358,10 @@ ENDSSH
 
 ### 4.2 Wazuh Active Response 설정
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== Wazuh Active Response 설정 예시 ==="
 
 cat << 'CONFIG'
@@ -382,7 +396,7 @@ ENDSSH
 ```bash
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "model": "gemma3:12b",
     "messages": [
       {"role": "system", "content": "SOC 인시던트 대응 보고서 작성 전문가입니다. 한국어로 전문적인 보고서를 작성합니다."},
@@ -398,9 +412,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 6.1 예방적 통제
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 controls = {
     "기술적 통제": [
         ("최소 권한 원칙", "필요 최소한의 sudo 명령만 허용"),
@@ -422,10 +438,10 @@ controls = {
     ],
 }
 
-for category, items in controls.items():
+for category, items in controls.items():               # 반복문 시작
     print(f"\n{category}")
     print("=" * 50)
-    for name, desc in items:
+    for name, desc in items:                           # 반복문 시작
         print(f"  - {name}: {desc}")
 PYEOF
 ENDSSH

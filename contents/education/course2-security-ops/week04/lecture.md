@@ -466,7 +466,7 @@ echo 1 | sudo -S tail -1 /var/log/suricata/stats.log
 ```bash
 # 테스트용 룰 작성 (HTTP 접근 시 알림)
 echo 'alert http any any -> any any (msg:"TEST - HTTP detected"; sid:9000001; rev:1;)' | \
-  sudo tee -a /etc/suricata/rules/local.rules
+  sudo tee -a /etc/suricata/rules/local.rules          # 표준 출력 + 파일 저장
 ```
 
 ### 9.2 룰 리로드

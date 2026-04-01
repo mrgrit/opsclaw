@@ -462,6 +462,8 @@ cat /etc/security/pwquality.conf 2>/dev/null | grep -v "^#" | grep -v "^$"
 
 ### 5.3 secu 서버 패스워드 정책 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
   "cat /etc/login.defs | grep -E '^PASS_MAX_DAYS|^PASS_MIN_DAYS|^PASS_MIN_LEN|^PASS_WARN_AGE'"
@@ -489,9 +491,11 @@ lastlog | head -20
 
 ### 6.1 각 서버의 방화벽 상태 확인
 
+nftables 방화벽 규칙을 설정합니다.
+
 ```bash
 echo "=== opsclaw 방화벽 상태 ==="
-sudo nft list ruleset 2>/dev/null | head -5 || sudo iptables -L 2>/dev/null | head -5 || echo "방화벽 규칙 없음"
+sudo nft list ruleset 2>/dev/null | head -5 || sudo iptables -L 2>/dev/null | head -5 || echo "방화벽 규칙 없음"  # nftables 규칙 조회
 
 echo ""
 echo "=== secu 방화벽 상태 ==="
@@ -529,10 +533,12 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
 
 ### 7.1 SSH 설정 파일 점검
 
+로그나 설정에서 특정 패턴을 검색합니다.
+
 ```bash
 # opsclaw SSH 설정 확인
 echo "=== opsclaw SSH 설정 ==="
-grep -E "^(PermitRootLogin|PasswordAuthentication|Port|MaxAuthTries|Protocol|X11Forwarding|AllowUsers|AllowGroups)" /etc/ssh/sshd_config 2>/dev/null
+grep -E "^(PermitRootLogin|PasswordAuthentication|Port|MaxAuthTries|Protocol|X11Forwarding|AllowUsers|AllowGroups)" /etc/ssh/sshd_config 2>/dev/null  # 패턴 검색
 ```
 
 **점검 항목**:
@@ -547,8 +553,10 @@ grep -E "^(PermitRootLogin|PasswordAuthentication|Port|MaxAuthTries|Protocol|X11
 
 ### 7.2 다른 서버의 SSH 설정도 확인
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
-for host in 10.20.30.1 10.20.30.80 10.20.30.100; do
+for host in 10.20.30.1 10.20.30.80 10.20.30.100; do    # 반복문 시작
   echo "=== $host SSH 설정 ==="
   sshpass -p1 ssh -o StrictHostKeyChecking=no user@$host \
     "grep -E '^(PermitRootLogin|PasswordAuthentication|Port|MaxAuthTries)' /etc/ssh/sshd_config 2>/dev/null || echo '설정 확인 불가'"
@@ -561,7 +569,7 @@ done
 ```bash
 # 최근 SSH 접속 시도 기록
 sudo journalctl -u sshd --since "today" 2>/dev/null | tail -10 || \
-sudo tail -20 /var/log/auth.log 2>/dev/null | grep sshd | tail -10
+sudo tail -20 /var/log/auth.log 2>/dev/null | grep sshd | tail -10  # 파일 끝부분 출력
 ```
 
 ---
@@ -602,8 +610,10 @@ ls /etc/logrotate.d/
 
 ### 8.3 각 서버의 로그 보존 현황
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
-for host in "localhost" "10.20.30.1" "10.20.30.80" "10.20.30.100"; do
+for host in "localhost" "10.20.30.1" "10.20.30.80" "10.20.30.100"; do  # 반복문 시작
   echo "=== $host 로그 상태 ==="
   if [ "$host" = "localhost" ]; then
     ls -lh /var/log/syslog /var/log/auth.log 2>/dev/null | awk '{print $5, $9}'
@@ -670,10 +680,10 @@ echo ""
 
 echo "[1] 패스워드 정책 점검"
 echo "--- opsclaw ---"
-grep "^PASS_MAX_DAYS" /etc/login.defs
-grep "^PASS_MIN_LEN" /etc/login.defs
+grep "^PASS_MAX_DAYS" /etc/login.defs                  # 패턴 검색
+grep "^PASS_MIN_LEN" /etc/login.defs                   # 패턴 검색
 
-for host in 10.20.30.1 10.20.30.80 10.20.30.100; do
+for host in 10.20.30.1 10.20.30.80 10.20.30.100; do    # 반복문 시작
   echo "--- $host ---"
   sshpass -p1 ssh -o StrictHostKeyChecking=no user@$host \
     "grep '^PASS_MAX_DAYS\|^PASS_MIN_LEN' /etc/login.defs" 2>/dev/null
@@ -682,9 +692,9 @@ done
 echo ""
 echo "[2] SSH PermitRootLogin 점검"
 echo "--- opsclaw ---"
-grep "^PermitRootLogin" /etc/ssh/sshd_config 2>/dev/null || echo "미설정(기본값)"
+grep "^PermitRootLogin" /etc/ssh/sshd_config 2>/dev/null || echo "미설정(기본값)"  # 패턴 검색
 
-for host in 10.20.30.1 10.20.30.80 10.20.30.100; do
+for host in 10.20.30.1 10.20.30.80 10.20.30.100; do    # 반복문 시작
   echo "--- $host ---"
   sshpass -p1 ssh -o StrictHostKeyChecking=no user@$host \
     "grep '^PermitRootLogin' /etc/ssh/sshd_config 2>/dev/null || echo '미설정(기본값)'" 2>/dev/null
@@ -693,12 +703,12 @@ done
 echo ""
 echo "[3] 로그 로테이션 점검"
 echo "--- opsclaw ---"
-grep "^rotate" /etc/logrotate.conf 2>/dev/null || echo "미설정"
+grep "^rotate" /etc/logrotate.conf 2>/dev/null || echo "미설정"  # 패턴 검색
 
 echo ""
 echo "[4] 리스닝 포트 점검 (불필요한 서비스)"
 echo "--- opsclaw ---"
-ss -tlnp 2>/dev/null | grep LISTEN | awk '{print $4}' | sort
+ss -tlnp 2>/dev/null | grep LISTEN | awk '{print $4}' | sort  # 소켓 상태: TCP
 
 echo ""
 echo "============================================"

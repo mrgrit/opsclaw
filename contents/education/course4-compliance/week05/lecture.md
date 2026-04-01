@@ -322,18 +322,18 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "apt list --upgradable 2>/dev/null | head -
 ```bash
 # 1.2.1 정보자산 식별 — 서버 자산 확인
 echo "=== 자산 목록 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   echo "--- $ip ---"
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "hostname; uname -r; cat /etc/os-release | grep PRETTY_NAME" 2>/dev/null
 done
 
 # 1.2.2 현황분석 — 네트워크 구성 확인
 echo "=== 네트워크 구성 ==="
-sshpass -p1 ssh secu@10.20.30.1 "ip route show"
+sshpass -p1 ssh secu@10.20.30.1 "ip route show"        # 비밀번호 자동입력 SSH
 
 # 2.11.1 사고 예방 — Wazuh 에이전트 설치 현황
 echo "=== Wazuh Agent 상태 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80; do      # 반복문 시작
   echo "--- $ip ---"
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "systemctl is-active wazuh-agent 2>/dev/null || echo 'N/A'"
 done
@@ -398,7 +398,7 @@ done
 ```bash
 # ISO 27001 A.8.5 (안전한 인증) 점검 증적 수집
 echo "=== 패스워드 정책 확인 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "  # 비밀번호 자동입력 SSH
   echo '--- login.defs ---' && grep -E 'PASS_MAX|PASS_MIN|PASS_WARN' /etc/login.defs
   echo '--- pam 설정 ---' && grep pam_pwquality /etc/pam.d/common-password 2>/dev/null || echo 'pam_pwquality 미설정'
   echo '--- sudo 설정 ---' && sudo -l 2>/dev/null | head -5

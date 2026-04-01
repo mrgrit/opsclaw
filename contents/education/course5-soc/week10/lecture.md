@@ -122,15 +122,15 @@
 
 ```bash
 # SQL Injection 관련 Suricata 알림 (검증 완료: fast.log에서 검색)
-sshpass -p1 ssh secu@10.20.30.1 "echo 1 | sudo -S grep -iE 'sql|injection|sqli' /var/log/suricata/fast.log 2>/dev/null | tail -10"
+sshpass -p1 ssh secu@10.20.30.1 "echo 1 | sudo -S grep -iE 'sql|injection|sqli' /var/log/suricata/fast.log 2>/dev/null | tail -10"  # 비밀번호 자동입력 SSH
 
 # 웹 공격 전체 알림
-sshpass -p1 ssh secu@10.20.30.1 "grep -iE 'web|http|xss|rfi|lfi' /var/log/suricata/fast.log 2>/dev/null | tail -10"
+sshpass -p1 ssh secu@10.20.30.1 "grep -iE 'web|http|xss|rfi|lfi' /var/log/suricata/fast.log 2>/dev/null | tail -10"  # 비밀번호 자동입력 SSH
 
 # eve.json에서 HTTP 이벤트
-sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if e.get('event_type') == 'alert':
@@ -156,6 +156,8 @@ sshpass -p1 ssh web@10.20.30.80 "tail -10 /var/log/nginx/error.log 2>/dev/null"
 
 ### 2.3 웹 로그에서 탐지
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # SQL Injection 패턴 검색
 sshpass -p1 ssh web@10.20.30.80 "grep -iE \"union.*select|or.*1=1|'.*or.*'|drop.*table|insert.*into|sleep\(|benchmark\(\" \
@@ -176,10 +178,12 @@ sshpass -p1 ssh web@10.20.30.80 "grep -iE '\.\.\/|%2e%2e|/etc/passwd|/etc/shadow
 
 ### 3.1 공격자 식별
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 공격 요청을 보낸 IP 목록
 sshpass -p1 ssh web@10.20.30.80 "grep -iE 'union|select|script|alert|\.\./' /var/log/nginx/access.log 2>/dev/null | \
-  awk '{print \$1}' | sort | uniq -c | sort -rn | head -5"
+  awk '{print \$1}' | sort | uniq -c | sort -rn | head -5"  # 텍스트 필드 처리
 ```
 
 ### 3.2 공격 타임라인 구성
@@ -191,17 +195,17 @@ ATTACKER_IP="10.0.0.1"  # 실제 발견된 IP로 변경
 echo "=== $ATTACKER_IP 활동 타임라인 ==="
 
 echo "[웹 접근]"
-sshpass -p1 ssh web@10.20.30.80 "grep '$ATTACKER_IP' /var/log/nginx/access.log 2>/dev/null | head -20"
+sshpass -p1 ssh web@10.20.30.80 "grep '$ATTACKER_IP' /var/log/nginx/access.log 2>/dev/null | head -20"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "[IPS 탐지]"
-sshpass -p1 ssh secu@10.20.30.1 "grep '$ATTACKER_IP' /var/log/suricata/fast.log 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "grep '$ATTACKER_IP' /var/log/suricata/fast.log 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "[Wazuh 알림]"
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         if '$ATTACKER_IP' in str(a):
@@ -245,15 +249,17 @@ echo "=== IP 차단 명령 (시연) ==="
 echo "sshpass -p1 ssh secu@10.20.30.1 'sudo nft add rule inet filter input ip saddr $ATTACKER_IP drop'"
 echo ""
 echo "현재 차단 규칙:"
-sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep 'drop' | head -5"
+sshpass -p1 ssh secu@10.20.30.1 "sudo nft list ruleset 2>/dev/null | grep 'drop' | head -5"  # 비밀번호 자동입력 SSH
 ```
 
 ### 4.2 WAF 규칙 강화
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # Apache+ModSecurity/nginx WAF 설정 확인
-sshpass -p1 ssh web@10.20.30.80 "cat /etc/nginx/conf.d/*.conf 2>/dev/null | head -20"
-sshpass -p1 ssh web@10.20.30.80 "ls /etc/apache2/ 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "cat /etc/nginx/conf.d/*.conf 2>/dev/null | head -20"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh web@10.20.30.80 "ls /etc/apache2/ 2>/dev/null"  # 비밀번호 자동입력 SSH
 ```
 
 ### 4.3 웹 서비스 상태 확인
@@ -427,14 +433,16 @@ sha256sum /tmp/*_evidence.txt 2>/dev/null
 
 ### Wazuh 로그 분석 실습
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # siem 서버에서 최근 경보 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "  # 비밀번호 자동입력 SSH
   echo '=== 최근 경보 (level >= 7) ==='
   sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | \
-    python3 -c '
+    python3 -c '                                       # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         if a.get("rule",{}).get("level",0) >= 7:

@@ -140,16 +140,16 @@ curl -s http://10.20.30.80:80/robots.txt
 ### 2.2 sitemap.xml 확인
 
 ```bash
-curl -s http://10.20.30.80:3000/sitemap.xml
-curl -s http://10.20.30.80:80/sitemap.xml
+curl -s http://10.20.30.80:3000/sitemap.xml            # silent 모드
+curl -s http://10.20.30.80:80/sitemap.xml              # silent 모드
 ```
 
 ### 2.3 .well-known 디렉터리
 
 ```bash
 # 보안 관련 공개 정보
-curl -s http://10.20.30.80:3000/.well-known/security.txt
-curl -s http://10.20.30.80:3000/.well-known/openid-configuration
+curl -s http://10.20.30.80:3000/.well-known/security.txt  # silent 모드
+curl -s http://10.20.30.80:3000/.well-known/openid-configuration  # silent 모드
 ```
 
 ---
@@ -208,6 +208,8 @@ done < /tmp/webdirs.txt
 
 ### 3.3 JuiceShop 숨겨진 경로 탐색
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # JuiceShop에 특화된 경로 목록
 for path in \
@@ -239,11 +241,11 @@ done
 ```bash
 # JuiceShop의 /ftp 디렉터리는 파일 목록을 노출할 수 있다
 curl -s http://10.20.30.80:3000/ftp/ | python3 -m json.tool 2>/dev/null || \
-  curl -s http://10.20.30.80:3000/ftp/
+  curl -s http://10.20.30.80:3000/ftp/                 # silent 모드
 
 # FTP에 있는 파일 다운로드 시도
-curl -s http://10.20.30.80:3000/ftp/legal.md
-curl -s http://10.20.30.80:3000/ftp/acquisitions.md
+curl -s http://10.20.30.80:3000/ftp/legal.md           # silent 모드
+curl -s http://10.20.30.80:3000/ftp/acquisitions.md    # silent 모드
 ```
 
 ### 3.5 디렉터리 스캔 결과 분석
@@ -305,13 +307,13 @@ curl -s http://10.20.30.80:3000/api/Products/abc
 
 ```bash
 # HTML에서 JS 파일 경로 추출
-curl -s http://10.20.30.80:3000 | grep -oE 'src="[^"]*\.js"' | head -10
+curl -s http://10.20.30.80:3000 | grep -oE 'src="[^"]*\.js"' | head -10  # silent 모드
 
 # main.js 등에서 API 엔드포인트 추출
 MAIN_JS=$(curl -s http://10.20.30.80:3000 | grep -oE 'src="[^"]*main[^"]*\.js"' | head -1 | sed 's/src="//;s/"//')
 if [ -n "$MAIN_JS" ]; then
   echo "Main JS: $MAIN_JS"
-  curl -s "http://10.20.30.80:3000/$MAIN_JS" | grep -oE '/api/[a-zA-Z/]+|/rest/[a-zA-Z/]+' | sort -u | head -20
+  curl -s "http://10.20.30.80:3000/$MAIN_JS" | grep -oE '/api/[a-zA-Z/]+|/rest/[a-zA-Z/]+' | sort -u | head -20  # silent 모드
 fi
 ```
 

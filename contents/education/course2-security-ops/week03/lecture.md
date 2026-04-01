@@ -159,7 +159,7 @@ echo 1 | sudo -S nft add chain inet lab_nat postrouting \
 ```bash
 # masquerade: 내부(10.20.30.0/24) → 외부 트래픽의 출발지 IP를 secu의 외부 IP로 자동 변환
 echo 1 | sudo -S nft add rule inet lab_nat postrouting \
-  ip saddr 10.20.30.0/24 masquerade
+  ip saddr 10.20.30.0/24 masquerade                    # IP 주소 조회
 ```
 
 > **검증 방법:** 내부 서버(web)에서 `curl ifconfig.me`를 실행하면 secu의 외부 IP가 반환되어야 한다.
@@ -424,7 +424,7 @@ table inet filter {
         iif lo accept
         tcp dport 22 accept
         icmp type echo-request accept
-        ip saddr 10.20.30.0/24 tcp dport { 80, 443, 8000 } accept
+        ip saddr 10.20.30.0/24 tcp dport { 80, 443, 8000 } accept  # IP 주소 조회
 
         log prefix "[NFT-DROP] " level warn
     }

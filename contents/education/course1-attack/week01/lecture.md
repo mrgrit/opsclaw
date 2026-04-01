@@ -477,9 +477,11 @@ ss -tlnp | head -20
 
 ### 4개 서버 일괄 정보 수집 스크립트
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # 모든 서버 정보를 한 번에 수집하는 스크립트
-for server in "opsclaw@localhost" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+for server in "opsclaw@localhost" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do  # 반복문 시작
   user=$(echo $server | cut -d@ -f1)
   host=$(echo $server | cut -d@ -f2)
   echo "========================================"
@@ -488,7 +490,7 @@ for server in "opsclaw@localhost" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.2
   if [ "$host" = "localhost" ]; then
     hostname && uname -r && echo "---" && free -h | head -2 && echo "---" && df -h / | tail -1
   else
-    sshpass -p1 ssh -o StrictHostKeyChecking=no $server "hostname && uname -r && echo '---' && free -h | head -2 && echo '---' && df -h / | tail -1" 2>/dev/null
+    sshpass -p1 ssh -o StrictHostKeyChecking=no $server "hostname && uname -r && echo '---' && free -h | head -2 && echo '---' && df -h / | tail -1" 2>/dev/null  # 비밀번호 자동입력 SSH
   fi
   echo ""
 done
@@ -651,7 +653,7 @@ OpsClaw 경유:     명령 → 결과 → evidence + PoW블록 + reward + replay
 RESULT=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{"name":"week01-my-first-project","request_text":"Week 01 실습: 환경 파악","master_mode":"external"}')
+  -d '{"name":"week01-my-first-project","request_text":"Week 01 실습: 환경 파악","master_mode":"external"}')  # 요청 데이터(body)
 
 # project_id 추출
 PID=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['project']['id'])")
@@ -680,6 +682,8 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute" \
 
 ### Step 3: 단일 명령 실행 (dispatch)
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # web 서버에서 hostname 실행
 curl -s -X POST "http://localhost:8000/projects/$PID/dispatch" \
@@ -692,12 +696,14 @@ curl -s -X POST "http://localhost:8000/projects/$PID/dispatch" \
 
 ### Step 4: 병렬 실행 (execute-plan)
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # 4개 서버 동시 점검
 curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {"order":1,"title":"opsclaw 점검","instruction_prompt":"hostname && uptime && free -h | head -2","risk_level":"low","subagent_url":"http://localhost:8002"},
       {"order":2,"title":"secu 점검","instruction_prompt":"hostname && uptime && free -h | head -2","risk_level":"low","subagent_url":"http://10.20.30.1:8002"},
@@ -711,7 +717,7 @@ import sys,json
 d=json.load(sys.stdin)
 print(f'전체 결과: {d[\"overall\"]}')
 print(f'성공: {d[\"tasks_ok\"]}개, 실패: {d[\"tasks_failed\"]}개')
-for t in d.get('task_results',[]):
+for t in d.get('task_results',[]):                     # 반복문 시작
     print(f'  [{t[\"order\"]}] {t[\"title\"]:15s} → {t[\"status\"]} (dur={t.get(\"duration_s\",\"?\")}s)')
 "
 # 예상 출력:

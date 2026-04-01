@@ -396,7 +396,7 @@ echo 1 | sudo -S tail -3 /var/log/suricata/fast.log
 ### 8.2 XSS 테스트
 
 ```bash
-curl -s "http://10.20.30.80/?q=%3Cscript%3Ealert(1)%3C/script%3E" > /dev/null
+curl -s "http://10.20.30.80/?q=%3Cscript%3Ealert(1)%3C/script%3E" > /dev/null  # silent 모드
 
 echo 1 | sudo -S tail -3 /var/log/suricata/fast.log
 ```
@@ -404,7 +404,7 @@ echo 1 | sudo -S tail -3 /var/log/suricata/fast.log
 ### 8.3 디렉터리 트래버설 테스트
 
 ```bash
-curl -s "http://10.20.30.80/../../etc/passwd" > /dev/null
+curl -s "http://10.20.30.80/../../etc/passwd" > /dev/null  # silent 모드
 
 echo 1 | sudo -S tail -3 /var/log/suricata/fast.log
 ```
@@ -414,7 +414,7 @@ echo 1 | sudo -S tail -3 /var/log/suricata/fast.log
 ```bash
 # 마지막 alert 이벤트 상세 보기
 echo 1 | sudo -S tail -20 /var/log/suricata/eve.json | \
-  python3 -m json.tool | grep -A 5 '"alert"'
+  python3 -m json.tool | grep -A 5 '"alert"'           # Python 스크립트 실행
 ```
 
 ---

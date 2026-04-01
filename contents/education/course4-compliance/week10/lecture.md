@@ -134,7 +134,7 @@
 
 ```bash
 # 하드웨어 자산 정보 수집
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   echo "========== $ip =========="
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
     echo '[호스트명]' && hostname
@@ -199,26 +199,28 @@ done
 
 ### 3.2 실습: 실제 위협 증거 수집
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # SSH 무차별 대입 시도 (외부 위협)
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | wc -l"
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | wc -l"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -5"  # 비밀번호 자동입력 SSH
 
 # Suricata 탐지 이벤트 (네트워크 위협)
-sshpass -p1 ssh secu@10.20.30.1 "wc -l /var/log/suricata/fast.log 2>/dev/null || echo '0'"
-sshpass -p1 ssh secu@10.20.30.1 "tail -5 /var/log/suricata/fast.log 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "wc -l /var/log/suricata/fast.log 2>/dev/null || echo '0'"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh secu@10.20.30.1 "tail -5 /var/log/suricata/fast.log 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 # Wazuh 고위험 알림 (복합 위협)
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 levels = {}
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         l = a.get('rule',{}).get('level',0)
         levels[l] = levels.get(l,0)+1
     except: pass
-for l in sorted(levels.keys(), reverse=True)[:5]:
+for l in sorted(levels.keys(), reverse=True)[:5]:      # 반복문 시작
     print(f'  Level {l}: {levels[l]}건')
 \" 2>/dev/null"
 ```
@@ -332,21 +334,21 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "sysctl net.ipv4.conf.all.accept_redirects 
 
 ```bash
 # 1단계: 자산 확인
-for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do
+for srv in "opsclaw@10.20.30.201" "secu@10.20.30.1" "web@10.20.30.80" "siem@10.20.30.100"; do  # 반복문 시작
   echo "=== $srv ==="
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "hostname; ss -tlnp 2>/dev/null | grep LISTEN | wc -l; echo '서비스 수'"
 done
 
 # 2단계: 위협 증거
 echo "=== SSH 공격 시도 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed' /var/log/auth.log 2>/dev/null | wc -l"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed' /var/log/auth.log 2>/dev/null | wc -l"  # 비밀번호 자동입력 SSH
 
 echo "=== IPS 탐지 ==="
-sshpass -p1 ssh secu@10.20.30.1 "wc -l /var/log/suricata/fast.log 2>/dev/null"
+sshpass -p1 ssh secu@10.20.30.1 "wc -l /var/log/suricata/fast.log 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 # 3단계: 취약점 확인
 echo "=== 미패치 현황 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   echo "$ip: $(sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) 'apt list --upgradable 2>/dev/null | wc -l') 패키지"
 done
 ```
@@ -410,7 +412,7 @@ done
 ```bash
 # ISO 27001 A.8.5 (안전한 인증) 점검 증적 수집
 echo "=== 패스워드 정책 확인 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "  # 비밀번호 자동입력 SSH
   echo '--- login.defs ---' && grep -E 'PASS_MAX|PASS_MIN|PASS_WARN' /etc/login.defs
   echo '--- pam 설정 ---' && grep pam_pwquality /etc/pam.d/common-password 2>/dev/null || echo 'pam_pwquality 미설정'
   echo '--- sudo 설정 ---' && sudo -l 2>/dev/null | head -5

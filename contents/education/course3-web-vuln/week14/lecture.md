@@ -151,8 +151,8 @@
 > **실전 활용**: 점검 보고서의 품질이 곧 컨설팅 회사의 역량 지표이며, CVSS 산출 능력은 필수이다
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 # CVSS v3.1 간이 계산기
 def cvss_score(av, ac, pr, ui, scope, c, i, a):
     """CVSS v3.1 Base Score 간이 계산"""
@@ -215,7 +215,7 @@ vulns = [
 print(f"{'취약점':<35} {'CVSS':<6} {'등급':<10}")
 print("-" * 55)
 
-for v in vulns:
+for v in vulns:                                        # 반복문 시작
     score = cvss_score(*v["params"])
     if score >= 9.0: grade = "Critical"
     elif score >= 7.0: grade = "High"
@@ -268,21 +268,23 @@ OWASP: A01:2021 - 카테고리명
 
 ### 3.2 실습: SQL Injection 취약점 카드 작성
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 취약점 카드 작성 실습 ==="
 
 # 재현 증거 수집
 echo "--- Step 1: 정상 로그인 시도 ---"
 curl -s -X POST http://localhost:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","password":"wrongpassword"}' | python3 -m json.tool 2>/dev/null || echo "JSON 파싱 실패"
+  -d '{"email":"test@test.com","password":"wrongpassword"}' | python3 -m json.tool 2>/dev/null || echo "JSON 파싱 실패"  # 요청 데이터(body)
 
 echo ""
 echo "--- Step 2: SQLi 페이로드 로그인 ---"
 RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"' OR 1=1--\",\"password\":\"x\"}")
+  -d "{\"email\":\"' OR 1=1--\",\"password\":\"x\"}")  # 요청 데이터(body)
 echo "$RESULT" | python3 -m json.tool 2>/dev/null || echo "$RESULT"
 
 echo ""
@@ -306,9 +308,11 @@ ENDSSH
 
 ### 3.3 보고서 자동 생성 스크립트
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 from datetime import datetime
 
 report = f"""
@@ -419,9 +423,11 @@ ENDSSH
 
 ### 4.2 권고사항 상세 작성 실습
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 recommendations = [
     {
         "vuln": "V-001 SQL Injection",
@@ -456,7 +462,7 @@ print("=" * 70)
 print("권고사항 상세")
 print("=" * 70)
 
-for idx, r in enumerate(recommendations, 1):
+for idx, r in enumerate(recommendations, 1):           # 반복문 시작
     print(f"\n[R-{idx:03d}] {r['vuln']}")
     print(f"  우선순위: {r['priority']}")
     print(f"  위험도: {r['risk']} / 구현 난이도: {r['effort']}")
@@ -478,7 +484,7 @@ ENDSSH
 # Ollama LLM으로 취약점 설명 자동 생성
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "model": "gemma3:12b",
     "messages": [
       {"role": "system", "content": "보안 컨설턴트입니다. 취약점 점검 보고서를 작성합니다. 한국어로 전문적이고 간결하게 작성하세요."},
@@ -493,7 +499,7 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 ```bash
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "model": "gemma3:12b",
     "messages": [
       {"role": "system", "content": "Node.js/Express 보안 전문가입니다. 취약점 수정 코드를 제시합니다."},
@@ -509,9 +515,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 6.1 자가 점검 항목
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 checklist = [
     ("표지", "프로젝트명, 일시, 점검 범위, 점검자 정보"),
     ("요약", "비기술 경영진도 이해할 수 있는 수준"),
@@ -529,7 +537,7 @@ checklist = [
 
 print("취약점 점검 보고서 품질 체크리스트")
 print("=" * 55)
-for idx, (item, desc) in enumerate(checklist, 1):
+for idx, (item, desc) in enumerate(checklist, 1):      # 반복문 시작
     print(f"  [ ] {idx:2d}. {item:<10} - {desc}")
 
 print(f"\n총 {len(checklist)}개 항목")

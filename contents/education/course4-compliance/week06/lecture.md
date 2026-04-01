@@ -124,8 +124,8 @@
 
 ```bash
 # 보안 관련 문서/설정 파일 존재 확인
-sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /etc/security/ 2>/dev/null"
-sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /etc/pam.d/ | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /etc/security/ 2>/dev/null"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -la /etc/pam.d/ | head -10"  # 비밀번호 자동입력 SSH
 ```
 
 ### 2.2 [2.1.3] 정보자산 관리
@@ -176,10 +176,12 @@ done
 
 ### 3.2 [2.5.2] 사용자 식별
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 점검: 공용 계정 사용 여부 (같은 계정으로 다수 접속)
-sshpass -p1 ssh opsclaw@10.20.30.201 "who"
-sshpass -p1 ssh opsclaw@10.20.30.201 "last | head -20"
+sshpass -p1 ssh opsclaw@10.20.30.201 "who"             # 비밀번호 자동입력 SSH
+sshpass -p1 ssh opsclaw@10.20.30.201 "last | head -20"  # 비밀번호 자동입력 SSH
 ```
 
 ### 3.3 [2.5.3] 사용자 인증
@@ -249,18 +251,20 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "find /usr -perm -4000 -type f 2>/dev/null 
 ```bash
 # 전송 구간 암호화 확인
 echo "=== Wazuh Dashboard TLS ==="
-sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep -E 'Protocol|Cipher'"
+sshpass -p1 ssh siem@10.20.30.100 "echo | openssl s_client -connect localhost:443 2>/dev/null | grep -E 'Protocol|Cipher'"  # 비밀번호 자동입력 SSH
 
 echo "=== SSH 암호 알고리즘 ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "ssh -Q cipher 2>/dev/null | head -10"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ssh -Q cipher 2>/dev/null | head -10"  # 비밀번호 자동입력 SSH
 ```
 
 ### 4.4 [2.9.1] 변경관리
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 최근 패키지 변경 이력
-sshpass -p1 ssh opsclaw@10.20.30.201 "cat /var/log/dpkg.log 2>/dev/null | tail -10"
-sshpass -p1 ssh opsclaw@10.20.30.201 "cat /var/log/apt/history.log 2>/dev/null | tail -20"
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /var/log/dpkg.log 2>/dev/null | tail -10"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh opsclaw@10.20.30.201 "cat /var/log/apt/history.log 2>/dev/null | tail -20"  # 비밀번호 자동입력 SSH
 ```
 
 ### 4.5 [2.9.3] 보안시스템 운영
@@ -349,7 +353,7 @@ echo "=========================================="
 echo " ISMS-P 핵심 점검 실행: $(date)"
 echo "=========================================="
 
-for ip in $SERVERS; do
+for ip in $SERVERS; do                                 # 반복문 시작
   echo ""
   echo "########## $ip ##########"
 
@@ -463,7 +467,7 @@ ISMS-P 점검 결과 보고서
 ```bash
 # ISO 27001 A.8.5 (안전한 인증) 점검 증적 수집
 echo "=== 패스워드 정책 확인 ==="
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "  # 비밀번호 자동입력 SSH
   echo '--- login.defs ---' && grep -E 'PASS_MAX|PASS_MIN|PASS_WARN' /etc/login.defs
   echo '--- pam 설정 ---' && grep pam_pwquality /etc/pam.d/common-password 2>/dev/null || echo 'pam_pwquality 미설정'
   echo '--- sudo 설정 ---' && sudo -l 2>/dev/null | head -5

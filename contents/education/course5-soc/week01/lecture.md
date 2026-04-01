@@ -439,6 +439,8 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
      Active: active (running) since ...
 ```
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo systemctl status wazuh-dashboard --no-pager | head -10"
@@ -491,6 +493,8 @@ Wazuh Dashboard 주요 메뉴:
 
 ### 7.1 에이전트 목록 조회
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo /var/ossec/bin/agent_control -l 2>/dev/null || sudo /var/ossec/bin/manage_agents -l 2>/dev/null"
@@ -505,6 +509,8 @@ Available agents:
 ```
 
 ### 7.2 에이전트 상세 정보 확인
+
+원격 서버에 접속하여 명령을 실행합니다.
 
 ```bash
 # 에이전트 001 (secu) 상세 정보
@@ -532,6 +538,8 @@ opsclaw (10.20.30.201)──→ Wazuh Agent ──→ TCP 1514 ──→ Wazuh M
 ## 8. 실습 3: Wazuh 알림 확인 및 구조 이해 (30분)
 
 ### 8.1 최근 알림 확인 (명령줄)
+
+원격 서버에 접속하여 명령을 실행합니다.
 
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
@@ -597,19 +605,21 @@ Wazuh 알림의 JSON 구조를 이해해보자:
 
 ### 8.5 레벨별 알림 분포 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 levels = {}
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         alert = json.loads(line.strip())
         level = alert.get('rule', {}).get('level', 0)
         levels[level] = levels.get(level, 0) + 1
     except:
         pass
-for level in sorted(levels.keys()):
+for level in sorted(levels.keys()):                    # 반복문 시작
     print(f'Level {level:2d}: {levels[level]:5d}건')
 \" 2>/dev/null" || echo "알림 데이터가 아직 충분하지 않을 수 있습니다"
 ```
@@ -646,23 +656,25 @@ for level in sorted(levels.keys()):
 
 ### 9.3 Wazuh에서 MITRE 매핑 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # MITRE ATT&CK ID가 포함된 알림 조회
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
 import sys, json
 mitre_count = {}
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         alert = json.loads(line.strip())
         mitre = alert.get('rule', {}).get('mitre', {})
-        for technique_id in mitre.get('id', []):
+        for technique_id in mitre.get('id', []):       # 반복문 시작
             tactic = mitre.get('tactic', ['Unknown'])[0] if mitre.get('tactic') else 'Unknown'
             key = f'{technique_id} ({tactic})'
             mitre_count[key] = mitre_count.get(key, 0) + 1
     except:
         pass
-for key in sorted(mitre_count.keys(), key=lambda x: mitre_count[x], reverse=True)[:10]:
+for key in sorted(mitre_count.keys(), key=lambda x: mitre_count[x], reverse=True)[:10]:  # 반복문 시작
     print(f'{key}: {mitre_count[key]}건')
 \" 2>/dev/null" || echo "MITRE 매핑 데이터를 확인할 수 없습니다"
 ```
@@ -690,9 +702,9 @@ SOC 분석가는 MITRE ATT&CK을 다음과 같이 활용한다:
 
 ```bash
 # 잘못된 비밀번호로 secu에 SSH 시도 (의도적 실패)
-sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null
-sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null
-sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null
+sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null  # 비밀번호 자동입력 SSH
+sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null  # 비밀번호 자동입력 SSH
+sshpass -p wrongpassword ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo test" 2>/dev/null  # 비밀번호 자동입력 SSH
 echo "3회 로그인 실패 생성 완료"
 ```
 
@@ -703,9 +715,9 @@ echo "3회 로그인 실패 생성 완료"
 sleep 15
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "sudo tail -20 /var/ossec/logs/alerts/alerts.json 2>/dev/null" | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         alert = json.loads(line.strip())
         if 'ssh' in alert.get('rule', {}).get('description', '').lower() or \

@@ -145,9 +145,11 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80
 
 ### 3.1 WAF 상태 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # Apache + ModSecurity 상태 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "  # 비밀번호 자동입력 SSH
 echo '=== Apache 상태 ===' && systemctl is-active apache2
 echo '=== ModSecurity 모듈 ===' && echo 1 | sudo -S apache2ctl -M 2>/dev/null | grep security
 echo '=== VirtualHost (WAF 적용 포트) ===' && echo 1 | sudo -S apache2ctl -S 2>/dev/null | grep -E '808[12]|:80 '
@@ -176,11 +178,11 @@ active
 ```bash
 # :8082 (WAF 적용) vs :3000 (WAF 미적용) 비교
 echo "=== :8082 (WAF ON) SQLi 테스트 ==="
-curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:8082/?id=1'+OR+1=1--"
+curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:8082/?id=1'+OR+1=1--"  # silent 모드
 echo " ← 403이면 WAF가 차단"
 
 echo "=== :3000 (WAF OFF) SQLi 테스트 ==="
-curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/?id=1'+OR+1=1--"
+curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/?id=1'+OR+1=1--"  # silent 모드
 echo " ← 200이면 WAF 미적용 (통과)"
 ```
 
@@ -193,7 +195,7 @@ echo 1 | sudo -S docker inspect apache2 | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 env = data[0]['Config']['Env']
-for e in sorted(env):
+for e in sorted(env):                                  # 반복문 시작
     if 'MODSEC' in e.upper() or 'WAF' in e.upper() or 'SECURITY' in e.upper():
         print(e)
 "
@@ -342,10 +344,12 @@ curl -s "http://10.20.30.80/?id=1%20UNION%20SELECT%201"
 
 ### 6.1 ModSecurity 감사 로그
 
+로그나 설정에서 특정 패턴을 검색합니다.
+
 ```bash
 # Apache+ModSecurity 컨테이너 내 로그 확인
 echo 1 | sudo -S docker exec apache2 cat /var/log/apache2/error.log | \
-  grep "ModSecurity" | tail -10
+  grep "ModSecurity" | tail -10                        # 패턴 검색
 ```
 
 ### 6.2 Nginx 접근 로그
@@ -359,7 +363,7 @@ echo 1 | sudo -S docker exec apache2 cat /var/log/apache2/access.log | tail -20
 ```bash
 # 403 응답만 추출
 echo 1 | sudo -S docker exec apache2 cat /var/log/apache2/access.log | \
-  awk '$9 == 403' | tail -10
+  awk '$9 == 403' | tail -10                           # 텍스트 필드 처리
 ```
 
 ---
@@ -500,7 +504,7 @@ tests=(
   "Scanner (sqlmap)|/ -A sqlmap/1.0"
 )
 
-for test in "${tests[@]}"; do
+for test in "${tests[@]}"; do                          # 반복문 시작
   IFS='|' read -r name path <<< "$test"
   if [[ "$name" == *"Scanner"* ]]; then
     code=$(curl -s -o /dev/null -w "%{http_code}" -A "sqlmap/1.0" "${TARGET}/")
@@ -519,7 +523,7 @@ done
 
 echo "=== 테스트 완료 ==="
 TESTEOF
-chmod +x /tmp/waf_test.sh
+chmod +x /tmp/waf_test.sh                              # 파일 권한 변경
 bash /tmp/waf_test.sh
 ```
 

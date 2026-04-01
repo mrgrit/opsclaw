@@ -212,14 +212,16 @@ sshpass -p1 ssh web@10.20.30.80 "awk -F'\"' '{print \$6}' /var/log/nginx/access.
 
 ### C-1. 경보 분석 (15점)
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 경보 전체 통계
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 levels = Counter()
 rules = Counter()
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -227,18 +229,18 @@ for line in sys.stdin:
         rules[f'{r.get(\"id\",\"\")}:{r.get(\"description\",\"\")}'] += 1
     except: pass
 print('=== 레벨별 ===')
-for l in sorted(levels.keys(), reverse=True):
+for l in sorted(levels.keys(), reverse=True):          # 반복문 시작
     print(f'  Level {l}: {levels[l]}')
 print()
 print('=== Top 10 규칙 ===')
-for r, c in rules.most_common(10):
+for r, c in rules.most_common(10):                     # 반복문 시작
     print(f'  {c:4d}건: {r}')
 \" 2>/dev/null"
 
 # Level 10+ 상세
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -323,17 +325,19 @@ level: (low/medium/high/critical)
 
 ## 시험 전 체크리스트
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # 서버 접속 확인
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 $srv "hostname" 2>/dev/null \
     && echo "$ip: OK" || echo "$ip: FAIL"
 done
 
 # 로그 존재 확인
-sshpass -p1 ssh opsclaw@10.20.30.201 "ls -lh /var/log/auth.log 2>/dev/null"
-sshpass -p1 ssh secu@10.20.30.1 "ls -lh /var/log/suricata/fast.log 2>/dev/null"
-sshpass -p1 ssh siem@10.20.30.100 "ls -lh /var/ossec/logs/alerts/alerts.json 2>/dev/null"
+sshpass -p1 ssh opsclaw@10.20.30.201 "ls -lh /var/log/auth.log 2>/dev/null"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh secu@10.20.30.1 "ls -lh /var/log/suricata/fast.log 2>/dev/null"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh siem@10.20.30.100 "ls -lh /var/ossec/logs/alerts/alerts.json 2>/dev/null"  # 비밀번호 자동입력 SSH
 ```
 
 ---
@@ -380,14 +384,16 @@ sshpass -p1 ssh siem@10.20.30.100 "ls -lh /var/ossec/logs/alerts/alerts.json 2>/
 
 ### Wazuh 로그 분석 실습
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # siem 서버에서 최근 경보 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "  # 비밀번호 자동입력 SSH
   echo '=== 최근 경보 (level >= 7) ==='
   sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | \
-    python3 -c '
+    python3 -c '                                       # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         if a.get("rule",{}).get("level",0) >= 7:

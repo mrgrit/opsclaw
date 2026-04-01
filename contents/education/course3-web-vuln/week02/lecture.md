@@ -395,9 +395,11 @@ curl -X POST http://10.20.30.80:3000/file-upload \
 
 ### 7.7 curl을 이용한 간이 스캐닝
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # 여러 경로를 순회하며 존재 여부 확인
-for path in admin robots.txt .env .git/config sitemap.xml; do
+for path in admin robots.txt .env .git/config sitemap.xml; do  # 반복문 시작
   code=$(curl -o /dev/null -s -w "%{http_code}" "http://10.20.30.80:3000/$path")
   echo "$code - /$path"
 done

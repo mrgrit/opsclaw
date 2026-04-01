@@ -537,6 +537,8 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
 
 ## 9. OpsClaw로 SQLi 테스트 자동화
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # SQLi 테스트 프로젝트 생성
 PROJECT_ID=$(curl -s -X POST http://localhost:8000/projects \
@@ -549,15 +551,15 @@ echo "Project ID: $PROJECT_ID"
 
 # Stage 전환
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/plan \
-  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null     # API 인증 키
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/execute \
-  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null     # API 인증 키
 
 # SQLi 테스트 실행
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/execute-plan \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 1,

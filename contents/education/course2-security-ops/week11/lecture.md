@@ -159,9 +159,11 @@ ossec.conf 내 `<syscheck>` 섹션:
 
 ### 3.3 FIM 설정 추가 (실습)
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # secu 서버 Agent 설정에 추가
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1  # 비밀번호 자동입력 SSH
 
 echo 1 | sudo -S cat >> /var/ossec/etc/ossec.conf << 'FIMEOF'
 <ossec_config>
@@ -212,14 +214,16 @@ echo 1 | sudo -S bash -c 'echo "suspicious" > /tmp/fim_test/webshell.php'
 
 ### 3.5 FIM 알림 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # siem 서버에서 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100  # 비밀번호 자동입력 SSH
 
 echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         r = e.get('rule',{})
@@ -291,7 +295,7 @@ TOKEN=$(curl -s -u wazuh-wui:wazuh-wui -k -X POST \
 
 # Agent 001(secu)의 SCA 결과
 curl -s -k -X GET "https://10.20.30.100:55000/sca/001?pretty=true" \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool | head -40
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool | head -40  # 인증 토큰
 ```
 
 **예상 출력:**
@@ -319,7 +323,7 @@ curl -s -k -X GET "https://10.20.30.100:55000/sca/001?pretty=true" \
 # 실패한 검사 항목 확인
 curl -s -k -X GET \
   "https://10.20.30.100:55000/sca/001/checks/cis_debian11?result=failed&pretty=true" \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool | head -60
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool | head -60  # 인증 토큰
 ```
 
 **예상 출력 (일부):**
@@ -413,6 +417,8 @@ ossec.conf (Manager측):
 
 ### 5.4 커스텀 Active Response 스크립트
 
+nftables 방화벽 규칙을 설정합니다.
+
 ```bash
 # 커스텀 대응 스크립트 생성
 echo 1 | sudo -S tee /var/ossec/active-response/bin/custom-block.sh << 'AREOF'
@@ -434,11 +440,11 @@ echo "$(date) $ACTION $IP Rule:$RULEID" >> /var/ossec/logs/active-responses.log
 
 if [ "$ACTION" = "add" ]; then
     # IP 차단 (nftables)
-    nft add element inet filter blocklist "{ $IP }" 2>/dev/null
+    nft add element inet filter blocklist "{ $IP }" 2>/dev/null  # nftables 규칙 조회
     echo "$(date) BLOCKED $IP" >> /var/ossec/logs/active-responses.log
 elif [ "$ACTION" = "delete" ]; then
     # IP 차단 해제
-    nft delete element inet filter blocklist "{ $IP }" 2>/dev/null
+    nft delete element inet filter blocklist "{ $IP }" 2>/dev/null  # nftables 규칙 조회
     echo "$(date) UNBLOCKED $IP" >> /var/ossec/logs/active-responses.log
 fi
 
@@ -495,15 +501,17 @@ echo 1 | sudo -S cat /var/ossec/logs/active-responses.log | tail -10
 
 ### 시나리오: SSH 브루트포스 → 로그인 성공 → 파일 변조
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # 1단계: 브루트포스 시뮬레이션 (secu에서 siem으로)
-for i in $(seq 1 10); do
+for i in $(seq 1 10); do                               # 반복문 시작
   sshpass -p wrong ssh -o StrictHostKeyChecking=no -o ConnectTimeout=2 \
     wrongsiem@10.20.30.100 2>/dev/null
 done
 
 # 2단계: 정상 로그인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100  # 비밀번호 자동입력 SSH
 
 # 3단계: 파일 변조
 echo 1 | sudo -S bash -c 'echo "hacked" >> /tmp/fim_test/test.txt'

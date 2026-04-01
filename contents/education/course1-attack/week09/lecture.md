@@ -474,12 +474,14 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "ip neigh show"
 
 ### 실습 6: OpsClaw로 스캔 자동화
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # OpsClaw 프로젝트 생성
 curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "name": "week09-network-scan",
     "request_text": "네트워크 스캔 실습",
     "master_mode": "external"
@@ -488,15 +490,15 @@ curl -s -X POST http://localhost:8000/projects \
 # 프로젝트 ID 확인 후 (예: id=1)
 # Stage 전환
 curl -s -X POST http://localhost:8000/projects/1/plan \
-  -H "X-API-Key: opsclaw-api-key-2026"
+  -H "X-API-Key: opsclaw-api-key-2026"                 # API 인증 키
 curl -s -X POST http://localhost:8000/projects/1/execute \
-  -H "X-API-Key: opsclaw-api-key-2026"
+  -H "X-API-Key: opsclaw-api-key-2026"                 # API 인증 키
 
 # nmap 스캔 실행
 curl -s -X POST http://localhost:8000/projects/1/execute-plan \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 1,

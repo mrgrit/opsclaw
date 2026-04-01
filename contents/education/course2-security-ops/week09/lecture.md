@@ -286,7 +286,7 @@ echo $TOKEN | head -c 50
 
 ```bash
 curl -s -k -X GET "https://10.20.30.100:55000/" \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool  # 인증 토큰
 ```
 
 **예상 출력:**
@@ -307,7 +307,7 @@ curl -s -k -X GET "https://10.20.30.100:55000/" \
 
 ```bash
 curl -s -k -X GET "https://10.20.30.100:55000/agents?pretty=true" \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool | head -40
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool | head -40  # 인증 토큰
 ```
 
 **예상 출력:**
@@ -343,7 +343,7 @@ secu 서버를 Agent로 등록:
 curl -s -k -X POST "https://10.20.30.100:55000/agents" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"secu","ip":"10.20.30.1"}' | python3 -m json.tool
+  -d '{"name":"secu","ip":"10.20.30.1"}' | python3 -m json.tool  # 요청 데이터(body)
 ```
 
 **예상 출력:**
@@ -392,9 +392,11 @@ echo 1 | sudo -S systemctl status wazuh-agent
 
 ### 7.4 Manager에서 Agent 상태 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # siem 서버에서
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100  # 비밀번호 자동입력 SSH
 
 echo 1 | sudo -S /var/ossec/bin/agent_control -l
 ```
@@ -416,7 +418,7 @@ Wazuh agent_control. List of available agents:
 ```bash
 echo 1 | sudo -S tail -f /var/ossec/logs/alerts/alerts.json | python3 -c "
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         rule = e.get('rule', {})
@@ -433,9 +435,9 @@ Ctrl+C로 종료.
 
 ```bash
 echo 1 | sudo -S tail -10 /var/ossec/logs/alerts/alerts.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         r = e.get('rule',{})
@@ -507,8 +509,10 @@ Suricata의 eve.json을 Wazuh가 수집하도록 설정:
 
 ### 10.1 Agent 측 설정 (secu 서버)
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1  # 비밀번호 자동입력 SSH
 
 # ossec.conf에 Suricata 로그 수집 추가
 echo 1 | sudo -S tee -a /var/ossec/etc/ossec.conf << 'XMLEOF'
@@ -526,14 +530,16 @@ echo 1 | sudo -S systemctl restart wazuh-agent
 
 ### 10.2 연동 확인
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # siem 서버에서 Suricata 알림 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100  # 비밀번호 자동입력 SSH
 
 echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if 'suricata' in str(e.get('rule',{}).get('groups',[])):

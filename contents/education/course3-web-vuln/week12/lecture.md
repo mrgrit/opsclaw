@@ -132,7 +132,7 @@ echo "=== API 엔드포인트 탐색 ==="
 MAIN_JS=$(curl -s http://10.20.30.80:3000 | grep -oE 'src="[^"]*main[^"]*\.js"' | head -1 | sed 's/src="//;s/"//')
 if [ -n "$MAIN_JS" ]; then
   echo "JS에서 발견된 API 경로:"
-  curl -s "http://10.20.30.80:3000/$MAIN_JS" | grep -oE '"/api/[^"]*"|"/rest/[^"]*"' | sort -u | head -30
+  curl -s "http://10.20.30.80:3000/$MAIN_JS" | grep -oE '"/api/[^"]*"|"/rest/[^"]*"' | sort -u | head -30  # silent 모드
 fi
 
 echo ""
@@ -154,7 +154,7 @@ ENDPOINTS=(
 
 printf "%-45s %s\n" "엔드포인트" "코드"
 printf "%-45s %s\n" "---" "---"
-for ep in "${ENDPOINTS[@]}"; do
+for ep in "${ENDPOINTS[@]}"; do                        # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/$ep")
   if [ "$code" != "404" ]; then
     printf "%-45s %s\n" "/$ep" "$code"
@@ -167,14 +167,14 @@ done
 ```bash
 # 각 API의 지원 메서드 확인
 echo "=== Products API 메서드 ==="
-for method in GET POST PUT DELETE PATCH OPTIONS; do
+for method in GET POST PUT DELETE PATCH OPTIONS; do    # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" -X "$method" http://10.20.30.80:3000/api/Products/)
   echo "  $method: HTTP $code"
 done
 
 echo ""
 echo "=== Users API 메서드 ==="
-for method in GET POST PUT DELETE PATCH OPTIONS; do
+for method in GET POST PUT DELETE PATCH OPTIONS; do    # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" -X "$method" http://10.20.30.80:3000/api/Users/)
   echo "  $method: HTTP $code"
 done
@@ -189,7 +189,7 @@ done
 ```bash
 # 인증 토큰 없이 각 API 호출
 echo "=== 인증 없는 접근 테스트 ==="
-python3 << 'PYEOF'
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import requests
 
 BASE = "http://10.20.30.80:3000"
@@ -209,7 +209,7 @@ endpoints = {
 print(f"{'API':<35} {'인증없음':>10} {'결과':>10}")
 print("-" * 60)
 
-for name, url in endpoints.items():
+for name, url in endpoints.items():                    # 반복문 시작
     method = name.split()[0]
     try:
         if method == "GET":
@@ -228,30 +228,30 @@ PYEOF
 ```bash
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 echo "=== 토큰 조작 테스트 ==="
 
 # 정상 토큰
 echo "정상 토큰:"
 curl -s http://10.20.30.80:3000/rest/user/whoami \
-  -H "Authorization: Bearer $TOKEN" | python3 -c "import sys,json; print(json.load(sys.stdin).get('user',{}).get('email','실패'))" 2>/dev/null
+  -H "Authorization: Bearer $TOKEN" | python3 -c "import sys,json; print(json.load(sys.stdin).get('user',{}).get('email','실패'))" 2>/dev/null  # 인증 토큰
 
 # 만료된 토큰 (한 글자 변경)
 TAMPERED="${TOKEN:0:-5}XXXXX"
 echo "변조 토큰:"
 curl -s http://10.20.30.80:3000/rest/user/whoami \
-  -H "Authorization: Bearer $TAMPERED" | head -3
+  -H "Authorization: Bearer $TAMPERED" | head -3       # 인증 토큰
 
 # 빈 토큰
 echo "빈 토큰:"
 curl -s http://10.20.30.80:3000/rest/user/whoami \
-  -H "Authorization: Bearer " | head -3
+  -H "Authorization: Bearer " | head -3                # 인증 토큰
 
 # 다른 인증 스킴
 echo "Basic 인증 시도:"
 curl -s http://10.20.30.80:3000/rest/user/whoami \
-  -H "Authorization: Basic YWRtaW46YWRtaW4=" | head -3
+  -H "Authorization: Basic YWRtaW46YWRtaW4=" | head -3  # 인증 토큰
 ```
 
 ### 3.3 API 키 노출 점검
@@ -283,10 +283,10 @@ Rate Limiting은 특정 시간 내 요청 수를 제한하여 무차별 대입, 
 echo "=== 로그인 API Rate Limiting 테스트 ==="
 echo "30회 연속 잘못된 로그인 시도:"
 
-for i in $(seq 1 30); do
+for i in $(seq 1 30); do                               # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://10.20.30.80:3000/rest/user/login \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"admin@juice-sh.op\",\"password\":\"wrong$i\"}")
+    -d "{\"email\":\"admin@juice-sh.op\",\"password\":\"wrong$i\"}")  # 요청 데이터(body)
   if [ "$code" = "429" ]; then
     echo "시도 $i: HTTP $code (Rate Limited!)"
     echo "Rate Limiting 활성화됨 ($i 회째에서 차단)"
@@ -308,7 +308,7 @@ echo "=== 검색 API Rate Limiting 테스트 ==="
 echo "50회 연속 검색 요청:"
 
 blocked=0
-for i in $(seq 1 50); do
+for i in $(seq 1 50); do                               # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" "http://10.20.30.80:3000/rest/products/search?q=test$i")
   if [ "$code" = "429" ]; then
     echo "시도 $i: Rate Limited!"
@@ -327,11 +327,11 @@ fi
 ```bash
 # X-Forwarded-For 헤더로 IP 위장
 echo "=== Rate Limiting 우회 (IP 위장) ==="
-for i in $(seq 1 5); do
+for i in $(seq 1 5); do                                # 반복문 시작
   code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://10.20.30.80:3000/rest/user/login \
     -H "Content-Type: application/json" \
     -H "X-Forwarded-For: 1.2.3.$i" \
-    -d '{"email":"admin@juice-sh.op","password":"wrong"}')
+    -d '{"email":"admin@juice-sh.op","password":"wrong"}')  # 요청 데이터(body)
   echo "IP 1.2.3.$i: HTTP $code"
 done
 ```
@@ -376,12 +376,12 @@ result=$(curl -s -o /dev/null -w "%{http_code}" "$SWAGGER_URL")
 
 if [ "$result" = "200" ]; then
   echo "Swagger 문서 발견! 엔드포인트 추출:"
-  curl -s "$SWAGGER_URL" | python3 -c "
+  curl -s "$SWAGGER_URL" | python3 -c "                # silent 모드
 import sys, json
 doc = json.load(sys.stdin)
 paths = doc.get('paths', {})
-for path, methods in paths.items():
-    for method in methods:
+for path, methods in paths.items():                    # 반복문 시작
+    for method in methods:                             # 반복문 시작
         if method.upper() in ['GET','POST','PUT','DELETE','PATCH']:
             auth = '인증필요' if any('security' in str(methods[method]) for _ in [1]) else '공개'
             print(f'  {method.upper():6} {path}')
@@ -403,18 +403,18 @@ echo "=== 데이터 과다 노출 점검 ==="
 
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 # Users API 응답 분석
 echo "=== /api/Users/1 응답 필드 ==="
 curl -s http://10.20.30.80:3000/api/Users/1 \
-  -H "Authorization: Bearer $TOKEN" | python3 -c "
+  -H "Authorization: Bearer $TOKEN" | python3 -c "     # 인증 토큰
 import sys, json
 try:
     data = json.load(sys.stdin).get('data', {})
     sensitive_keywords = ['password', 'hash', 'secret', 'token', 'ssn', 'card', 'credit']
     print('포함된 필드:')
-    for key, val in data.items():
+    for key, val in data.items():                      # 반복문 시작
         is_sensitive = any(k in key.lower() for k in sensitive_keywords)
         marker = ' <<< 민감 정보!' if is_sensitive else ''
         print(f'  {key}: {str(val)[:60]}{marker}')
@@ -424,12 +424,12 @@ except Exception as e:
 
 echo ""
 echo "=== /api/Products/1 응답 필드 ==="
-curl -s http://10.20.30.80:3000/api/Products/1 | python3 -c "
+curl -s http://10.20.30.80:3000/api/Products/1 | python3 -c "  # silent 모드
 import sys, json
 try:
     data = json.load(sys.stdin).get('data', {})
     print('포함된 필드:')
-    for key, val in data.items():
+    for key, val in data.items():                      # 반복문 시작
         print(f'  {key}: {str(val)[:60]}')
 except:
     print('파싱 실패')
@@ -444,7 +444,7 @@ echo "=== 페이지네이션 점검 ==="
 
 # 전체 사용자 조회
 result=$(curl -s http://10.20.30.80:3000/api/Users/ \
-  -H "Authorization: Bearer $TOKEN")
+  -H "Authorization: Bearer $TOKEN")                   # 인증 토큰
 count=$(echo "$result" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
 echo "Users API: ${count}건 반환 (제한 없이 전체?)"
 

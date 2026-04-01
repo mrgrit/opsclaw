@@ -123,10 +123,10 @@ SOC 분석원은 경보를 분석하여 **실제 위협인지 판별**한다.
 
 ```bash
 # 경보 샘플 추출
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 alerts = []
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -141,7 +141,7 @@ for line in sys.stdin:
                 'full_log': a.get('full_log','')[:100]
             })
     except: pass
-for i, a in enumerate(alerts[-10:], 1):
+for i, a in enumerate(alerts[-10:], 1):                # 반복문 시작
     print(f'--- 경보 #{i} ---')
     print(f'  시간: {a[\"time\"]}')
     print(f'  레벨: {a[\"level\"]}')
@@ -219,15 +219,17 @@ for i, a in enumerate(alerts[-10:], 1):
 
 ### 4.1 단계 1: 전체 현황 파악
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 오늘의 경보 현황
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 levels = Counter()
 rules = Counter()
 agents = Counter()
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -237,28 +239,30 @@ for line in sys.stdin:
     except: pass
 
 print('=== 레벨별 통계 ===')
-for l in sorted(levels.keys(), reverse=True):
+for l in sorted(levels.keys(), reverse=True):          # 반복문 시작
     print(f'  Level {l:2d}: {levels[l]:5d}건')
 
 print()
 print('=== Top 10 경보 유형 ===')
-for desc, cnt in rules.most_common(10):
+for desc, cnt in rules.most_common(10):                # 반복문 시작
     print(f'  {cnt:5d}건: {desc}')
 
 print()
 print('=== 에이전트별 통계 ===')
-for agent, cnt in agents.most_common():
+for agent, cnt in agents.most_common():                # 반복문 시작
     print(f'  {cnt:5d}건: {agent}')
 \" 2>/dev/null"
 ```
 
 ### 4.2 단계 2: 고위험 경보 상세 분석
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # Level 8 이상 경보 상세 분석
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
@@ -286,13 +290,13 @@ for line in sys.stdin:
 # 특정 규칙 ID에 대한 모든 경보
 RULE_ID="5710"  # SSH authentication failed (예시)
 
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 sources = Counter()
 targets = Counter()
 count = 0
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         if a.get('rule',{}).get('id','') == '$RULE_ID':
@@ -304,11 +308,11 @@ for line in sys.stdin:
 print(f'규칙 {\"$RULE_ID\"} 총 {count}건')
 print()
 print('출발지 IP:')
-for ip, cnt in sources.most_common(5):
+for ip, cnt in sources.most_common(5):                 # 반복문 시작
     print(f'  {cnt}건: {ip}')
 print()
 print('대상 사용자:')
-for user, cnt in targets.most_common(5):
+for user, cnt in targets.most_common(5):               # 반복문 시작
     print(f'  {cnt}건: {user}')
 \" 2>/dev/null"
 ```
@@ -366,18 +370,18 @@ sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2
 
 ```bash
 # 반복되는 FP 경보 확인
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 rules = Counter()
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule',{})
         rules[f'{r.get(\"id\",\"\")}:{r.get(\"description\",\"\")}'] += 1
     except: pass
 print('=== 가장 많이 발생하는 경보 (FP 후보) ===')
-for desc, cnt in rules.most_common(10):
+for desc, cnt in rules.most_common(10):                # 반복문 시작
     print(f'  {cnt:5d}건: {desc}')
 \" 2>/dev/null"
 ```

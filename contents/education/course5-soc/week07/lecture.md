@@ -254,7 +254,7 @@ level: medium
 ```bash
 # 실제 환경에서 이 패턴이 발생하는지 확인
 sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
-  awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | awk '\$1>5 {print \$1, \$2}' | head -5"
+  awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | awk '\$1>5 {print \$1, \$2}' | head -5"  # 텍스트 필드 처리
 ```
 
 ### 4.2 규칙 2: 의심스러운 sudo 사용
@@ -291,7 +291,7 @@ level: high
 검증:
 ```bash
 sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'COMMAND=' /var/log/auth.log 2>/dev/null | \
-  grep -E 'bash|sh |passwd|useradd|userdel|chmod' | tail -5"
+  grep -E 'bash|sh |passwd|useradd|userdel|chmod' | tail -5"  # 패턴 검색
 ```
 
 ### 4.3 규칙 3: 웹 SQL Injection 탐지
@@ -485,7 +485,7 @@ level: medium
 ```bash
 # 새벽 시간대 로그인 확인
 sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Accepted' /var/log/auth.log 2>/dev/null | \
-  awk '{print \$3}' | awk -F: '{h=\$1; if(h>=22||h<=5) print}' | head -10"
+  awk '{print \$3}' | awk -F: '{h=\$1; if(h>=22||h<=5) print}' | head -10"  # 텍스트 필드 처리
 ```
 
 ---

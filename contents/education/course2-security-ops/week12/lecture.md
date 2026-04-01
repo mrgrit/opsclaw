@@ -279,7 +279,7 @@ curl -s -X POST http://10.20.30.100:9400/graphql \
 curl -s -X POST http://10.20.30.100:9400/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENCTI_TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "query": "{ indicators(first: 5) { edges { node { name pattern valid_from } } } }"
   }' | python3 -m json.tool
 ```
@@ -290,7 +290,7 @@ curl -s -X POST http://10.20.30.100:9400/graphql \
 curl -s -X POST http://10.20.30.100:9400/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENCTI_TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "query": "{ threatActorsIndividuals(first: 5) { edges { node { name description } } } }"
   }' | python3 -m json.tool
 ```
@@ -316,7 +316,7 @@ curl -s -X POST http://10.20.30.100:9400/graphql \
 curl -s -X POST http://10.20.30.100:9400/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENCTI_TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "query": "{ connectors { id name active connector_type updated_at } }"
   }' | python3 -m json.tool
 ```
@@ -401,7 +401,7 @@ STIXEOF
 curl -s -X POST http://10.20.30.100:9400/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENCTI_TOKEN" \
-  -d "{
+  -d "{                                                # 요청 데이터(body)
     \"query\": \"mutation { stixBundleImport(file: \\\"$(base64 -w0 /tmp/test-stix-bundle.json)\\\") }\"
   }"
 ```
@@ -427,12 +427,12 @@ Wazuh 룰 → IOC 매칭 → 알림
 curl -s -X POST http://10.20.30.100:9400/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENCTI_TOKEN" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "query": "{ indicators(filters: {mode: and, filters: [{key: \"pattern_type\", values: [\"stix\"]}]}, first: 100) { edges { node { name pattern } } } }"
   }' | python3 -c "
 import sys, json, re
 data = json.load(sys.stdin)
-for edge in data.get('data',{}).get('indicators',{}).get('edges',[]):
+for edge in data.get('data',{}).get('indicators',{}).get('edges',[]):  # 반복문 시작
     pattern = edge['node'].get('pattern','')
     m = re.search(r\"value\s*=\s*'([^']+)'\", pattern)
     if m:

@@ -120,14 +120,14 @@
 
 ```bash
 # Wazuh SIEM에서 파일 무결성 변경 알림 확인
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== Wazuh FIM 경보 확인 ==="
 
 # FIM 관련 경보 (rule.group: syscheck)
 cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
 import sys, json
 alerts = []
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         if 'syscheck' in str(a.get('rule',{}).get('groups',[])):
@@ -135,7 +135,7 @@ for line in sys.stdin:
     except: pass
 
 print(f'FIM 경보 수: {len(alerts)}')
-for a in alerts[-5:]:
+for a in alerts[-5:]:                                  # 반복문 시작
     rule = a.get('rule',{})
     syscheck = a.get('syscheck',{})
     print(f'  [{rule.get(\"level\",0)}] {rule.get(\"description\",\"\")}')
@@ -147,7 +147,7 @@ echo ""
 echo "=== 높은 심각도 경보 (Level >= 10) ==="
 cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         if a.get('rule',{}).get('level',0) >= 10:
@@ -160,51 +160,55 @@ ENDSSH
 
 ### 2.2 secu 서버 프로세스 조사
 
+파일 시스템을 검색하여 보안 관련 항목을 찾습니다.
+
 ```bash
 # 의심 프로세스 탐색
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 의심 프로세스 탐색 ==="
 
 # 1. 비정상 네트워크 연결 프로세스
 echo "--- 외부 연결 프로세스 ---"
-ss -tnp 2>/dev/null | grep -v "127.0.0.1\|::1\|10.20.30" | head -10
+ss -tnp 2>/dev/null | grep -v "127.0.0.1\|::1\|10.20.30" | head -10  # 소켓 상태: TCP
 
 echo ""
 echo "--- ESTABLISHED 연결 ---"
-ss -tnp state established 2>/dev/null | head -10
+ss -tnp state established 2>/dev/null | head -10       # 소켓 상태: TCP
 
 echo ""
 # 2. 의심 프로세스 (숨김 파일에서 실행)
 echo "--- /dev/shm, /tmp, /var/tmp 에서 실행 중인 프로세스 ---"
 ls -la /dev/shm/ /tmp/ /var/tmp/ 2>/dev/null | grep -E "^-.*x" | head -10
-ps aux 2>/dev/null | grep -E "/dev/shm|/tmp/\.|/var/tmp" | grep -v grep
+ps aux 2>/dev/null | grep -E "/dev/shm|/tmp/\.|/var/tmp" | grep -v grep  # 프로세스 목록 조회
 
 echo ""
 # 3. 최근 생성/수정된 실행 파일
 echo "--- 최근 24시간 내 변경된 실행 파일 ---"
-find /usr/local/bin /usr/bin /opt -newer /tmp -maxdepth 2 -type f 2>/dev/null | head -10
+find /usr/local/bin /usr/bin /opt -newer /tmp -maxdepth 2 -type f 2>/dev/null | head -10  # 시간 기준 파일 검색
 
 echo ""
 # 4. 숨김 파일 탐색
 echo "--- 숨김 실행 파일 ---"
-find /tmp /dev/shm /var/tmp -name ".*" -type f 2>/dev/null | head -10
+find /tmp /dev/shm /var/tmp -name ".*" -type f 2>/dev/null | head -10  # 이름 기준 파일 검색
 
 echo ""
 # 5. CPU 사용량 상위 프로세스
 echo "--- CPU 상위 5개 프로세스 ---"
-ps aux --sort=-%cpu 2>/dev/null | head -6
+ps aux --sort=-%cpu 2>/dev/null | head -6              # 프로세스 목록 조회
 ENDSSH
 ```
 
 ### 2.3 cron/systemd 백도어 탐색
 
+시스템 서비스를 관리합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== cron 백도어 탐색 ==="
 
 # 모든 사용자 crontab
 echo "--- 전체 crontab ---"
-for user in $(cut -d: -f1 /etc/passwd); do
+for user in $(cut -d: -f1 /etc/passwd); do             # 반복문 시작
   CRON=$(crontab -l -u $user 2>/dev/null)
   if [ -n "$CRON" ]; then
     echo "[$user]"
@@ -221,22 +225,22 @@ echo ""
 echo "=== systemd 서비스 탐색 ==="
 # 최근 생성된 서비스 파일
 echo "--- 사용자 정의 서비스 ---"
-find /etc/systemd/system /usr/lib/systemd/system -name "*.service" -newer /etc/hostname 2>/dev/null | head -10
+find /etc/systemd/system /usr/lib/systemd/system -name "*.service" -newer /etc/hostname 2>/dev/null | head -10  # 이름 기준 파일 검색
 
 # 활성 상태의 의심 서비스
 echo ""
 echo "--- 활성 서비스 (사용자 정의) ---"
 systemctl list-units --type=service --state=running 2>/dev/null | \
-  grep -v -E "systemd|ssh|cron|docker|suricata|nftables|rsyslog|wazuh|dbus|getty" | head -10
+  grep -v -E "systemd|ssh|cron|docker|suricata|nftables|rsyslog|wazuh|dbus|getty" | head -10  # 패턴 검색
 
 echo ""
 echo "=== 로그인 기록 점검 ==="
 echo "--- 최근 로그인 ---"
-last -10 2>/dev/null
+last -10 2>/dev/null                                   # 로그인 이력 조회
 
 echo ""
 echo "--- SSH 인증 실패 ---"
-grep "Failed password" /var/log/auth.log 2>/dev/null | tail -5
+grep "Failed password" /var/log/auth.log 2>/dev/null | tail -5  # 패턴 검색
 ENDSSH
 ```
 
@@ -246,9 +250,11 @@ ENDSSH
 
 ### 3.1 의심 파일 정적 분석
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 의심 파일이 발견되었다고 가정하고 분석 절차 실습
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 파일 분석 시뮬레이션 ==="
 
 # 분석용 샘플 파일 생성 (교육용)
@@ -256,25 +262,25 @@ cat > /tmp/.hidden_test << 'SAMPLE'
 #!/bin/bash
 # 교육용 샘플 - 실제 악성코드 아님
 while true; do
-  curl -s http://evil.example.com/beacon >/dev/null 2>&1
+  curl -s http://evil.example.com/beacon >/dev/null 2>&1  # silent 모드
   sleep 300
 done
 SAMPLE
 
 # 1. 파일 유형 확인
 echo "--- file 명령 ---"
-file /tmp/.hidden_test
+file /tmp/.hidden_test                                 # 파일 유형 확인
 
 # 2. 문자열 추출
 echo ""
 echo "--- strings 분석 ---"
-strings /tmp/.hidden_test | grep -iE "http|curl|wget|nc|bash|eval|exec|base64"
+strings /tmp/.hidden_test | grep -iE "http|curl|wget|nc|bash|eval|exec|base64"  # 바이너리 문자열 추출
 
 # 3. 해시 계산 (IOC용)
 echo ""
 echo "--- 파일 해시 ---"
-md5sum /tmp/.hidden_test 2>/dev/null
-sha256sum /tmp/.hidden_test 2>/dev/null
+md5sum /tmp/.hidden_test 2>/dev/null                   # 해시값 계산
+sha256sum /tmp/.hidden_test 2>/dev/null                # 해시값 계산
 
 # 4. 파일 타임스탬프
 echo ""
@@ -282,19 +288,21 @@ echo "--- 타임스탬프 ---"
 stat /tmp/.hidden_test 2>/dev/null | grep -E "Access|Modify|Change|Birth"
 
 # 정리
-rm -f /tmp/.hidden_test
+rm -f /tmp/.hidden_test                                # 파일 삭제
 ENDSSH
 ```
 
 ### 3.2 네트워크 IOC 분석
 
+로그나 설정에서 특정 패턴을 검색합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 네트워크 IOC 분석 ==="
 
 # 1. DNS 쿼리 로그 (의심 도메인)
 echo "--- DNS 쿼리 확인 ---"
-grep -r "query" /var/log/syslog 2>/dev/null | grep -viE "local|arpa|ubuntu" | tail -5
+grep -r "query" /var/log/syslog 2>/dev/null | grep -viE "local|arpa|ubuntu" | tail -5  # 디렉터리 재귀 검색
 
 # 2. Suricata 알림에서 C2 통신 징후
 echo ""
@@ -306,12 +314,12 @@ grep -iE "trojan|malware|c2|command.and.control|botnet|coinminer" \
 echo ""
 echo "--- 비표준 포트 외부 연결 ---"
 ss -tnp 2>/dev/null | awk '$4 !~ /:(22|80|443|8000|8002|3000)$/' | \
-  grep -v "127.0.0.1\|::1" | head -10
+  grep -v "127.0.0.1\|::1" | head -10                  # 패턴 검색
 
 # 4. iptables/nftables 로그에서 차단된 연결
 echo ""
 echo "--- 방화벽 차단 로그 ---"
-dmesg 2>/dev/null | grep -iE "drop|reject|block" | tail -5
+dmesg 2>/dev/null | grep -iE "drop|reject|block" | tail -5  # 커널 메시지 조회
 ENDSSH
 ```
 
@@ -321,7 +329,7 @@ ENDSSH
 # Ollama로 의심 로그 분석
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "model": "gemma3:12b",
     "messages": [
       {"role": "system", "content": "SOC 분석관입니다. 보안 로그를 분석하여 악성코드 감염 여부를 판단합니다. 한국어로 답변하세요."},
@@ -337,20 +345,22 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 4.1 네트워크 격리
 
+nftables 방화벽 규칙을 설정합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 네트워크 격리 시뮬레이션 ==="
 
 # 실제 격리는 수행하지 않음 - 규칙 예시만 표시
 echo "--- 외부 통신 차단 nftables 규칙 (예시) ---"
 cat << 'RULES'
 # 감염 서버 외부 통신 차단 (관리 SSH만 허용)
-nft add rule inet filter output ip daddr != 10.20.30.0/24 drop
-nft add rule inet filter output tcp dport 22 ip daddr 10.20.30.0/24 accept
+nft add rule inet filter output ip daddr != 10.20.30.0/24 drop  # nftables 규칙 추가
+nft add rule inet filter output tcp dport 22 ip daddr 10.20.30.0/24 accept  # nftables 규칙 추가
 
 # 특정 C2 IP 차단
-nft add rule inet filter output ip daddr 45.33.0.0/16 drop
-nft add rule inet filter input ip saddr 45.33.0.0/16 drop
+nft add rule inet filter output ip daddr 45.33.0.0/16 drop  # nftables 규칙 추가
+nft add rule inet filter input ip saddr 45.33.0.0/16 drop  # nftables 규칙 추가
 RULES
 
 echo ""
@@ -361,8 +371,10 @@ ENDSSH
 
 ### 4.2 프로세스 격리
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 프로세스 격리 절차 (교육용) ==="
 
 cat << 'PROCEDURE'
@@ -400,8 +412,10 @@ ENDSSH
 
 ### 5.1 시스템 무결성 검증
 
+파일 시스템을 검색하여 보안 관련 항목을 찾습니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 시스템 무결성 검증 ==="
 
 # 1. 패키지 무결성 확인
@@ -411,7 +425,7 @@ dpkg --verify 2>/dev/null | head -10 || echo "dpkg verify 미지원"
 # 2. 중요 바이너리 해시 확인
 echo ""
 echo "--- 핵심 바이너리 해시 ---"
-for bin in /usr/bin/ssh /usr/bin/sudo /usr/bin/curl /bin/bash; do
+for bin in /usr/bin/ssh /usr/bin/sudo /usr/bin/curl /bin/bash; do  # 반복문 시작
   if [ -f "$bin" ]; then
     HASH=$(sha256sum "$bin" 2>/dev/null | cut -d' ' -f1)
     echo "$bin: ${HASH:0:16}..."
@@ -421,10 +435,10 @@ done
 # 3. SSH 키 점검
 echo ""
 echo "--- SSH authorized_keys ---"
-for home in /home/* /root; do
+for home in /home/* /root; do                          # 반복문 시작
   if [ -f "$home/.ssh/authorized_keys" ]; then
     echo "[$home]"
-    wc -l "$home/.ssh/authorized_keys" 2>/dev/null
+    wc -l "$home/.ssh/authorized_keys" 2>/dev/null     # 줄/단어/바이트 수 카운트
     cat "$home/.ssh/authorized_keys" 2>/dev/null | head -3
   fi
 done
@@ -433,20 +447,22 @@ done
 echo ""
 echo "--- 비정상 SUID 파일 ---"
 find / -perm -4000 -type f 2>/dev/null | \
-  grep -v -E "^/(usr/(bin|lib|sbin)|bin|sbin)/" | head -5 || echo "비정상 SUID 없음"
+  grep -v -E "^/(usr/(bin|lib|sbin)|bin|sbin)/" | head -5 || echo "비정상 SUID 없음"  # 패턴 검색
 ENDSSH
 ```
 
 ### 5.2 Wazuh SCA 활용
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== Wazuh SCA 결과 확인 ==="
 
 cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c "
 import sys, json
 sca_alerts = []
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line.strip())
         groups = a.get('rule',{}).get('groups',[])
@@ -456,7 +472,7 @@ for line in sys.stdin:
 
 if sca_alerts:
     print(f'SCA 경보 수: {len(sca_alerts)}')
-    for a in sca_alerts[-5:]:
+    for a in sca_alerts[-5:]:                          # 반복문 시작
         rule = a.get('rule',{})
         print(f'  [{rule.get(\"level\",0)}] {rule.get(\"description\",\"\")}')
 else:
@@ -474,7 +490,7 @@ ENDSSH
 ```bash
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "model": "gemma3:12b",
     "messages": [
       {"role": "system", "content": "인시던트 대응 보고서 작성 전문가입니다. 한국어로 작성합니다."},
@@ -486,9 +502,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 6.2 ATT&CK 매핑 실습
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 attack_mapping = [
     ("Initial Access", "T1190", "Exploit Public-Facing App", "웹 취약점으로 초기 침입"),
     ("Execution", "T1059.004", "Unix Shell", "/dev/shm/.cache 실행"),
@@ -501,7 +519,7 @@ attack_mapping = [
 
 print(f"{'Tactic':<20} {'ID':<14} {'Technique':<30} {'분석'}")
 print("=" * 90)
-for tactic, tid, tech, analysis in attack_mapping:
+for tactic, tid, tech, analysis in attack_mapping:     # 반복문 시작
     print(f"{tactic:<20} {tid:<14} {tech:<30} {analysis}")
 PYEOF
 ENDSSH

@@ -145,7 +145,7 @@ echo 1 | sudo -S tail -20 /var/log/suricata/fast.log
 ```bash
 # 가장 많이 발생한 알림 TOP 10
 echo 1 | sudo -S cat /var/log/suricata/fast.log | \
-  awk -F'\\]' '{print $2}' | sort | uniq -c | sort -rn | head -10
+  awk -F'\\]' '{print $2}' | sort | uniq -c | sort -rn | head -10  # 텍스트 필드 처리
 ```
 
 ### 3.3 특정 SID 검색
@@ -157,10 +157,12 @@ echo 1 | sudo -S grep "9000010" /var/log/suricata/fast.log | tail -5
 
 ### 3.4 출발지 IP별 알림 수
 
+로그나 설정에서 특정 패턴을 검색합니다.
+
 ```bash
 echo 1 | sudo -S cat /var/log/suricata/fast.log | \
   grep -oP '\d+\.\d+\.\d+\.\d+:\d+ ->' | \
-  awk -F: '{print $1}' | sort | uniq -c | sort -rn | head -10
+  awk -F: '{print $1}' | sort | uniq -c | sort -rn | head -10  # 텍스트 필드 처리
 ```
 
 ---
@@ -174,16 +176,16 @@ eve.json은 구조화된 JSON 형식으로, 훨씬 풍부한 정보를 제공한
 ```bash
 # 이벤트 타입별 개수
 echo 1 | sudo -S cat /var/log/suricata/eve.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
 types = {}
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         t = e.get('event_type','unknown')
         types[t] = types.get(t,0) + 1
     except: pass
-for t,c in sorted(types.items(), key=lambda x:-x[1]):
+for t,c in sorted(types.items(), key=lambda x:-x[1]):  # 반복문 시작
     print(f'{c:>8}  {t}')
 "
 ```
@@ -203,16 +205,16 @@ for t,c in sorted(types.items(), key=lambda x:-x[1]):
 ```bash
 # 최근 알림 5개를 보기 좋게 출력
 echo 1 | sudo -S cat /var/log/suricata/eve.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
 alerts = []
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if e.get('event_type') == 'alert':
             alerts.append(e)
     except: pass
-for a in alerts[-5:]:
+for a in alerts[-5:]:                                  # 반복문 시작
     al = a['alert']
     print(f\"[{a['timestamp']}] SID:{al['signature_id']} {al['signature']}\")
     print(f\"  {a.get('src_ip','?')}:{a.get('src_port','?')} -> {a.get('dest_ip','?')}:{a.get('dest_port','?')}\")
@@ -251,9 +253,9 @@ echo 1 | sudo -S tail -100 /var/log/suricata/eve.json | \
 ```bash
 # HTTP 요청 로그 (공격과 무관한 정상 트래픽 포함)
 echo 1 | sudo -S cat /var/log/suricata/eve.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if e.get('event_type') == 'http':
@@ -302,9 +304,9 @@ capture.kernel_drops             | Total: 0        | Per min: 0
 
 ```bash
 echo 1 | sudo -S tail -f /var/log/suricata/eve.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if e.get('event_type') == 'stats':
@@ -402,17 +404,17 @@ app-layer:
 ```bash
 # 가장 많이 발생하는 알림 확인 (오탐 후보)
 echo 1 | sudo -S cat /var/log/suricata/eve.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
 sigs = {}
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if e.get('event_type') == 'alert':
             key = f\"{e['alert']['signature_id']}:{e['alert']['signature']}\"
             sigs[key] = sigs.get(key,0) + 1
     except: pass
-for s,c in sorted(sigs.items(), key=lambda x:-x[1])[:10]:
+for s,c in sorted(sigs.items(), key=lambda x:-x[1])[:10]:  # 반복문 시작
     print(f'{c:>6}  {s}')
 "
 ```
@@ -435,7 +437,7 @@ echo 1 | sudo -S kill -USR2 $(pidof suricata)
 ```bash
 # 특정 IP에서 오는 특정 SID 무시
 echo 'suppress gen_id 1, sig_id 2024897, track by_src, ip 10.20.30.80' | \
-  sudo tee -a /etc/suricata/threshold.config
+  sudo tee -a /etc/suricata/threshold.config           # 표준 출력 + 파일 저장
 ```
 
 **방법 3: pass 룰 (특정 트래픽 허용)**
@@ -443,7 +445,7 @@ echo 'suppress gen_id 1, sig_id 2024897, track by_src, ip 10.20.30.80' | \
 ```bash
 # 모니터링 도구의 트래픽을 허용
 echo 'pass http 10.20.30.100 any -> any any (msg:"Allow SIEM health check"; content:"/health"; http.uri; sid:9000099; rev:1;)' | \
-  sudo tee -a /etc/suricata/rules/local.rules
+  sudo tee -a /etc/suricata/rules/local.rules          # 표준 출력 + 파일 저장
 ```
 
 > pass 룰은 다른 룰보다 먼저 평가된다.
@@ -512,12 +514,12 @@ echo 1 | sudo -S grep "kernel_drops" /var/log/suricata/stats.log | tail -1
 
 # 3. 최근 24시간 알림 수
 echo 1 | sudo -S cat /var/log/suricata/eve.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
 from datetime import datetime, timedelta
 cutoff = datetime.now() - timedelta(hours=24)
 cnt = 0
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if e.get('event_type') == 'alert':
@@ -531,9 +533,9 @@ echo 1 | sudo -S du -sh /var/log/suricata/
 
 # 5. 높은 심각도 알림
 echo 1 | sudo -S cat /var/log/suricata/eve.json | \
-  python3 -c "
+  python3 -c "                                         # Python 코드 실행
 import sys, json
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line)
         if e.get('event_type') == 'alert' and e['alert'].get('severity',4) <= 2:

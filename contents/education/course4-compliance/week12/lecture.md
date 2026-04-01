@@ -129,7 +129,7 @@
 ```bash
 # 1. SSH 로그인 성공/실패 통계
 echo "=== SSH 로그인 감사 ==="
-for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
+for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do  # 반복문 시작
   echo "--- $ip ---"
   echo -n "성공: "
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "grep 'Accepted' /var/log/auth.log 2>/dev/null | wc -l"
@@ -138,10 +138,12 @@ for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
 done
 ```
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 2. 실패한 로그인의 출발지 IP 분석
 sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'Failed password' /var/log/auth.log 2>/dev/null | \
-  awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -10"
+  awk '{print \$(NF-3)}' | sort | uniq -c | sort -rn | head -10"  # 텍스트 필드 처리
 ```
 
 ```bash
@@ -152,35 +154,41 @@ for ip in 10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100; do
 done
 ```
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # 4. 비정상 시간대 로그인 확인 (새벽 2~5시)
 sshpass -p1 ssh opsclaw@10.20.30.201 "grep 'session opened' /var/log/auth.log 2>/dev/null | \
-  awk '{print \$3}' | awk -F: '\$1>=2 && \$1<=5 {print}'"
+  awk '{print \$3}' | awk -F: '\$1>=2 && \$1<=5 {print}'"  # 텍스트 필드 처리
 ```
 
 ### 2.3 실습: 네트워크 로그 감사
+
+로그나 설정에서 특정 패턴을 검색합니다.
 
 ```bash
 # Suricata 알림 분석
 echo "=== Suricata 알림 통계 ==="
 sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/fast.log 2>/dev/null | \
-  awk -F'\\]' '{print \$2}' | sort | uniq -c | sort -rn | head -10"
+  awk -F'\\]' '{print \$2}' | sort | uniq -c | sort -rn | head -10"  # 텍스트 필드 처리
 
 # Suricata 알림 심각도별 분류
 sshpass -p1 ssh secu@10.20.30.1 "cat /var/log/suricata/fast.log 2>/dev/null | \
-  grep -oE 'Priority: [0-9]+' | sort | uniq -c | sort -rn"
+  grep -oE 'Priority: [0-9]+' | sort | uniq -c | sort -rn"  # 디렉터리 재귀 검색
 ```
 
 ### 2.4 실습: Wazuh 알림 감사
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
 # Wazuh 알림 레벨별 통계
-sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"
+sshpass -p1 ssh siem@10.20.30.100 "cat /var/ossec/logs/alerts/alerts.json 2>/dev/null | python3 -c \"  # 비밀번호 자동입력 SSH
 import sys, json
 from collections import Counter
 levels = Counter()
 rules = Counter()
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         a = json.loads(line)
         r = a.get('rule', {})
@@ -189,11 +197,11 @@ for line in sys.stdin:
             rules[r.get('description', 'unknown')] += 1
     except: pass
 print('=== 레벨별 통계 ===')
-for l in sorted(levels.keys(), reverse=True):
+for l in sorted(levels.keys(), reverse=True):          # 반복문 시작
     print(f'  Level {l}: {levels[l]}건')
 print()
 print('=== 고위험 알림 Top 5 ===')
-for desc, cnt in rules.most_common(5):
+for desc, cnt in rules.most_common(5):                 # 반복문 시작
     print(f'  {cnt}건: {desc}')
 \" 2>/dev/null"
 ```
@@ -204,6 +212,8 @@ for desc, cnt in rules.most_common(5):
 
 ### 3.1 점검 스크립트
 
+로그나 설정에서 특정 패턴을 검색합니다.
+
 ```bash
 #!/bin/bash
 # 보안 설정 감사 스크립트
@@ -213,7 +223,7 @@ echo "================================================"
 
 SERVERS="10.20.30.201 10.20.30.1 10.20.30.80 10.20.30.100"
 
-for ip in $SERVERS; do
+for ip in $SERVERS; do                                 # 반복문 시작
   echo ""
   echo "############## $ip ##############"
 
@@ -229,7 +239,7 @@ for ip in $SERVERS; do
   # 2. 비밀번호 정책
   echo "[비밀번호 정책]"
   sshpass -p1 ssh -o StrictHostKeyChecking=no $srv  # srv=user@ip (아래 루프 참고) "
-    grep -E '^PASS_MAX_DAYS|^PASS_MIN_DAYS|^PASS_MIN_LEN' /etc/login.defs 2>/dev/null | sed 's/^/  /'
+    grep -E '^PASS_MAX_DAYS|^PASS_MIN_DAYS|^PASS_MIN_LEN' /etc/login.defs 2>/dev/null | sed 's/^/  /'  # 패턴 검색
   " 2>/dev/null
 
   # 3. 파일 권한

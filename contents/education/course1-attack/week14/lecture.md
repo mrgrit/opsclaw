@@ -258,15 +258,17 @@ Block 1              Block 2              Block 3
 
 ### 실습 1: 프로젝트 생성 및 기본 워크플로우
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # 환경 변수 설정
-export OPSCLAW_API_KEY="opsclaw-api-key-2026"
+export OPSCLAW_API_KEY="opsclaw-api-key-2026"          # 환경 변수 설정
 
 # 1. 프로젝트 생성
 PROJECT=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "name": "week14-automated-pentest",
     "request_text": "JuiceShop 대상 자동화 침투 테스트",
     "master_mode": "external"
@@ -280,20 +282,22 @@ echo "프로젝트 ID: $PROJECT_ID"
 
 # 2. Stage 전환: created → planning → executing
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/plan" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool
+  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool  # API 인증 키
 
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool
+  -H "X-API-Key: $OPSCLAW_API_KEY" | python3 -m json.tool  # API 인증 키
 ```
 
 ### 실습 2: 정찰 단계 자동화 (T1046, T1595)
+
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
 
 ```bash
 # 정찰 태스크 실행
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 1,
@@ -330,12 +334,14 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
 
 ### 실습 3: 웹 공격 단계 자동화 (T1190)
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # SQL Injection 테스트 태스크
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 4,
@@ -361,6 +367,8 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/execute-plan" \
 ```
 
 ### 실습 4: 증거 확인
+
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
 
 ```bash
 # 증거 요약 조회
@@ -406,12 +414,14 @@ curl -s -H "X-API-Key: $OPSCLAW_API_KEY" \
 
 ### 실습 6: 완료 보고서 생성
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # 완료 보고서 작성
 curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/completion-report" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "summary": "JuiceShop 대상 자동화 침투 테스트 완료",
     "outcome": "success",
     "work_details": [
@@ -433,12 +443,14 @@ curl -s -X POST "http://localhost:8000/projects/$PROJECT_ID/completion-report" \
 
 ### 실습 7: 다중 서버 공격 자동화
 
+OpsClaw Manager API를 호출하여 작업을 수행합니다.
+
 ```bash
 # 새 프로젝트: 전체 인프라 스캔
 PROJECT2=$(curl -s -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "name": "week14-multi-server-scan",
     "request_text": "전체 인프라 정찰 스캔",
     "master_mode": "external"
@@ -446,15 +458,15 @@ PROJECT2=$(curl -s -X POST http://localhost:8000/projects \
 PID2=$(echo "$PROJECT2" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
 
 curl -s -X POST "http://localhost:8000/projects/$PID2/plan" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null         # API 인증 키
 curl -s -X POST "http://localhost:8000/projects/$PID2/execute" \
-  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null
+  -H "X-API-Key: $OPSCLAW_API_KEY" > /dev/null         # API 인증 키
 
 # 각 서버별 SubAgent로 명령 분배
 curl -s -X POST "http://localhost:8000/projects/$PID2/execute-plan" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $OPSCLAW_API_KEY" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "tasks": [
       {
         "order": 1,

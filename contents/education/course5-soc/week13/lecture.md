@@ -126,8 +126,8 @@
 > **실전 활용**: CTI 기반 선제 탐지는 알려진 위협을 조기에 차단하는 SOC의 핵심 역량이다
 
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 # 교육용 IOC 데이터베이스 시뮬레이션
 ioc_database = {
     "malicious_ips": [
@@ -149,15 +149,15 @@ ioc_database = {
 
 print("=== IOC 데이터베이스 ===")
 print(f"\n악성 IP: {len(ioc_database['malicious_ips'])}건")
-for ioc in ioc_database["malicious_ips"]:
+for ioc in ioc_database["malicious_ips"]:              # 반복문 시작
     print(f"  {ioc['ip']:<25} {ioc['type']:<20} 신뢰도: {ioc['confidence']}%")
 
 print(f"\n악성 도메인: {len(ioc_database['malicious_domains'])}건")
-for ioc in ioc_database["malicious_domains"]:
+for ioc in ioc_database["malicious_domains"]:          # 반복문 시작
     print(f"  {ioc['domain']:<25} {ioc['type']:<25} {ioc['first_seen']}")
 
 print(f"\n악성 파일 해시: {len(ioc_database['file_hashes'])}건")
-for ioc in ioc_database["file_hashes"]:
+for ioc in ioc_database["file_hashes"]:                # 반복문 시작
     print(f"  {ioc['sha256']:<20} {ioc['name']:<30} {ioc['type']}")
 PYEOF
 ENDSSH
@@ -165,14 +165,16 @@ ENDSSH
 
 ### 2.2 로그에서 IOC 매칭
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== IOC 매칭: 네트워크 로그 vs 악성 IP ==="
 
 MALICIOUS_IPS="45.33.32.156 185.220.101.35 91.219.236.222"
 
 echo "--- Suricata 로그 IOC 매칭 ---"
-for ip in $MALICIOUS_IPS; do
+for ip in $MALICIOUS_IPS; do                           # 반복문 시작
   COUNT=$(grep -c "$ip" /var/log/suricata/eve.json 2>/dev/null || echo "0")
   if [ "$COUNT" -gt "0" ]; then
     echo "[HIT] $ip - $COUNT건 발견"
@@ -183,7 +185,7 @@ done
 
 echo ""
 echo "--- 현재 연결에서 IOC 매칭 ---"
-for ip in $MALICIOUS_IPS; do
+for ip in $MALICIOUS_IPS; do                           # 반복문 시작
   if ss -tn 2>/dev/null | grep -q "$ip"; then
     echo "[ACTIVE] $ip - 현재 연결 중!"
   fi
@@ -194,8 +196,10 @@ ENDSSH
 
 ### 2.3 Wazuh CDB 리스트 활용
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no siem@10.20.30.100 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== Wazuh CDB 리스트 기반 IOC 탐지 ==="
 
 cat << 'EXPLAIN'
@@ -232,9 +236,11 @@ ENDSSH
 
 ### 3.1 STIX 2.1 객체 이해
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import json
 
 stix_indicator = {
@@ -268,7 +274,7 @@ stix_types = [
     ("sighting", "IOC 관측 기록"),
 ]
 
-for stype, desc in stix_types:
+for stype, desc in stix_types:                         # 반복문 시작
     print(f"  {stype:<20} {desc}")
 PYEOF
 ENDSSH
@@ -280,40 +286,44 @@ ENDSSH
 
 ### 4.1 가설 기반 위협 헌팅
 
+파일 시스템을 검색하여 보안 관련 항목을 찾습니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== 위협 헌팅 실습 ==="
 echo "가설: 내부 서버에서 외부 C2 서버로 비콘 통신이 발생하고 있다"
 echo ""
 
 echo "--- Hunt 1: 비정상 외부 연결 ---"
 ss -tn 2>/dev/null | awk '{print $5}' | grep -v "^$\|127.0.0.1\|10.20.30\|192.168\|::1" | \
-  sort | uniq -c | sort -rn | head -5
+  sort | uniq -c | sort -rn | head -5                  # 정렬
 echo "(외부 연결 목록)"
 
 echo ""
 echo "--- Hunt 2: 비정상 DNS 쿼리 (긴 도메인 = 터널링 징후) ---"
 grep -o "[a-zA-Z0-9.-]*\.[a-z]*" /var/log/syslog 2>/dev/null | \
-  awk '{if(length($0) > 40) print "LONG:", $0}' | head -5 || echo "긴 DNS 없음 (정상)"
+  awk '{if(length($0) > 40) print "LONG:", $0}' | head -5 || echo "긴 DNS 없음 (정상)"  # 텍스트 필드 처리
 
 echo ""
 echo "--- Hunt 3: 프로세스 체인 ---"
-ps auxf 2>/dev/null | grep -A2 -E "nginx|apache|node" | head -15
+ps auxf 2>/dev/null | grep -A2 -E "nginx|apache|node" | head -15  # 프로세스 목록 조회
 
 echo ""
 echo "--- Hunt 4: 비정상 위치 실행 파일 ---"
-find /dev/shm /tmp /var/tmp -type f -executable 2>/dev/null | head -5 || echo "없음 (정상)"
+find /dev/shm /tmp /var/tmp -type f -executable 2>/dev/null | head -5 || echo "없음 (정상)"  # 유형 기준 파일 검색
 
 echo ""
 echo "--- Hunt 5: 예약 작업 ---"
-crontab -l 2>/dev/null | grep -vE "^#|^$" | head -5
+crontab -l 2>/dev/null | grep -vE "^#|^$" | head -5    # 크론 스케줄 관리
 ENDSSH
 ```
 
 ### 4.2 Suricata 로그 기반 위협 헌팅
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'
+sshpass -p1 ssh -o StrictHostKeyChecking=no secu@10.20.30.1 << 'ENDSSH'  # 비밀번호 자동입력 SSH
 echo "=== Suricata 로그 위협 헌팅 ==="
 
 cat /var/log/suricata/eve.json 2>/dev/null | python3 -c "
@@ -321,7 +331,7 @@ import sys, json
 from collections import Counter
 
 http_events, alert_events = [], []
-for line in sys.stdin:
+for line in sys.stdin:                                 # 반복문 시작
     try:
         e = json.loads(line.strip())
         etype = e.get('event_type','')
@@ -335,13 +345,13 @@ print(f'Alert 이벤트: {len(alert_events)}건')
 if http_events:
     uas = Counter(e.get('http',{}).get('http_user_agent','unknown') for e in http_events)
     print('\nUser-Agent 분포 (상위 5개):')
-    for ua, cnt in uas.most_common(5):
+    for ua, cnt in uas.most_common(5):                 # 반복문 시작
         print(f'  [{cnt}] {ua[:60]}')
 
 if alert_events:
     cats = Counter(e.get('alert',{}).get('category','unknown') for e in alert_events)
     print('\nAlert 카테고리:')
-    for cat, cnt in cats.most_common(10):
+    for cat, cnt in cats.most_common(10):              # 반복문 시작
         print(f'  [{cnt}] {cat}')
 " 2>/dev/null || echo "Suricata 로그 없음"
 ENDSSH
@@ -352,7 +362,7 @@ ENDSSH
 ```bash
 curl -s http://192.168.0.105:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{                                                # 요청 데이터(body)
     "model": "gemma3:12b",
     "messages": [
       {"role": "system", "content": "위협 헌팅 전문가입니다. MITRE ATT&CK 기반으로 헌팅 가설을 생성합니다. 한국어로 답변하세요."},
@@ -368,9 +378,11 @@ curl -s http://192.168.0.105:11434/v1/chat/completions \
 
 ### 5.1 IOC 자동 업데이트 스크립트
 
+원격 서버에 접속하여 명령을 실행합니다.
+
 ```bash
-sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'
-python3 << 'PYEOF'
+sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 << 'ENDSSH'  # 비밀번호 자동입력 SSH
+python3 << 'PYEOF'                                     # Python 스크립트 실행
 import json
 from datetime import datetime
 
@@ -394,7 +406,7 @@ def generate_wazuh_cdb(iocs):
 def generate_suricata_rules(iocs):
     """Suricata 룰 형식"""
     rules = []
-    for idx, ip_ioc in enumerate(iocs["ips"], 1):
+    for idx, ip_ioc in enumerate(iocs["ips"], 1):      # 반복문 시작
         sid = 9000000 + idx
         rules.append(
             f'alert ip any any -> {ip_ioc["value"]} any '
