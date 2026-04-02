@@ -922,7 +922,6 @@ async def chat_stream(req: ChatRequest):
                                 except Exception:
                                     pass
 
-    "nemotron:120b": {"type": "ollama", "model": "nemotron-3-super:120b"},
                 elif cfg["type"] == "claude":
                     if not ANTHROPIC_BASE_URL or not ANTHROPIC_AUTH_TOKEN:
                         yield f"data: {json.dumps({'content': 'Claude API not configured'})}\n\n"
@@ -1041,7 +1040,6 @@ async def chat(req: ChatRequest):
                 data = resp.json()
                 answer = data["choices"][0]["message"]["content"]
 
-    "nemotron:120b": {"type": "ollama", "model": "nemotron-3-super:120b"},
             elif cfg["type"] == "claude":
                 if not ANTHROPIC_BASE_URL or not ANTHROPIC_AUTH_TOKEN:
                     raise HTTPException(503, "Claude API not configured")
