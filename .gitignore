@@ -20,3 +20,6 @@ paper/
 
 # CTF flags (answers)
 contents/ctf/flags/
+
+# Papers (admin only via web)
+contents/paper/

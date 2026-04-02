@@ -689,12 +689,23 @@ async def list_papers(_admin: dict = Depends(admin_required)):
         return {"papers": []}
 
     papers = []
+    # 최상위 md 파일 (마스터 플랜 등)
+    top_files = sorted(f.name for f in paper_dir.iterdir() if f.is_file() and f.suffix == ".md")
+    if top_files:
+        papers.append({"name": "_overview", "title": "마스터 플랜", "icon": "📋", "files": top_files})
+    # 논문 폴더 (paper1~5)
     for d in sorted(paper_dir.iterdir()):
         if d.is_dir() and d.name.startswith("paper"):
-            files = sorted(
-                f.name for f in d.iterdir() if f.is_file() and f.suffix == ".md"
-            )
-            papers.append({"name": d.name, "files": files})
+            files = sorted(f.name for f in d.iterdir() if f.is_file() and f.suffix == ".md")
+            num = d.name.replace("paper", "")
+            titles = {"1": "아키텍처", "2": "보안/모의해킹", "3": "사례연구", "4": "하네스 비교", "5": "교육 파이프라인"}
+            papers.append({"name": d.name, "title": f"Paper {num}: {titles.get(num, '')}", "icon": "📄", "files": files})
+    # 아이디어 폴더
+    ideas_dir = paper_dir / "ideas"
+    if ideas_dir.is_dir():
+        idea_files = sorted(f.name for f in ideas_dir.iterdir() if f.is_file() and f.suffix == ".md")
+        if idea_files:
+            papers.append({"name": "ideas", "title": "연구 아이디어", "icon": "💡", "files": idea_files})
     return {"papers": papers}
 
 
@@ -706,7 +717,10 @@ async def get_paper(
 ):
     """Return a paper markdown file (admin only)."""
     filename = file if file.endswith(".md") else f"{file}.md"
-    paper_path = _safe_path(CONTENTS_BASE / "paper", paper, filename)
+    if paper == "_overview":
+        paper_path = _safe_path(CONTENTS_BASE / "paper", filename)
+    else:
+        paper_path = _safe_path(CONTENTS_BASE / "paper", paper, filename)
     if not paper_path.is_file():
         raise HTTPException(404, f"Paper not found: {paper}/{file}")
     return {"paper": paper, "file": file, "content": paper_path.read_text("utf-8")}
