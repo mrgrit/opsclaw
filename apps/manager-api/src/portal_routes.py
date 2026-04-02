@@ -53,7 +53,6 @@ ANTHROPIC_AUTH_TOKEN = os.getenv("ANTHROPIC_AUTH_TOKEN", "")
 CHAT_MODELS = {
     "gpt-oss:120b": {"type": "ollama", "model": "gpt-oss:120b"},
     "qwen3.5-coder:122b": {"type": "ollama", "model": "mdq100/qwen3.5-coder:122b"},
-    "nemotron:120b": {"type": "ollama", "model": "nemotron-3-super:120b"},
     "nemotron-3-super:120b": {"type": "ollama", "model": "nemotron-3-super:120b"},
     "claude": {"type": "claude", "model": "claude-sonnet-4-20250514"},
 }
