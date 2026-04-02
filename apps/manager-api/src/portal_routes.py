@@ -54,6 +54,7 @@ CHAT_MODELS = {
     "gpt-oss:120b": {"type": "ollama", "model": "gpt-oss:120b"},
     "qwen3.5-coder:122b": {"type": "ollama", "model": "mdq100/qwen3.5-coder:122b"},
     "nemotron:120b": {"type": "ollama", "model": "nemotron-3-super:120b"},
+    "nemotron-3-super:120b": {"type": "ollama", "model": "nemotron-3-super:120b"},
     "claude": {"type": "claude", "model": "claude-sonnet-4-20250514"},
 }
 
@@ -922,6 +923,7 @@ async def chat_stream(req: ChatRequest):
                                 except Exception:
                                     pass
 
+    "nemotron-3-super:120b": {"type": "ollama", "model": "nemotron-3-super:120b"},
                 elif cfg["type"] == "claude":
                     if not ANTHROPIC_BASE_URL or not ANTHROPIC_AUTH_TOKEN:
                         yield f"data: {json.dumps({'content': 'Claude API not configured'})}\n\n"
@@ -1040,6 +1042,7 @@ async def chat(req: ChatRequest):
                 data = resp.json()
                 answer = data["choices"][0]["message"]["content"]
 
+    "nemotron-3-super:120b": {"type": "ollama", "model": "nemotron-3-super:120b"},
             elif cfg["type"] == "claude":
                 if not ANTHROPIC_BASE_URL or not ANTHROPIC_AUTH_TOKEN:
                     raise HTTPException(503, "Claude API not configured")
