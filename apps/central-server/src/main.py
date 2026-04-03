@@ -131,6 +131,13 @@ def _init_db():
                     points INT DEFAULT 0,
                     submitted_at TIMESTAMPTZ DEFAULT now()
                 );
+                -- 중앙 설정 (Config)
+                CREATE TABLE IF NOT EXISTS central_config (
+                    key TEXT PRIMARY KEY,
+                    value JSONB NOT NULL,
+                    description TEXT DEFAULT '',
+                    updated_at TIMESTAMPTZ DEFAULT now()
+                );
                 -- 배포 패키지
                 CREATE TABLE IF NOT EXISTS deploy_packages (
                     id TEXT PRIMARY KEY,
@@ -146,11 +153,89 @@ def _init_db():
             """)
             conn.commit()
 
+# ── Config Defaults (기본값 시딩) ──────────────────
+DEFAULT_CONFIG = {
+    # 인프라 서버
+    "infra.opsclaw.ip": {"value": "10.20.30.201", "description": "OpsClaw control plane IP"},
+    "infra.opsclaw.external_ip": {"value": "192.168.0.107", "description": "OpsClaw 외부 IP (WiFi)"},
+    "infra.secu.ip": {"value": "10.20.30.1", "description": "secu 서버 IP (nftables+Suricata)"},
+    "infra.secu.external_ip": {"value": "192.168.208.150", "description": "secu 외부 IP"},
+    "infra.web.ip": {"value": "10.20.30.80", "description": "web 서버 IP (WAF+JuiceShop)"},
+    "infra.web.external_ip": {"value": "192.168.208.151", "description": "web 외부 IP"},
+    "infra.siem.ip": {"value": "10.20.30.100", "description": "siem 서버 IP (Wazuh)"},
+    "infra.siem.external_ip": {"value": "192.168.208.152", "description": "siem 외부 IP"},
+    "infra.dgx.ip": {"value": "192.168.0.105", "description": "DGX-Spark GPU 서버 IP"},
+    "infra.network.cidr": {"value": "10.20.30.0/24", "description": "내부 네트워크 CIDR"},
+    # 가상 서버
+    "infra.v-secu.ip": {"value": "192.168.0.108", "description": "v-secu VM IP"},
+    "infra.v-web.ip": {"value": "192.168.0.110", "description": "v-web VM IP"},
+    "infra.v-siem.ip": {"value": "192.168.0.109", "description": "v-siem VM IP"},
+    # 서비스 포트
+    "service.manager.port": {"value": 8000, "description": "Manager API 포트"},
+    "service.master.port": {"value": 8001, "description": "Master Service 포트"},
+    "service.subagent.port": {"value": 8002, "description": "SubAgent 포트"},
+    "service.central.port": {"value": 7000, "description": "Central Server 포트"},
+    "service.bastion.port": {"value": 9000, "description": "Bastion API 포트"},
+    "service.ccc.port": {"value": 9100, "description": "CCC API 포트"},
+    "service.ctfd.port": {"value": 8080, "description": "CTFd 포트"},
+    # SubAgent URL 매핑
+    "subagent.local": {"value": "http://localhost:8002", "description": "로컬 SubAgent URL"},
+    "subagent.secu": {"value": "http://10.20.30.1:8002", "description": "secu SubAgent URL"},
+    "subagent.web": {"value": "http://10.20.30.80:8002", "description": "web SubAgent URL"},
+    "subagent.siem": {"value": "http://10.20.30.100:8002", "description": "siem SubAgent URL"},
+    "subagent.dgx": {"value": "http://192.168.0.105:8002", "description": "dgx-spark SubAgent URL"},
+    # LLM
+    "llm.ollama.url": {"value": "http://192.168.0.105:11434", "description": "Ollama LLM 서버 URL"},
+    "llm.ollama.api_url": {"value": "http://192.168.0.105:11434/v1", "description": "Ollama OpenAI 호환 API URL"},
+    "llm.default_model": {"value": "gpt-oss:120b", "description": "기본 LLM 모델"},
+    # DB
+    "db.opsclaw.url": {"value": "postgresql://opsclaw:opsclaw@127.0.0.1:5432/opsclaw", "description": "OpsClaw DB 연결"},
+    "db.bastion.url": {"value": "postgresql://opsclaw:opsclaw@127.0.0.1:5432/bastion", "description": "Bastion DB 연결"},
+    "db.ccc.url": {"value": "postgresql://opsclaw:opsclaw@127.0.0.1:5432/ccc", "description": "CCC DB 연결"},
+    # API 키
+    "auth.opsclaw.api_key": {"value": "opsclaw-api-key-2026", "description": "OpsClaw API 키"},
+    "auth.bastion.api_key": {"value": "bastion-api-key-2026", "description": "Bastion API 키"},
+    "auth.ccc.api_key": {"value": "ccc-api-key-2026", "description": "CCC API 키"},
+    "auth.central.api_key": {"value": "central-api-key-2026", "description": "Central API 키"},
+    # SSH
+    "ssh.default_user": {"value": "opsclaw", "description": "SSH 기본 사용자"},
+    "ssh.default_port": {"value": 22, "description": "SSH 기본 포트"},
+    # DB 자격증명
+    "db.postgres.host": {"value": "127.0.0.1", "description": "PostgreSQL 호스트"},
+    "db.postgres.port": {"value": 5432, "description": "PostgreSQL 포트"},
+    "db.postgres.user": {"value": "opsclaw", "description": "PostgreSQL 사용자"},
+    "db.postgres.password": {"value": "opsclaw", "description": "PostgreSQL 비밀번호"},
+    # 서버별 SSH 자격증명
+    "ssh.secu.user": {"value": "opsclaw", "description": "secu SSH 사용자"},
+    "ssh.secu.password": {"value": "1", "description": "secu SSH/sudo 비밀번호"},
+    "ssh.web.user": {"value": "opsclaw", "description": "web SSH 사용자"},
+    "ssh.web.password": {"value": "1", "description": "web SSH/sudo 비밀번호"},
+    "ssh.siem.user": {"value": "opsclaw", "description": "siem SSH 사용자"},
+    "ssh.siem.password": {"value": "1", "description": "siem SSH/sudo 비밀번호"},
+    # 포털 관리자
+    "auth.portal.admin_user": {"value": "admin", "description": "포털 관리자 아이디"},
+    "auth.portal.admin_password": {"value": "admin2026", "description": "포털 관리자 비밀번호"},
+}
+
+def _seed_config():
+    """기본 설정값을 DB에 시딩 (이미 있으면 건너뜀)"""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            for key, cfg in DEFAULT_CONFIG.items():
+                cur.execute(
+                    """INSERT INTO central_config (key, value, description)
+                       VALUES (%s, %s, %s)
+                       ON CONFLICT (key) DO NOTHING""",
+                    (key, Json(cfg["value"]), cfg["description"]),
+                )
+            conn.commit()
+
 # ── Lifespan ───────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         _init_db()
+        _seed_config()
     except Exception as e:
         print(f"[central] DB init warning: {e}")
     yield
@@ -383,6 +468,117 @@ def list_packages(pkg_type: str | None = None):
             cur.execute(q, params)
             rows = cur.fetchall()
     return {"packages": [dict(r) for r in rows]}
+
+# ══════════════════════════════════════════════════
+#  Config (중앙 설정 관리)
+# ══════════════════════════════════════════════════
+class ConfigUpdate(BaseModel):
+    value: Any
+    description: str | None = None
+
+@app.get("/config", dependencies=[Depends(verify_key)])
+def list_config(prefix: str | None = None):
+    """설정 목록 (prefix 필터 가능: infra, service, subagent, llm, db, auth, ssh)"""
+    q = "SELECT key, value, description, updated_at FROM central_config"
+    params: list = []
+    if prefix:
+        q += " WHERE key LIKE %s"; params.append(f"{prefix}%")
+    q += " ORDER BY key"
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(q, params)
+            rows = cur.fetchall()
+    config = {}
+    for r in rows:
+        config[r["key"]] = {"value": r["value"], "description": r["description"], "updated_at": str(r["updated_at"])}
+    return {"config": config, "total": len(config)}
+
+@app.get("/config/{key:path}", dependencies=[Depends(verify_key)])
+def get_config(key: str):
+    """단일 설정 조회"""
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM central_config WHERE key=%s", (key,))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(404, f"Config key '{key}' not found")
+    return {"key": row["key"], "value": row["value"], "description": row["description"], "updated_at": str(row["updated_at"])}
+
+@app.put("/config/{key:path}", dependencies=[Depends(verify_key)])
+def update_config(key: str, body: ConfigUpdate):
+    """설정 수정"""
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            sets = ["value=%s", "updated_at=now()"]
+            params: list = [Json(body.value)]
+            if body.description is not None:
+                sets.append("description=%s")
+                params.append(body.description)
+            params.append(key)
+            cur.execute(f"UPDATE central_config SET {','.join(sets)} WHERE key=%s RETURNING *", params)
+            row = cur.fetchone()
+            if not row:
+                # 없으면 새로 생성
+                cur.execute(
+                    "INSERT INTO central_config (key, value, description) VALUES (%s, %s, %s) RETURNING *",
+                    (key, Json(body.value), body.description or ""),
+                )
+                row = cur.fetchone()
+            conn.commit()
+    return {"key": row["key"], "value": row["value"], "description": row["description"]}
+
+@app.delete("/config/{key:path}", dependencies=[Depends(verify_key)])
+def delete_config(key: str):
+    """설정 삭제"""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM central_config WHERE key=%s", (key,))
+            conn.commit()
+            if cur.rowcount == 0:
+                raise HTTPException(404, f"Config key '{key}' not found")
+    return {"deleted": key}
+
+@app.get("/config-bundle/{instance_type}", dependencies=[Depends(verify_key)])
+def get_config_bundle(instance_type: str):
+    """인스턴스 타입별 설정 번들 (시스템 기동 시 한 번에 가져감)
+    instance_type: opsclaw | bastion | ccc | all
+    """
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT key, value FROM central_config ORDER BY key")
+            rows = cur.fetchall()
+    all_config = {r["key"]: r["value"] for r in rows}
+
+    # 공통 설정 (모든 시스템)
+    bundle = {}
+    for k, v in all_config.items():
+        if k.startswith("infra.") or k.startswith("llm.") or k.startswith("ssh."):
+            bundle[k] = v
+
+    # 시스템별 추가
+    if instance_type in ("opsclaw", "all"):
+        bundle["db.url"] = all_config.get("db.opsclaw.url")
+        bundle["api_key"] = all_config.get("auth.opsclaw.api_key")
+        bundle["service.port"] = all_config.get("service.manager.port")
+    elif instance_type == "bastion":
+        bundle["db.url"] = all_config.get("db.bastion.url")
+        bundle["api_key"] = all_config.get("auth.bastion.api_key")
+        bundle["service.port"] = all_config.get("service.bastion.port")
+    elif instance_type == "ccc":
+        bundle["db.url"] = all_config.get("db.ccc.url")
+        bundle["api_key"] = all_config.get("auth.ccc.api_key")
+        bundle["service.port"] = all_config.get("service.ccc.port")
+
+    # SubAgent URL들
+    for k, v in all_config.items():
+        if k.startswith("subagent."):
+            bundle[k] = v
+    # 서비스 포트들
+    for k, v in all_config.items():
+        if k.startswith("service."):
+            bundle[k] = v
+
+    return {"instance_type": instance_type, "config": bundle}
 
 # ══════════════════════════════════════════════════
 #  Dashboard

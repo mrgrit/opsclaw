@@ -5,6 +5,7 @@ import Instances from './pages/Instances.tsx'
 import Blockchain from './pages/Blockchain.tsx'
 import CTF from './pages/CTF.tsx'
 import NMS from './pages/NMS.tsx'
+import Config from './pages/Config.tsx'
 
 const nav = [
   { to: '/dashboard', label: 'Dashboard', icon: '📊' },
@@ -12,6 +13,7 @@ const nav = [
   { to: '/blockchain', label: 'Blockchain', icon: '⛓️' },
   { to: '/ctf', label: 'CTF', icon: '🏁' },
   { to: '/nms', label: 'NMS/SMS', icon: '📡' },
+  { to: '/config', label: 'Config', icon: '⚙️' },
 ]
 
 export default function App() {
@@ -41,6 +43,7 @@ export default function App() {
           <Route path="/blockchain" element={<Blockchain />} />
           <Route path="/ctf" element={<CTF />} />
           <Route path="/nms" element={<NMS />} />
+          <Route path="/config" element={<Config />} />
         </Routes>
       </main>
     </div>
