@@ -75,43 +75,31 @@
 
 ```
 외부 인터넷
-    │
-    ▼
-┌──────────────────────────────────────┐
-│  Layer 1: 네트워크 방화벽 (nftables)  │  ← IP/포트 필터링
-│  secu (10.20.30.1)                   │
-└──────────────┬───────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────┐
-│  Layer 2: IPS (Suricata)             │  ← 페이로드 검사 (L3~L7)
-│  secu (10.20.30.1)                   │
-└──────────────┬───────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────┐
-│  Layer 3: WAF (Apache+ModSecurity)            │  ← HTTP 공격 검사 (L7)
-│  web (10.20.30.80)                   │
-└──────────────┬───────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────┐
-│  Layer 4: 애플리케이션 (JuiceShop)    │
-│  web (10.20.30.80)                   │
-└──────────────────────────────────────┘
+  |
+  v
+[Layer 1] 네트워크 방화벽 (nftables)   -- IP/포트 필터링
+  secu (10.20.30.1)
+  |
+  v
+[Layer 2] IPS (Suricata)              -- 페이로드 검사 (L3~L7)
+  secu (10.20.30.1)
+  |
+  v
+[Layer 3] WAF (Apache+ModSecurity)    -- HTTP 공격 검사 (L7)
+  web (10.20.30.80)
+  |
+  v
+[Layer 4] 애플리케이션 (JuiceShop)
+  web (10.20.30.80)
 
-               ↕ 모든 계층의 로그
+  (모든 계층의 로그)
 
-┌──────────────────────────────────────┐
-│  Layer 5: SIEM (Wazuh)               │  ← 통합 로그 분석
-│  siem (10.20.30.100)                 │
-└──────────────┬───────────────────────┘
-               │
-               ▼
-┌──────────────────────────────────────┐
-│  Layer 6: CTI (OpenCTI)              │  ← 위협 인텔리전스
-│  siem (10.20.30.100:9400)            │
-└──────────────────────────────────────┘
+[Layer 5] SIEM (Wazuh)                -- 통합 로그 분석
+  siem (10.20.30.100)
+  |
+  v
+[Layer 6] CTI (OpenCTI)               -- 위협 인텔리전스
+  siem (10.20.30.100:9400)
 ```
 
 ---
@@ -131,29 +119,22 @@
 > **주의:** 모든 실습은 허가된 실습 환경(10.20.30.0/24)에서만 수행한다.
 
 ```
-                    ┌───────────────────────────┐
-                    │     외부 (인터넷)           │
-                    └───────────┬───────────────┘
-                                │
-                    ┌───────────┴───────────────┐
-                    │   secu (10.20.30.1)        │
-                    │   ┌─────────────────┐      │
-                    │   │ nftables (FW)   │      │
-                    │   │ Suricata (IPS)  │      │
-                    │   │ Wazuh Agent     │      │
-                    │   └────────┬────────┘      │
-                    └────────────┼───────────────┘
-                       ┌─────────┼──────────┐
-                       │                    │
-          ┌────────────┴──────┐  ┌──────────┴────────────┐
-          │ web (10.20.30.80)  │  │ siem (10.20.30.100)    │
-          │ ┌───────────────┐  │  │ ┌──────────────────┐   │
-          │ │ Apache+ModSecurity WAF │  │  │ │ Wazuh Manager    │   │
-          │ │ JuiceShop App │  │  │ │ Wazuh Indexer    │   │
-          │ │ Wazuh Agent   │  │  │ │ Wazuh Dashboard  │   │
-          │ └───────────────┘  │  │ │ OpenCTI          │   │
-          └────────────────────┘  │ └──────────────────┘   │
-                                  └────────────────────────┘
+[외부 (인터넷)]
+       |
+       v
+[secu] 10.20.30.1
+  - nftables (FW)
+  - Suricata (IPS)
+  - Wazuh Agent
+       |
+       +--------------------+
+       |                    |
+       v                    v
+[web] 10.20.30.80      [siem] 10.20.30.100
+  - Apache+ModSecurity    - Wazuh Manager
+    WAF                   - Wazuh Indexer
+  - JuiceShop App         - Wazuh Dashboard
+  - Wazuh Agent           - OpenCTI
 ```
 
 ---
@@ -263,13 +244,13 @@ bash /tmp/check_all.sh
 ### 4.1 정상 HTTP 요청의 경로
 
 ```
-클라이언트 → [nftables] → [Suricata] → [Apache+ModSecurity WAF] → [JuiceShop]
-                 ↓              ↓              ↓               ↓
-             방화벽 로그     eve.json       access.log      app.log
-                 └──────────────┴──────────────┴───────────────┘
-                                        │
-                                   Wazuh SIEM
-                                   (통합 분석)
+클라이언트 --> [nftables] --> [Suricata] --> [Apache+ModSecurity WAF] --> [JuiceShop]
+                  |              |                |                  |
+              방화벽 로그     eve.json         access.log          app.log
+                  +-------+------+--------+------+
+                                 |
+                            Wazuh SIEM
+                            (통합 분석)
 ```
 
 ### 4.2 SQL Injection 공격의 경로
@@ -338,13 +319,13 @@ for line in sys.stdin:                                 # 반복문 시작
 ### 6.1 Wazuh 중심 통합
 
 ```
-nftables 로그   ──┐
-Suricata eve.json ┤
-Apache+ModSecurity 로그  ──┼──→ Wazuh Agent ──→ Wazuh Manager
-시스템 로그     ──┤                      ↓
-인증 로그       ──┘                   상관분석 + 알림
-                                        ↓
-                                   Dashboard / API
+nftables 로그            --+
+Suricata eve.json        --+
+Apache+ModSecurity 로그  --+--> Wazuh Agent --> Wazuh Manager
+시스템 로그              --+                         |
+인증 로그               --+                     상관분석 + 알림
+                                                     |
+                                                Dashboard / API
 ```
 
 ### 6.2 상관분석 룰 예시
@@ -401,22 +382,22 @@ Apache+ModSecurity 로그  ──┼──→ Wazuh Agent ──→ Wazuh Manage
 
 ```
 1. 준비 (Preparation)
-   └→ 보안 장비 구성, 대응 계획 수립
+   --> 보안 장비 구성, 대응 계획 수립
 
 2. 식별 (Identification)
-   └→ Wazuh 알림, Suricata 탐지, WAF 차단 로그 분석
+   --> Wazuh 알림, Suricata 탐지, WAF 차단 로그 분석
 
 3. 억제 (Containment)
-   └→ nftables IP 차단, Active Response
+   --> nftables IP 차단, Active Response
 
 4. 제거 (Eradication)
-   └→ 악성코드 제거, 취약점 패치
+   --> 악성코드 제거, 취약점 패치
 
 5. 복구 (Recovery)
-   └→ 서비스 복원, 설정 확인
+   --> 서비스 복원, 설정 확인
 
 6. 교훈 (Lessons Learned)
-   └→ IOC 등록, 룰 업데이트, 보고서 작성
+   --> IOC 등록, 룰 업데이트, 보고서 작성
 ```
 
 ### 8.2 인시던트 대응 실습 시나리오

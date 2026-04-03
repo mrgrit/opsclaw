@@ -85,25 +85,23 @@ Q(s, a) ← Q(s, a) + α · [r + γ · max_a' Q(s', a') - Q(s, a)]
 
 ```
 태스크 실행
-    │
-    ▼
+    |
+    v
 PoW 블록 생성 (자동)
-    │
-    ▼
+    |
+    v
 task_reward 계산
-    │   ┌─────────────────────────────┐
-    │   │ reward = base_reward        │
-    │   │        - risk_penalty       │
-    │   │        + speed_bonus        │
-    │   │        + success_bonus      │
-    │   └─────────────────────────────┘
-    ▼
+    |   reward = base_reward
+    |          - risk_penalty
+    |          + speed_bonus
+    |          + success_bonus
+    v
 Q-value 업데이트
-    │
-    ▼
+    |
+    v
 정책(policy) 개선
-    │
-    ▼
+    |
+    v
 다음 태스크 시 최적 risk_level 추천
 ```
 

@@ -38,16 +38,16 @@
 **MITRE ATT&CK 매핑:**
 ```
 팀 공방전에서 다루는 전체 Kill Chain:
-  ├── [Red]  TA0043 Reconnaissance     → 정찰팀
-  ├── [Red]  TA0001 Initial Access      → 침투팀
-  ├── [Red]  TA0002 Execution           → 침투팀
-  ├── [Red]  TA0003 Persistence         → 지속성팀
-  ├── [Red]  TA0004 Privilege Escalation → 침투팀
-  ├── [Red]  TA0008 Lateral Movement    → 피벗팀
-  ├── [Red]  TA0010 Exfiltration        → 목표팀
-  ├── [Blue] Detection                  → SOC 분석가
-  ├── [Blue] Containment               → IR 대응팀
-  └── [Blue] Recovery                   → 시스템 관리팀
+  +-- [Red]  TA0043 Reconnaissance     → 정찰팀
+  +-- [Red]  TA0001 Initial Access      → 침투팀
+  +-- [Red]  TA0002 Execution           → 침투팀
+  +-- [Red]  TA0003 Persistence         → 지속성팀
+  +-- [Red]  TA0004 Privilege Escalation → 침투팀
+  +-- [Red]  TA0008 Lateral Movement    → 피벗팀
+  +-- [Red]  TA0010 Exfiltration        → 목표팀
+  +-- [Blue] Detection                  → SOC 분석가
+  +-- [Blue] Containment               → IR 대응팀
+  +-- [Blue] Recovery                   → 시스템 관리팀
 ```
 
 ### 1v1 vs 팀 공방전 비교
@@ -111,20 +111,20 @@
 ```
 [Blue Team SOC 구조]
 
-┌──────────────────────────────────────┐
-│            SOC 리더 (지휘)            │
-│  - 알림 우선순위 판단                  │
-│  - 차단/관찰 의사결정                  │
-│  - 보고서 작성                        │
-└───────┬──────────┬──────────┬────────┘
-        │          │          │
-   ┌────┴────┐ ┌───┴───┐ ┌───┴──────┐
-   │네트워크  │ │호스트  │ │ IR 대응  │
-   │분석가   │ │분석가  │ │         │
-   │secu     │ │web    │ │전체     │
-   │Suricata │ │logs   │ │nftables │
-   │nftables │ │ps, ss │ │kill,cp  │
-   └─────────┘ └───────┘ └──────────┘
++--------------------------------------+
+|            SOC 리더 (지휘)            |
+|  - 알림 우선순위 판단                  |
+|  - 차단/관찰 의사결정                  |
+|  - 보고서 작성                        |
++-------+----------+----------+--------+
+        |          |          |
+   +----+----+ +---+---+ +---+------+
+   |네트워크  | |호스트  | | IR 대응  |
+   |분석가   | |분석가  | |         |
+   |secu     | |web    | |전체     |
+   |Suricata | |logs   | |nftables |
+   |nftables | |ps, ss | |kill,cp  |
+   +---------+ +-------+ +----------+
 
 통신 흐름:
   분석가 → SOC 리더: "ALERT: SSH 브루트포스 10.20.30.201"
@@ -530,7 +530,7 @@ cat << 'RESULTS'
   권한 상승:    0~20점
   횡적 이동:    0~25점
   팀 보고서:    20점
-  ────────────────────────
+  ------------------------
   합계:        90~135점
 
 [Blue Team 성과]
@@ -540,7 +540,7 @@ cat << 'RESULTS'
   서비스 유지:   4서버 x 15점 = 60점
   증거 수집:    15점
   IR 보고서:    20점
-  ────────────────────────
+  ------------------------
   합계:        80~140점
 
 [Purple Team 분석]

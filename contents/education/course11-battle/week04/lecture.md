@@ -39,16 +39,16 @@
 **MITRE ATT&CK 매핑:**
 ```
 전술: TA0006 — Credential Access (인증 정보 접근)
-  ├── T1110 — Brute Force
-  │     ├── T1110.001 — Password Guessing (온라인 추측)
-  │     ├── T1110.002 — Password Cracking (오프라인 크래킹)
-  │     ├── T1110.003 — Password Spraying (스프레이 공격)
-  │     └── T1110.004 — Credential Stuffing (재사용 공격)
-  ├── T1003 — OS Credential Dumping
-  │     └── T1003.008 — /etc/passwd and /etc/shadow
-  └── T1552 — Unsecured Credentials
-        ├── T1552.001 — Credentials In Files
-        └── T1552.003 — Bash History
+  +-- T1110 — Brute Force
+  |     +-- T1110.001 — Password Guessing (온라인 추측)
+  |     +-- T1110.002 — Password Cracking (오프라인 크래킹)
+  |     +-- T1110.003 — Password Spraying (스프레이 공격)
+  |     +-- T1110.004 — Credential Stuffing (재사용 공격)
+  +-- T1003 — OS Credential Dumping
+  |     +-- T1003.008 — /etc/passwd and /etc/shadow
+  +-- T1552 — Unsecured Credentials
+        +-- T1552.001 — Credentials In Files
+        +-- T1552.003 — Bash History
 ```
 
 ### 패스워드 공격 분류
@@ -122,10 +122,10 @@ DB 저장: "0192023a7bbd73250516f069df18b500" (MD5)
 
 ```
 $6$rounds=5000$salt$hash
- │  │            │     └── 해시 결과
- │  │            └── 솔트 값
- │  └── 반복 횟수
- └── 알고리즘 식별자
+ |  |            |     +-- 해시 결과
+ |  |            +-- 솔트 값
+ |  +-- 반복 횟수
+ +-- 알고리즘 식별자
 
 식별자:
   $1$  = MD5 (취약)

@@ -150,28 +150,26 @@ STIX 데이터를 **교환하는 프로토콜**:
 OpenCTI는 오픈소스 위협 인텔리전스 플랫폼이다.
 
 ```
-┌────────────────────────────────────────────┐
-│              OpenCTI Platform              │
-│         https://10.20.30.100:9400          │
-│                                            │
-│  ┌──────────┐  ┌──────────┐  ┌─────────┐  │
-│  │ Frontend │  │ GraphQL  │  │ Workers │  │
-│  │ (React)  │  │   API    │  │         │  │
-│  └──────────┘  └────┬─────┘  └────┬────┘  │
-│                     │              │       │
-│  ┌──────────────────┴──────────────┘       │
-│  │                                         │
-│  ├── Elasticsearch / OpenSearch             │
-│  ├── Redis                                 │
-│  ├── MinIO (파일 저장)                      │
-│  └── RabbitMQ (메시지 큐)                   │
-│                                            │
-│  ┌─────────── Connectors ─────────────┐    │
-│  │ AlienVault OTX  │  MITRE ATT&CK   │    │
-│  │ CVE             │  AbuseIPDB      │    │
-│  │ VirusTotal      │  Custom Feed    │    │
-│  └────────────────────────────────────┘    │
-└────────────────────────────────────────────┘
+[OpenCTI Platform] https://10.20.30.100:9400
+
+  Components:
+    - Frontend (React)
+    - GraphQL API
+    - Workers
+
+  Backend:
+    - Elasticsearch / OpenSearch
+    - Redis
+    - MinIO (파일 저장)
+    - RabbitMQ (메시지 큐)
+
+  Connectors:
+    - AlienVault OTX
+    - MITRE ATT&CK
+    - CVE
+    - AbuseIPDB
+    - VirusTotal
+    - Custom Feed
 ```
 
 ---

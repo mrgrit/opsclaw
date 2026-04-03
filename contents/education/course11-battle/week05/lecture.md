@@ -39,15 +39,15 @@
 **MITRE ATT&CK 매핑:**
 ```
 전술: TA0004 — Privilege Escalation (권한 상승)
-  ├── T1548 — Abuse Elevation Control Mechanism
-  │     ├── T1548.001 — Setuid and Setgid
-  │     ├── T1548.003 — Sudo and Sudo Caching
-  │     └── T1548.004 — Elevated Execution with Prompt
-  ├── T1068 — Exploitation for Privilege Escalation
-  │     └── 절차: 커널 취약점(DirtyPipe 등) 악용
-  ├── T1055 — Process Injection
-  └── T1053 — Scheduled Task/Job
-        └── T1053.003 — Cron
+  +-- T1548 — Abuse Elevation Control Mechanism
+  |     +-- T1548.001 — Setuid and Setgid
+  |     +-- T1548.003 — Sudo and Sudo Caching
+  |     +-- T1548.004 — Elevated Execution with Prompt
+  +-- T1068 — Exploitation for Privilege Escalation
+  |     +-- 절차: 커널 취약점(DirtyPipe 등) 악용
+  +-- T1055 — Process Injection
+  +-- T1053 — Scheduled Task/Job
+        +-- T1053.003 — Cron
 ```
 
 ### 권한 상승의 유형
@@ -96,16 +96,16 @@
 
 ```
 -rwsr-xr-x 1 root root 12345 Jan 1 00:00 /usr/bin/passwd
-│││││││││││
-│││││││││└─ 기타 사용자: 실행(x)
-│││││││└── 기타 사용자: 읽기(r)
-││││││└─── 기타 사용자: 실행(x)
-│││││└──── 그룹: 실행(x)
-││││└───── 그룹: 읽기(r)
-│││└────── 그룹: 실행(x)
-││└─────── 소유자: 실행(s = SUID + x)  ← SUID 비트!
-│└──────── 소유자: 쓰기(w)
-└───────── 소유자: 읽기(r)
+|||||||||||
+|||||||||+- 기타 사용자: 실행(x)
+|||||||+-- 기타 사용자: 읽기(r)
+||||||+--- 기타 사용자: 실행(x)
+|||||+---- 그룹: 실행(x)
+||||+----- 그룹: 읽기(r)
+|||+------ 그룹: 실행(x)
+||+------- 소유자: 실행(s = SUID + x)  ← SUID 비트!
+|+-------- 소유자: 쓰기(w)
++--------- 소유자: 읽기(r)
 ```
 
 ### SUID (Set User ID) — 핵심 개념
@@ -461,10 +461,10 @@ sshpass -p1 scp -o StrictHostKeyChecking=no /tmp/linpeas.sh web@10.20.30.80:/tmp
 sshpass -p1 ssh -o StrictHostKeyChecking=no web@10.20.30.80 \
   "chmod +x /tmp/linpeas.sh && /tmp/linpeas.sh 2>/dev/null" | head -100
 # 예상 출력:
-# ══════════╣ System Information ╠══════════
+# ==========+ System Information +==========
 # OS: Ubuntu 22.04...
 # Kernel: 6.8.0-106-generic
-# ══════════╣ Interesting Files ╠══════════
+# ==========+ Interesting Files +==========
 # -rwsr-xr-x 1 root root ... /usr/bin/sudo
 # User web may run the following commands:
 #     (ALL) NOPASSWD: ALL

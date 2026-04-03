@@ -104,19 +104,18 @@ WAF(Web Application Firewall)는 HTTP/HTTPS 트래픽을 검사하여 웹 공격
 (Apache+ModSecurity은 설치되어 있으나 현재 비활성 상태이며, Apache VirtualHost가 ModSecurity CRS를 직접 적용한다.)
 
 ```
-    클라이언트 요청
-         │
-    ┌────┴─────────────────────────────────────────┐
-    │  :80 (Apache 직접)      :8082 (Apache+ModSecurity 프록시)  │
-    │  → WAF 없음             → ModSecurity CRS 검사    │
-    │  → SQLi 통과!           → 정상 → 통과 (200)       │
-    │                         → 공격 → 차단 (403)       │
-    └────┬────────────────────┬────────────────────┘
-         ▼                    ▼
-    ┌──────────┐         ┌──────────┐
-    │ Apache   │         │ JuiceShop│ (백엔드 앱)
-    │   :80    │         │   :3000  │
-    └──────────┘         └──────────┘
+클라이언트 요청
+  |
+  +---------------------------+
+  |                           |
+  v                           v
+:80 (Apache 직접)           :8082 (Apache+ModSecurity 프록시)
+  - WAF 없음                  - ModSecurity CRS 검사
+  - SQLi 통과!                - 정상 --> 통과 (200)
+  |                           - 공격 --> 차단 (403)
+  v                           |
+[Apache :80]                  v
+                            [JuiceShop :3000] (백엔드 앱)
 ```
 
 **실습 환경 포트 정리:** web 서버(10.20.30.80)

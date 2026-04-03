@@ -69,19 +69,13 @@
 ### 1.2 아키텍처에서의 위치
 
 ```
-┌─────────────────────────────────────────────────┐
-│  OpsClaw Manager API (:8000)                     │
-│  ┌──────────────┐  ┌──────────────┐             │
-│  │ Schedule     │  │ Watcher      │             │
-│  │ (cron 기반)   │  │ (조건 기반)   │             │
-│  └──────┬───────┘  └──────┬───────┘             │
-│         │                  │                     │
-│         ▼                  ▼                     │
-│  scheduler-worker    watch-worker                │
-│         │                  │                     │
-│         ▼                  ▼                     │
-│  프로젝트 자동 생성 → SubAgent 실행 → Evidence    │
-└─────────────────────────────────────────────────┘
+  OpsClaw Manager API (:8000)
+  | Schedule  |  | Watcher  |
+  | (cron 기반)  |  | (조건 기반)  |
+  ▼  ▼
+  scheduler-worker  watch-worker
+  ▼  ▼
+  프로젝트 자동 생성 → SubAgent 실행 → Evidence
 ```
 
 ### 1.3 실제 운영 시나리오
@@ -337,21 +331,17 @@ curl -s -X POST $MGR/projects/$PID/completion-report \
 Watcher는 지정된 조건을 주기적으로 확인하고, 임계값을 초과하면 액션을 실행한다.
 
 ```
-┌─────────────────────────────────────┐
-│  Watcher 정의                        │
-│  - check_command: "df / | awk ..."  │
-│  - threshold: 80                     │
-│  - operator: ">"                     │
-│  - action: "create_project"          │
-│  - interval: 300 (5분)               │
-└──────────────┬──────────────────────┘
-               │
-               ▼ (5분마다 실행)
-  check_command 실행 → 결과값 추출
-               │
-               ▼ (결과 > threshold?)
-         Yes: action 실행
-         No:  대기 후 재확인
+  Watcher 정의
+  - check_command: "df / | awk ..."
+  - threshold: 80
+  - operator: ">"
+  - action: "create_project"
+  - interval: 300 (5분)
+▼ (5분마다 실행)
+check_command 실행 → 결과값 추출
+▼ (결과 > threshold?)
+Yes: action 실행
+No:  대기 후 재확인
 ```
 
 ### 4.2 Watcher 등록 실습

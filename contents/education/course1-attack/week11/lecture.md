@@ -101,16 +101,17 @@
 
 ```bash
 # 현재 사용자 확인
-whoami         # → user
-id             # → uid=1000(user) gid=1000(user) groups=1000(user),27(sudo)
+whoami         # --> user
+id             # --> uid=1000(user) gid=1000(user) groups=1000(user),27(sudo)
 
 # 파일 권한 확인
 ls -la /etc/passwd
 # -rw-r--r-- 1 root root 1234 Mar 27 10:00 /etc/passwd
-#  │││ │││ │││
-#  │││ │││ └└└ 기타 사용자: 읽기만 가능
-#  │││ └└└ 그룹: 읽기만 가능
-#  └└└ 소유자: 읽기+쓰기
+#
+# 권한 필드 해석: -rw-r--r--
+#   rw-  --> 소유자: 읽기+쓰기
+#   r--  --> 그룹: 읽기만 가능
+#   r--  --> 기타 사용자: 읽기만 가능
 ```
 
 ### 1.2 특수 퍼미션

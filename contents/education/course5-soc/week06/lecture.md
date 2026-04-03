@@ -84,9 +84,9 @@
 ### 1.2 구조
 
 ```
-전술 (Tactic)     = "공격자의 목표" (WHY)
-  └ 기법 (Technique)  = "목표 달성 방법" (HOW)
-      └ 하위 기법 (Sub-technique) = "구체적 구현"
+전술 (Tactic)          = "공격자의 목표" (WHY)
+  +-- 기법 (Technique)     = "목표 달성 방법" (HOW)
+      +-- 하위 기법 (Sub-technique) = "구체적 구현"
 ```
 
 ### 1.3 Enterprise ATT&CK 14개 전술

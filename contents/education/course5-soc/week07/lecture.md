@@ -418,11 +418,11 @@ sshpass -p1 ssh siem@10.20.30.100 "/var/ossec/bin/wazuh-logtest 2>/dev/null <<< 
 
 ```
 sigma/rules/
-├── cloud/          # 클라우드 탐지 규칙
-├── linux/          # Linux 탐지 규칙
-├── network/        # 네트워크 탐지 규칙
-├── web/            # 웹 탐지 규칙
-└── windows/        # Windows 탐지 규칙
++-- cloud/          # 클라우드 탐지 규칙
++-- linux/          # Linux 탐지 규칙
++-- network/        # 네트워크 탐지 규칙
++-- web/            # 웹 탐지 규칙
++-- windows/        # Windows 탐지 규칙
 ```
 
 ### 6.2 규칙 품질 수준

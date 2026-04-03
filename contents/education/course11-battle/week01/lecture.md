@@ -39,18 +39,18 @@
 **MITRE ATT&CK 매핑:**
 ```
 전술: TA0043 — Reconnaissance (정찰)
-  ├── T1595 — Active Scanning (능동 스캐닝)
-  │     ├── T1595.001 — Scanning IP Blocks
-  │     └── T1595.002 — Vulnerability Scanning
-  ├── T1592 — Gather Victim Host Information
-  │     ├── T1592.001 — Hardware
-  │     ├── T1592.002 — Software
-  │     └── T1592.004 — Client Configurations
-  ├── T1590 — Gather Victim Network Information
-  │     ├── T1590.001 — Domain Properties
-  │     ├── T1590.004 — Network Topology
-  │     └── T1590.005 — IP Addresses
-  └── T1593 — Search Open Websites/Domains
+  +-- T1595 — Active Scanning (능동 스캐닝)
+  |     +-- T1595.001 — Scanning IP Blocks
+  |     +-- T1595.002 — Vulnerability Scanning
+  +-- T1592 — Gather Victim Host Information
+  |     +-- T1592.001 — Hardware
+  |     +-- T1592.002 — Software
+  |     +-- T1592.004 — Client Configurations
+  +-- T1590 — Gather Victim Network Information
+  |     +-- T1590.001 — Domain Properties
+  |     +-- T1590.004 — Network Topology
+  |     +-- T1590.005 — IP Addresses
+  +-- T1593 — Search Open Websites/Domains
 ```
 
 ### 왜 정찰이 중요한가?
@@ -169,8 +169,8 @@
 ### ICMP 기반 탐색
 
 ```
-스캐너 ──── ICMP Echo Request ────→ 대상 호스트
-          ← ICMP Echo Reply ──────
+스캐너 ---- ICMP Echo Request ----> 대상 호스트
+          ← ICMP Echo Reply ------
 결과: 호스트 활성 확인
 
 주의: 많은 방화벽이 ICMP를 차단함 → 이것만으로는 부족
@@ -179,8 +179,8 @@
 ### ARP 기반 탐색 (같은 서브넷)
 
 ```
-스캐너 ──── ARP Request (who has 10.20.30.80?) ────→ 브로드캐스트
-          ← ARP Reply (10.20.30.80 is at AA:BB:CC:DD:EE:FF) ──
+스캐너 ---- ARP Request (who has 10.20.30.80?) ----> 브로드캐스트
+          ← ARP Reply (10.20.30.80 is at AA:BB:CC:DD:EE:FF) --
 결과: 호스트 활성 + MAC 주소 확인
 
 장점: 방화벽으로 차단 불가 (Layer 2)
@@ -190,9 +190,9 @@
 ### TCP 기반 탐색
 
 ```
-스캐너 ──── TCP SYN (포트 80) ────→ 대상 호스트
-          ← TCP SYN-ACK ───────── (포트 열림)
-          ← TCP RST ──────────── (포트 닫힘, 그러나 호스트 존재)
+스캐너 ---- TCP SYN (포트 80) ----> 대상 호스트
+          ← TCP SYN-ACK --------- (포트 열림)
+          ← TCP RST ------------ (포트 닫힘, 그러나 호스트 존재)
 결과: ICMP 차단 환경에서도 호스트 확인 가능
 ```
 
@@ -215,18 +215,18 @@
 
 ```
 [포트 열림 (open)]
-스캐너 ── SYN ──→ 대상
-        ← SYN-ACK ──
-스캐너 ── RST ──→ 대상    ← 연결 완료하지 않고 즉시 종료
+스캐너 -- SYN --> 대상
+        ← SYN-ACK --
+스캐너 -- RST --> 대상    ← 연결 완료하지 않고 즉시 종료
 결과: open
 
 [포트 닫힘 (closed)]
-스캐너 ── SYN ──→ 대상
-        ← RST ────
+스캐너 -- SYN --> 대상
+        ← RST ----
 결과: closed
 
 [필터링 (filtered)]
-스캐너 ── SYN ──→ 대상
+스캐너 -- SYN --> 대상
         (응답 없음 / ICMP 도달불가)
 결과: filtered
 ```
@@ -241,15 +241,15 @@
 
 ```
 [포트 열림 (open)]
-스캐너 ── SYN ──→ 대상
-        ← SYN-ACK ──
-스캐너 ── ACK ──→ 대상    ← 완전한 3-way handshake
-스캐너 ── RST ──→ 대상    ← 즉시 연결 해제
+스캐너 -- SYN --> 대상
+        ← SYN-ACK --
+스캐너 -- ACK --> 대상    ← 완전한 3-way handshake
+스캐너 -- RST --> 대상    ← 즉시 연결 해제
 결과: open — 애플리케이션 로그에 기록됨
 
 [포트 닫힘 (closed)]
-스캐너 ── SYN ──→ 대상
-        ← RST ────
+스캐너 -- SYN --> 대상
+        ← RST ----
 결과: closed
 ```
 
@@ -265,18 +265,18 @@
 
 ```
 [FIN 스캔 (-sF)]
-스캐너 ── FIN ──→ 대상 (열린 포트)
+스캐너 -- FIN --> 대상 (열린 포트)
         (응답 없음)           → open|filtered
 
-스캐너 ── FIN ──→ 대상 (닫힌 포트)
-        ← RST ────           → closed
+스캐너 -- FIN --> 대상 (닫힌 포트)
+        ← RST ----           → closed
 
 [NULL 스캔 (-sN)]
-스캐너 ── (플래그 없음) ──→ 대상 (열린 포트)
+스캐너 -- (플래그 없음) --> 대상 (열린 포트)
         (응답 없음)               → open|filtered
 
 [Xmas 스캔 (-sX)]
-스캐너 ── FIN+PSH+URG ──→ 대상 (열린 포트)
+스캐너 -- FIN+PSH+URG --> 대상 (열린 포트)
         (응답 없음)              → open|filtered
 ```
 
@@ -289,12 +289,12 @@
 
 ```
 [UDP 포트 열림]
-스캐너 ── UDP 패킷 ──→ 대상
+스캐너 -- UDP 패킷 --> 대상
         (응답 없음 또는 UDP 응답)   → open 또는 open|filtered
 
 [UDP 포트 닫힘]
-스캐너 ── UDP 패킷 ──→ 대상
-        ← ICMP Port Unreachable ── → closed
+스캐너 -- UDP 패킷 --> 대상
+        ← ICMP Port Unreachable -- → closed
 ```
 
 **특징:**
@@ -321,11 +321,11 @@
 서비스 버전 탐지는 공격자가 알려진 취약점(CVE)을 검색하기 위한 핵심 단계이다.
 
 ```
-스캐너 ── 연결 ──→ 대상 포트 22
+스캐너 -- 연결 --> 대상 포트 22
         ← "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
 결과: OpenSSH 8.9p1 → CVE 검색 가능
 
-스캐너 ── HTTP GET ──→ 대상 포트 80
+스캐너 -- HTTP GET --> 대상 포트 80
         ← "Server: Apache/2.4.52 (Ubuntu)"
 결과: Apache 2.4.52 → CVE-2023-XXXXX 등 확인
 ```

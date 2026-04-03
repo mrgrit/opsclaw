@@ -62,27 +62,19 @@
 ### 1.1 두 가지 작동 모드
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Mode A: Native Mode (자율 실행)                  │
-│                                                   │
-│  사용자 → Manager API → Master Service(LLM)       │
-│                ↓             ↓ 계획 수립           │
-│           SubAgent(secu)  SubAgent(web)           │
-│                ↓             ↓ 명령 실행           │
-│           결과 → Evidence → 완료보고서             │
-│                                                   │
-│  특징: LLM이 자율적으로 계획-실행-보고              │
-└─────────────────────────────────────────────────┘
+  Mode A: Native Mode (자율 실행)
+  사용자 → Manager API → Master Service(LLM)
+  ↓  ↓ 계획 수립
+  SubAgent(secu)  SubAgent(web)
+  ↓  ↓ 명령 실행
+  결과 → Evidence → 완료보고서
+  특징: LLM이 자율적으로 계획-실행-보고
 
-┌─────────────────────────────────────────────────┐
-│  Mode B: External Mode (외부 제어)                │
-│                                                   │
-│  Claude Code → Manager API → SubAgent             │
-│      ↑              ↓                             │
-│      └── 결과 해석 ← Evidence                     │
-│                                                   │
-│  특징: Claude Code가 API를 호출하여 제어           │
-└─────────────────────────────────────────────────┘
+  Mode B: External Mode (외부 제어)
+  Claude Code → Manager API → SubAgent
+  ↑  ↓
+  결과 해석 ← Evidence
+  특징: Claude Code가 API를 호출하여 제어
 ```
 
 ### 1.2 서비스 구성

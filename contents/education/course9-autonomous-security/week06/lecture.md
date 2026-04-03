@@ -116,40 +116,35 @@
 OpsClaw의 각 PoW 블록은 다음 필드를 포함한다:
 
 ```
-┌─────────────────────────────────┐
-│         PoW Block #N             │
-│                                  │
-│  id: 5                           │
-│  project_id: "abc-123"           │
-│  agent_id: "http://10.20.30.1"  │
-│  task_order: 2                   │
-│  risk_level: "low"               │
-│  exit_code: 0                    │
-│  prev_hash: "00a3f5b9c8..."     │ ← Block #(N-1)의 해시
-│  nonce: 42857                    │ ← mining으로 찾은 값
-│  block_hash: "0012de7f8a..."    │ ← 이 블록의 해시
-│  ts_raw: "2026-03-25T10:00:01Z" │
-│  reward: 1.0                     │
-└─────────────────────────────────┘
+  PoW Block #N
+  id: 5
+  project_id: "abc-123"
+  agent_id: "http://10.20.30.1"
+  task_order: 2
+  risk_level: "low"
+  exit_code: 0
+  prev_hash: "00a3f5b9c8..."  | ← Block #(N-1)의 해시
+  nonce: 42857  | ← mining으로 찾은 값
+  block_hash: "0012de7f8a..."  | ← 이 블록의 해시
+  ts_raw: "2026-03-25T10:00:01Z"
+  reward: 1.0
 ```
 
 ### 2.2 해시 체인 구조
 
 ```
-Block #1              Block #2              Block #3
-┌──────────────┐      ┌──────────────┐      ┌──────────────┐
-│ prev: "000..." │     │ prev: "00a3f"│      │ prev: "0012d"│
-│ data: task1   │     │ data: task2   │      │ data: task3   │
-│ nonce: 12345  │     │ nonce: 42857  │      │ nonce: 98761  │
-│ hash: "00a3f" │──→  │ hash: "0012d" │──→   │ hash: "00f7e" │
-└──────────────┘      └──────────────┘      └──────────────┘
+Block #1               Block #2               Block #3
+  prev: "000..."         prev: "00a3f"          prev: "0012d"
+  data: task1            data: task2            data: task3
+  nonce: 12345           nonce: 42857           nonce: 98761
+  hash: "00a3f"    --->  hash: "0012d"    --->  hash: "00f7e"
 
 Block #2의 prev_hash = Block #1의 block_hash
 Block #3의 prev_hash = Block #2의 block_hash
 
 만약 Block #1을 수정하면:
-  Block #1의 hash가 변경 → Block #2의 prev_hash와 불일치
-  → 체인 전체가 무효화 = 위변조 탐지!
+Block #1의 hash가 변경 → Block #2의 prev_hash와 불일치
+→ 체인 전체가 무효화 = 위변조 탐지!
 ```
 
 ### 2.3 Nonce Mining

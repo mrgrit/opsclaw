@@ -38,10 +38,10 @@
 **MITRE ATT&CK 관련:**
 ```
 방어 기법:
-  └── Defense in Depth의 네트워크 계층
+  +-- Defense in Depth의 네트워크 계층
 공격 기법:
-  └── T1562.004 — Disable or Modify System Firewall
-        └── 절차: nftables 규칙 삭제/수정으로 방화벽 무력화
+  +-- T1562.004 — Disable or Modify System Firewall
+        +-- 절차: nftables 규칙 삭제/수정으로 방화벽 무력화
 ```
 
 ### 방화벽 유형
@@ -74,9 +74,9 @@ nftables는 Linux 커널의 netfilter 프레임워크 기반 차세대 방화벽
 ```
 nftables 구조:
   테이블 (Table)
-    └── 체인 (Chain)
-          └── 규칙 (Rule)
-                └── 표현식 (Expression) + 판정 (Verdict)
+    +-- 체인 (Chain)
+          +-- 규칙 (Rule)
+                +-- 표현식 (Expression) + 판정 (Verdict)
 
 예시:
   table inet filter {

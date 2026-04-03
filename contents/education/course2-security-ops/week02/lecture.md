@@ -90,8 +90,8 @@ nftables는 3단계 계층 구조를 가진다:
 
 ```
 Table (테이블)
- └── Chain (체인)
-      └── Rule (룰)
+  +-- Chain (체인)
+       +-- Rule (룰)
 ```
 
 ### 2.1 Table (테이블)

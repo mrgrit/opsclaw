@@ -38,14 +38,14 @@
 **MITRE ATT&CK 매핑:**
 ```
 방어 활동:
-  └── 탐지(Detection) — 로그 기반 공격 식별
-  └── 대응(Response) — 로그 기반 사고 범위 파악
+  +-- 탐지(Detection) — 로그 기반 공격 식별
+  +-- 대응(Response) — 로그 기반 사고 범위 파악
 
 공격 활동 (로그 회피):
-  └── T1070 — Indicator Removal
-        ├── T1070.001 — Clear Windows Event Logs
-        ├── T1070.002 — Clear Linux or Mac System Logs
-        └── T1070.003 — Clear Command History
+  +-- T1070 — Indicator Removal
+        +-- T1070.001 — Clear Windows Event Logs
+        +-- T1070.002 — Clear Linux or Mac System Logs
+        +-- T1070.003 — Clear Command History
 ```
 
 ### 로그 분석이 답하는 질문
@@ -82,14 +82,14 @@ WHY   — 왜? (동기, 목표)
 
 ```
 Mar 25 14:32:01 web sshd[12345]: Accepted password for web from 10.20.30.201 port 54321 ssh2
-│              │    │     │        │                        │                  │
-│              │    │     │        │                        │                  └── 소스 포트
-│              │    │     │        │                        └── 소스 IP
-│              │    │     │        └── 인증 결과 + 사용자
-│              │    │     └── PID
-│              │    └── 프로세스
-│              └── 호스트명
-└── 타임스탬프
+|              |    |     |        |                        |                  |
+|              |    |     |        |                        |                  +-- 소스 포트
+|              |    |     |        |                        +-- 소스 IP
+|              |    |     |        +-- 인증 결과 + 사용자
+|              |    |     +-- PID
+|              |    +-- 프로세스
+|              +-- 호스트명
++-- 타임스탬프
 ```
 
 ### 주요 auth.log 이벤트 패턴

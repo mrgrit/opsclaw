@@ -135,10 +135,11 @@ table inet filter {
 
 ```
 tcp dport 22 accept
-│   │        │
-│   │        └ 동작: 허용
-│   └ 조건: 목적지 포트 22
-└ 프로토콜: TCP
+
+각 필드 설명:
+  tcp      --> 프로토콜: TCP
+  dport 22 --> 조건: 목적지 포트 22
+  accept   --> 동작: 허용
 ```
 
 **주요 매칭 표현:**

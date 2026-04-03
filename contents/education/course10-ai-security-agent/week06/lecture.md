@@ -65,15 +65,12 @@
 Playbook은 **사전 정의된 작업 절차**이다. 반복되는 운영/보안 작업을 표준화하여 일관된 실행을 보장한다.
 
 ```
-┌─────────────────────────────────────────┐
-│  Playbook: "서버 보안 점검"              │
-│                                         │
-│  Step 1: 디스크 사용량 확인 (low risk)    │
-│  Step 2: 열린 포트 스캔 (low risk)        │
-│  Step 3: SSH 설정 검증 (medium risk)      │
-│  Step 4: 방화벽 규칙 검토 (medium risk)    │
-│  Step 5: 결과 종합 분석 (low risk)        │
-└─────────────────────────────────────────┘
+  Playbook: "서버 보안 점검"
+  Step 1: 디스크 사용량 확인 (low risk)
+  Step 2: 열린 포트 스캔 (low risk)
+  Step 3: SSH 설정 검증 (medium risk)
+  Step 4: 방화벽 규칙 검토 (medium risk)
+  Step 5: 결과 종합 분석 (low risk)
 ```
 
 ### 1.2 Playbook vs Ad-hoc 실행
