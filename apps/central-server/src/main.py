@@ -164,6 +164,11 @@ app = FastAPI(
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+@app.get("/")
+def root():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/app/")
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "central-server"}
