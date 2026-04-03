@@ -668,6 +668,220 @@ def sms_alerts():
         })
     return {"alerts": alerts, "total": len(alerts)}
 
+# ══════════════════════════════════════════════════
+#  Slack Webhook (슬래시 커맨드 수신)
+# ══════════════════════════════════════════════════
+import httpx as _httpx_slack
+
+SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
+BASTION_URL = os.getenv("BASTION_URL", "http://localhost:9000")
+BASTION_KEY = os.getenv("BASTION_API_KEY", "bastion-api-key-2026")
+CCC_URL = os.getenv("CCC_URL", "http://localhost:9100")
+CCC_KEY = os.getenv("CCC_API_KEY", "ccc-api-key-2026")
+
+def _slack_post(channel: str, text: str, blocks: list | None = None):
+    """Slack에 메시지 전송"""
+    if not SLACK_BOT_TOKEN:
+        return
+    payload: dict = {"channel": channel, "text": text}
+    if blocks:
+        payload["blocks"] = blocks
+    _httpx_slack.post(
+        "https://slack.com/api/chat.postMessage",
+        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}", "Content-Type": "application/json"},
+        json=payload, timeout=10.0,
+    )
+
+@app.post("/slack/command")
+async def slack_command(request: Request):
+    """Slack 슬래시 커맨드 수신 엔드포인트.
+    /opsclaw status | task <instruction> | dashboard | nms | labs | battle
+    """
+    from fastapi.responses import JSONResponse
+    form = await request.form()
+    command = form.get("command", "")
+    text = str(form.get("text", "")).strip()
+    channel = str(form.get("channel_id", ""))
+    user = str(form.get("user_name", ""))
+
+    parts = text.split(None, 1)
+    action = parts[0].lower() if parts else "help"
+    arg = parts[1] if len(parts) > 1 else ""
+
+    # 즉시 200 응답 (Slack 3초 타임아웃)
+    # 비동기로 처리 후 Slack에 결과 전송
+    import asyncio
+    asyncio.create_task(_handle_slack_command(action, arg, channel, user))
+
+    return JSONResponse({"response_type": "in_channel", "text": f"Processing `{action} {arg}`..."})
+
+async def _handle_slack_command(action: str, arg: str, channel: str, user: str):
+    """슬래시 커맨드 비동기 처리"""
+    import httpx as _ahttpx
+    try:
+        if action == "status" or action == "dashboard":
+            # 전체 시스템 상태 — 직접 DB에서 조회 (자기 호출 방지)
+            try:
+                with _conn() as conn:
+                    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                        cur.execute("SELECT count(*) as cnt FROM central_instances")
+                        inst_total = cur.fetchone()["cnt"]
+                        cur.execute("SELECT instance_type, count(*) as cnt FROM central_instances GROUP BY instance_type")
+                        by_type = {r["instance_type"]: r["cnt"] for r in cur.fetchall()}
+                        cur.execute("SELECT count(*) as cnt FROM unified_blocks")
+                        blocks = cur.fetchone()["cnt"]
+                        cur.execute("SELECT count(*) as cnt FROM ctf_challenges")
+                        ctf = cur.fetchone()["cnt"]
+                        cur.execute("SELECT instance_id, name, instance_type, api_url, status FROM central_instances")
+                        instances = cur.fetchall()
+
+                msg = (
+                    f"*OpsClaw Central Dashboard*\n"
+                    f"• Instances: {inst_total} ({', '.join(f'{k}:{v}' for k,v in by_type.items())})\n"
+                    f"• Blockchain: {blocks} blocks\n"
+                    f"• CTF: {ctf} challenges\n"
+                )
+                # 각 인스턴스 health check
+                async with _ahttpx.AsyncClient(timeout=5.0) as client:
+                    for inst in instances:
+                        try:
+                            r = await client.get(f"{inst['api_url']}/health")
+                            emoji = "🟢" if r.status_code == 200 else "🔴"
+                            lat = f"{r.elapsed.total_seconds()*1000:.0f}ms"
+                        except Exception:
+                            emoji = "🔴"; lat = "timeout"
+                        msg += f"  {emoji} {inst['name']} ({inst['instance_type']}) — {lat}\n"
+            except Exception as e:
+                msg = f"❌ Status error: {e}"
+                msg = (
+                    f"*OpsClaw Central Dashboard*\n"
+                    f"• Instances: {dash['instances']['total']} ({', '.join(f'{k}:{v}' for k,v in dash['instances']['by_type'].items())})\n"
+                    f"• Blockchain: {dash['blockchain']['total_blocks']} blocks\n"
+                    f"• CTF: {dash['ctf']['challenges']} challenges\n"
+                    f"• Network: {nms['reachable']}/{nms['total']} reachable\n"
+                )
+                for inst in nms.get("instances", []):
+                    status_emoji = "🟢" if inst["reachable"] else "🔴"
+                    latency = f"{inst['latency_ms']}ms" if inst.get("latency_ms") else "-"
+                    msg += f"  {status_emoji} {inst['name']} ({inst['type']}) — {latency}\n"
+            except Exception as e:
+                msg = f"❌ Status error: {e}"
+            _slack_post(channel, msg)
+
+        elif action == "task":
+            # bastion AI 작업
+            if not arg:
+                _slack_post(channel, "Usage: `/opsclaw task <작업 내용>`")
+                return
+            _slack_post(channel, f"🤖 AI Task 실행 중: `{arg}`")
+            try:
+                async with _ahttpx.AsyncClient(timeout=180.0) as client:
+                    r = await client.post(
+                        f"{BASTION_URL}/agent/task",
+                        headers={"X-API-Key": BASTION_KEY, "Content-Type": "application/json"},
+                        json={"instruction": arg, "subagent_url": "http://localhost:8002"},
+                    )
+                data = r.json()
+                plan_str = "\n".join(f"  {t['order']}. `{t['command']}`" for t in data.get("plan", [])[:5])
+                results_str = "\n".join(
+                    f"  {'✅' if r['success'] else '❌'} `{r['command']}` → {r['stdout'][:100]}"
+                    for r in data.get("results", [])[:5]
+                )
+                msg = (
+                    f"*AI Task Complete*\n"
+                    f"📋 Plan:\n{plan_str}\n"
+                    f"📊 Results:\n{results_str}\n"
+                    f"⛓️ Block: `{data.get('block_hash', '')[:24]}...`"
+                )
+                if data.get("error"):
+                    msg += f"\n⚠️ Error: {data['error']}"
+            except Exception as e:
+                msg = f"❌ Task error: {e}"
+            _slack_post(channel, msg)
+
+        elif action == "nms":
+            # NMS 상태 — 직접 DB + health check
+            try:
+                with _conn() as conn:
+                    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                        cur.execute("SELECT * FROM central_instances ORDER BY name")
+                        instances = cur.fetchall()
+                total = len(instances)
+                reachable = 0
+                msg = ""
+                async with _ahttpx.AsyncClient(timeout=5.0) as client:
+                    for inst in instances:
+                        try:
+                            r = await client.get(f"{inst['api_url']}/health")
+                            ok = r.status_code == 200
+                            lat = f"{r.elapsed.total_seconds()*1000:.0f}ms"
+                        except Exception:
+                            ok = False; lat = "timeout"
+                        if ok: reachable += 1
+                        emoji = "🟢" if ok else "🔴"
+                        msg += f"  {emoji} {inst['name']:<20} {inst['instance_type']:<10} {lat}\n"
+                msg = f"*NMS Status* ({reachable}/{total} reachable)\n" + msg
+            except Exception as e:
+                msg = f"❌ NMS error: {e}"
+            _slack_post(channel, msg)
+
+        elif action == "labs":
+            # CCC 실습 현황
+            try:
+                async with _ahttpx.AsyncClient(timeout=10.0) as client:
+                    r = await client.get(f"{CCC_URL}/education/courses", headers={"X-API-Key": CCC_KEY})
+                courses = r.json()
+                msg = f"*CCC Education* ({courses['total']} courses)\n"
+                for c in courses.get("courses", []):
+                    msg += f"  {c['icon']} {c['title']} — {c['weeks']}주, Non-AI:{c['labs_nonai']} AI:{c['labs_ai']}\n"
+            except Exception as e:
+                msg = f"❌ Labs error: {e}"
+            _slack_post(channel, msg)
+
+        elif action == "battle":
+            # CCC 대전 현황
+            try:
+                async with _ahttpx.AsyncClient(timeout=10.0) as client:
+                    r = await client.get(f"{CCC_URL}/battles/active", headers={"X-API-Key": CCC_KEY})
+                active = r.json()
+                battles = active.get("battles", [])
+                if battles:
+                    msg = f"*Active Battles* ({len(battles)})\n"
+                    for b in battles:
+                        msg += f"  ⚔️ {b['challenger']['id'][:8]} ({b['challenger']['score']}) vs {b['defender']['id'][:8]} ({b['defender']['score']}) — {b['time_remaining']:.0f}s left\n"
+                else:
+                    msg = "No active battles"
+            except Exception as e:
+                msg = f"❌ Battle error: {e}"
+            _slack_post(channel, msg)
+
+        elif action == "leaderboard":
+            try:
+                async with _ahttpx.AsyncClient(timeout=10.0) as client:
+                    r = await client.get(f"{CCC_URL}/leaderboard", headers={"X-API-Key": CCC_KEY})
+                lb = r.json()
+                msg = "*Leaderboard*\n"
+                for i, e in enumerate(lb.get("leaderboard", [])[:10]):
+                    msg += f"  #{i+1} {e.get('name','?')} — CTF:{e.get('ctf_score',0)} Lab:{e.get('lab_score',0)} Battle:{e.get('battle_score',0)}\n"
+            except Exception as e:
+                msg = f"❌ Leaderboard error: {e}"
+            _slack_post(channel, msg)
+
+        else:
+            msg = (
+                "*OpsClaw Slack Commands*\n"
+                "• `/opsclaw status` — 전체 시스템 상태\n"
+                "• `/opsclaw task <작업>` — AI 작업 실행 (bastion)\n"
+                "• `/opsclaw nms` — 네트워크 모니터링\n"
+                "• `/opsclaw labs` — 교육과정 현황\n"
+                "• `/opsclaw battle` — 진행 중 대전\n"
+                "• `/opsclaw leaderboard` — 리더보드\n"
+            )
+            _slack_post(channel, msg)
+
+    except Exception as e:
+        _slack_post(channel, f"❌ Error: {e}")
+
 # ── Static files (central-ui) ─────────────────────
 import pathlib
 from fastapi.staticfiles import StaticFiles
