@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/api.ts","./src/main.tsx","./src/pages/Blockchain.tsx","./src/pages/CTF.tsx","./src/pages/Dashboard.tsx","./src/pages/Instances.tsx","./src/pages/NMS.tsx"],"version":"6.0.2"}
+{"root":["./src/App.tsx","./src/api.ts","./src/main.tsx","./src/pages/Blockchain.tsx","./src/pages/CTF.tsx","./src/pages/Config.tsx","./src/pages/Dashboard.tsx","./src/pages/Instances.tsx","./src/pages/NMS.tsx"],"version":"6.0.2"}
