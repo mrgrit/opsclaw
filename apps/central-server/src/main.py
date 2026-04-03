@@ -399,3 +399,85 @@ def admin_dashboard():
         "blockchain": {"total_blocks": blocks},
         "ctf": {"challenges": challenges},
     }
+
+# ══════════════════════════════════════════════════
+#  NMS (Network Management)
+# ══════════════════════════════════════════════════
+@app.get("/nms/status", dependencies=[Depends(verify_key)])
+def nms_status():
+    """모든 인스턴스 네트워크 상태"""
+    import httpx as _httpx
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM central_instances ORDER BY registered_at")
+            instances = cur.fetchall()
+    results = []
+    for inst in instances:
+        entry = {"instance_id": inst["instance_id"], "name": inst["name"], "type": inst["instance_type"], "api_url": inst["api_url"], "registered_status": inst["status"]}
+        try:
+            r = _httpx.get(f"{inst['api_url']}/health", timeout=5.0)
+            entry["reachable"] = r.status_code == 200
+            entry["health"] = r.json() if r.status_code == 200 else None
+            entry["latency_ms"] = round(r.elapsed.total_seconds() * 1000, 1)
+        except Exception as e:
+            entry["reachable"] = False
+            entry["health"] = None
+            entry["latency_ms"] = None
+            entry["error"] = str(e)
+        results.append(entry)
+    return {"instances": results, "total": len(results), "reachable": sum(1 for r in results if r["reachable"])}
+
+# ══════════════════════════════════════════════════
+#  SMS (System Management)
+# ══════════════════════════════════════════════════
+@app.get("/sms/metrics", dependencies=[Depends(verify_key)])
+def sms_metrics():
+    """인스턴스별 시스템 메트릭 (하트비트 metadata에서 추출)"""
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT instance_id, name, instance_type, status, metadata, last_heartbeat FROM central_instances ORDER BY name")
+            rows = cur.fetchall()
+    metrics = []
+    for r in rows:
+        m = dict(r)
+        meta = r.get("metadata", {}) or {}
+        m["cpu"] = meta.get("cpu")
+        m["mem"] = meta.get("mem")
+        m["disk"] = meta.get("disk")
+        m["agents"] = meta.get("agents")
+        m["uptime"] = meta.get("uptime")
+        metrics.append(m)
+    return {"metrics": metrics}
+
+@app.get("/sms/alerts", dependencies=[Depends(verify_key)])
+def sms_alerts():
+    """인스턴스 알림 (하트비트 timeout 등)"""
+    import datetime
+    threshold = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=5)
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM central_instances WHERE last_heartbeat < %s OR status != 'healthy'", (threshold,))
+            rows = cur.fetchall()
+    alerts = []
+    for r in rows:
+        alerts.append({
+            "instance_id": r["instance_id"], "name": r["name"],
+            "type": "heartbeat_timeout" if r["status"] == "healthy" else "unhealthy",
+            "status": r["status"], "last_heartbeat": str(r["last_heartbeat"]),
+        })
+    return {"alerts": alerts, "total": len(alerts)}
+
+# ── Static files (central-ui) ─────────────────────
+import pathlib
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+_ui_dist = pathlib.Path(__file__).parent.parent.parent / "central-ui" / "dist"
+if _ui_dist.exists():
+    @app.get("/app/{path:path}")
+    def spa_fallback(path: str):
+        fpath = _ui_dist / path
+        if fpath.is_file():
+            return FileResponse(str(fpath))
+        return FileResponse(str(_ui_dist / "index.html"))
+    app.mount("/app", StaticFiles(directory=str(_ui_dist), html=True), name="ui")
