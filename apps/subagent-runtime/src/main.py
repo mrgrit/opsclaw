@@ -173,6 +173,103 @@ def create_a2a_router() -> APIRouter:
             },
         )
 
+    # ── CCC P14 — Lab 세션 audit (학생 명령 transcript 캡처) ──────────────────
+    # 메모리 기반 세션 상태. 프로세스 재시작 시 휘발 (학생 1회 lab 용).
+    _audit_sessions: dict[str, dict] = {}
+
+    @router.post("/audit/start")
+    def audit_start(payload: dict) -> dict:
+        """학생 lab 세션 시작 — session_id 등록 후 명령 캡처 활성.
+        Body: {session_id: str, lab_id?: str, student_id?: str}
+        """
+        sid = str(payload.get("session_id") or "").strip()
+        if not sid:
+            raise HTTPException(400, "session_id required")
+        from datetime import datetime, timezone
+        _audit_sessions[sid] = {
+            "session_id": sid,
+            "lab_id": payload.get("lab_id", ""),
+            "student_id": payload.get("student_id", ""),
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "commands": [],
+        }
+        return {"status": "ok", "session_id": sid, "audit_active": True}
+
+    @router.post("/audit/run")
+    def audit_run(payload: dict) -> dict:
+        """audit 활성 세션에서 명령 실행 — 입출력 자동 캡처.
+        Body: {session_id, script, timeout_s?}
+        """
+        sid = str(payload.get("session_id") or "").strip()
+        if not sid:
+            raise HTTPException(400, "session_id required")
+        if sid not in _audit_sessions:
+            raise HTTPException(404, f"audit session not found: {sid}")
+        script = str(payload.get("script") or "")
+        if not script.strip():
+            raise HTTPException(400, "script required")
+        timeout_s = int(payload.get("timeout_s") or 30)
+        from datetime import datetime, timezone
+        ts = datetime.now(timezone.utc).isoformat()
+        stdout, stderr, exit_code = _run_shell(script, timeout_s)
+        entry = {
+            "ts": ts,
+            "cmd": script,
+            "stdout": stdout,
+            "stderr": stderr,
+            "exit": exit_code,
+        }
+        _audit_sessions[sid]["commands"].append(entry)
+        return {
+            "status": "ok",
+            "session_id": sid,
+            "command_index": len(_audit_sessions[sid]["commands"]) - 1,
+            "stdout": stdout,
+            "stderr": stderr,
+            "exit_code": exit_code,
+        }
+
+    @router.post("/audit/stop")
+    def audit_stop(payload: dict) -> dict:
+        """학생 lab 세션 종료 — 캡처된 transcript 반환 + 메모리 삭제.
+        Body: {session_id}
+        """
+        sid = str(payload.get("session_id") or "").strip()
+        if not sid:
+            raise HTTPException(400, "session_id required")
+        sess = _audit_sessions.pop(sid, None)
+        if sess is None:
+            raise HTTPException(404, f"audit session not found: {sid}")
+        from datetime import datetime, timezone
+        sess["ended_at"] = datetime.now(timezone.utc).isoformat()
+        return {
+            "status": "ok",
+            "transcript": {
+                "capture_mode": "subagent_audit",
+                "session_id": sid,
+                "started_at": sess["started_at"],
+                "ended_at": sess["ended_at"],
+                "commands": sess["commands"],
+            },
+        }
+
+    @router.get("/audit/status")
+    def audit_status() -> dict:
+        """현재 활성 audit 세션 목록 (디버그)."""
+        return {
+            "active_sessions": [
+                {
+                    "session_id": s["session_id"],
+                    "lab_id": s.get("lab_id", ""),
+                    "student_id": s.get("student_id", ""),
+                    "started_at": s["started_at"],
+                    "command_count": len(s["commands"]),
+                }
+                for s in _audit_sessions.values()
+            ],
+            "total": len(_audit_sessions),
+        }
+
     # ── 신규: LLM 기반 작업 실행 ─────────────────────────────────────────────
     @router.post("/invoke_llm")
     def invoke_llm(payload: InvokeLLMRequest) -> dict[str, Any]:
